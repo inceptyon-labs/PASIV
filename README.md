@@ -55,10 +55,10 @@ Done!
 
 In Claude Code:
 ```
-Read my spec.md and generate GitHub CLI commands to create epics and issues
+Read my spec.md and create GitHub issues for epics and tasks
 ```
 
-Run the commands → issues created!
+Claude reads it and creates all issues automatically!
 
 ### Review PRs
 
