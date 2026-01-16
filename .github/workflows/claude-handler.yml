@@ -1,0 +1,29 @@
+name: Claude Mention Handler
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  handle-command:
+    if: contains(github.event.comment.body, '@claude /start')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Respond to command
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment $ISSUE_NUMBER --body "👋 Ready to help!
+
+          **Next steps:**
+          1. Open Claude Code in your terminal
+          2. Ask me to create a plan for this issue
+          3. Review and approve the plan
+          4. I'll help you implement it
+          5. Create a PR when ready
+
+          Let's build this together! 🚀"

@@ -1,0 +1,66 @@
+name: Epic
+description: High-level feature grouping
+title: "[EPIC] "
+labels: ["epic"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Epic Overview
+        This template creates a high-level epic that groups related issues.
+
+  - type: input
+    id: epic-title
+    attributes:
+      label: Epic Title
+      description: Clear, concise title for this feature
+      placeholder: "User Authentication System"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is this epic about?
+      placeholder: "Implement a complete authentication system with OAuth, magic links, and email/password support."
+    validations:
+      required: true
+
+  - type: textarea
+    id: goals
+    attributes:
+      label: Goals & Outcomes
+      description: What should be achieved when this epic is complete?
+      placeholder: |
+        - Users can sign up and log in
+        - Support multiple auth methods
+        - Secure session management
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What's included and what's not?
+      placeholder: |
+        **In Scope:**
+        - OAuth (Google, Apple)
+        - Magic link login
+        - Email/password
+
+        **Out of Scope:**
+        - 2FA (future epic)
+        - Social login (Twitter, etc.)
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true

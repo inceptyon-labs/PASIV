@@ -1,0 +1,9 @@
+node_modules/
+.bun/
+dist/
+*.log
+.DS_Store
+.env
+.github/automation.config.json
+review-*.json
+!.github/automation.config.json.example

@@ -1,0 +1,77 @@
+name: Task
+description: Individual work item
+title: ""
+labels: ["enhancement"]
+body:
+  - type: input
+    id: title
+    attributes:
+      label: Task Title
+      description: Clear, actionable title
+      placeholder: "Add JWT authentication middleware"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What needs to be done?
+      placeholder: "Implement JWT middleware using jose library for Cloudflare Workers..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: When is this task complete?
+      placeholder: |
+        - [ ] Middleware validates JWT tokens
+        - [ ] Returns 401 for invalid tokens
+        - [ ] Adds user to context on success
+        - [ ] Unit tests pass
+    validations:
+      required: true
+
+  - type: input
+    id: epic-link
+    attributes:
+      label: Epic Link
+      description: Parent epic issue number (e.g., #42)
+      placeholder: "#42"
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size Estimate
+      options:
+        - S (1-4 hours)
+        - M (4-8 hours)
+        - L (8+ hours)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Frontend
+        - Backend
+        - Infrastructure
+        - Database
+        - Documentation
+    validations:
+      required: true

@@ -1,0 +1,22 @@
+{
+  "project": {
+    "name": "Gulf Coast Hackers League",
+    "owner": "your-github-username",
+    "repo": "gchl-monorepo",
+    "projectNumber": 1
+  },
+  "labels": {
+    "areas": ["frontend", "backend", "infrastructure", "database", "documentation"],
+    "priorities": ["high", "medium", "low"],
+    "sizes": ["S", "M", "L"]
+  },
+  "review": {
+    "maxAutoFixIterations": 3,
+    "fastReviewModel": "claude-sonnet-4.5",
+    "deepReviewModel": "claude-opus-4.5"
+  },
+  "backlog": {
+    "defaultSpecPath": "spec.md",
+    "defaultPlanPath": "plan.md"
+  }
+}
