@@ -8,16 +8,10 @@
 
 In Claude Code, say:
 ```
-Read my spec.md and generate GitHub CLI commands to create epics and issues
+Read my spec.md and create GitHub issues for epics and tasks
 ```
 
-I'll give you commands like:
-```bash
-gh issue create --title "[EPIC] Feature X" --label "epic"
-gh issue create --title "Task Y" --label "enhancement,size: M"
-```
-
-Run them → issues created!
+I'll read it, break it down, and create all the issues for you automatically!
 
 ### 2. Work on Issues
 
