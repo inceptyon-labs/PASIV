@@ -15,12 +15,41 @@ Full flow for: $ARGUMENTS (issue number or "next")
 ## Step 1: Get Issue
 
 ```bash
-gh issue view NUMBER --json title,body,labels
+gh issue view NUMBER --json title,body,labels,url
 ```
 
 If "next", find highest priority:
 ```bash
 gh issue list --label "priority:high" --state open --limit 1
+```
+
+## Step 1.5: Move to In Progress
+
+Get project and field info, then update status:
+
+```bash
+REPO_NAME=$(gh repo view --json name -q '.name')
+OWNER=$(gh repo view --json owner -q '.owner.login')
+ISSUE_URL=$(gh issue view NUMBER --json url -q '.url')
+
+# Get project number
+PROJECT_NUM=$(gh project list --owner "$OWNER" --format json \
+  | jq -r --arg name "$REPO_NAME" '.projects[]? | select(.title == $name) | .number' \
+  | head -1)
+
+# Get project item ID for this issue
+ITEM_ID=$(gh project item-list "$PROJECT_NUM" --owner "$OWNER" --format json \
+  | jq -r --arg url "$ISSUE_URL" '.items[] | select(.content.url == $url) | .id')
+
+# Get Status field ID and "In Progress" option ID
+STATUS_FIELD=$(gh project field-list "$PROJECT_NUM" --owner "$OWNER" --format json \
+  | jq -r '.fields[] | select(.name == "Status")')
+FIELD_ID=$(echo "$STATUS_FIELD" | jq -r '.id')
+IN_PROGRESS_ID=$(echo "$STATUS_FIELD" | jq -r '.options[] | select(.name == "In Progress") | .id')
+
+# Update status to In Progress
+gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_NUM" \
+  --field-id "$FIELD_ID" --single-select-option-id "$IN_PROGRESS_ID"
 ```
 
 ## Step 2: Create Plan
@@ -87,6 +116,19 @@ git merge feature/issue-NUMBER
 git push origin main
 git branch -d feature/issue-NUMBER
 gh issue close NUMBER --comment "Completed in $(git rev-parse --short HEAD)"
+```
+
+## Step 6.5: Move to Done
+
+Update project status to Done:
+
+```bash
+# Get "Done" option ID (reuse FIELD_ID from Step 1.5)
+DONE_ID=$(echo "$STATUS_FIELD" | jq -r '.options[] | select(.name == "Done") | .id')
+
+# Update status to Done
+gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_NUM" \
+  --field-id "$FIELD_ID" --single-select-option-id "$DONE_ID"
 ```
 
 Report:
