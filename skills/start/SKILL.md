@@ -160,7 +160,9 @@ Architecture, edge cases, performance, maintainability, **test coverage quality*
 
 ### Pass 3: Codex (independent)
 
-Run Codex with custom focus (get diff first, then review):
+**IMPORTANT: Use the custom prompt, NOT `codex review --base main`.**
+
+Get the diff and run Codex with custom focus:
 
 ```bash
 DIFF=$(git diff main)
@@ -177,11 +179,6 @@ Focus on:
 4. What previous reviewers missed
 
 Categorize as ERROR/WARNING/SUGGESTION."
-```
-
-Or for standard review without custom prompt:
-```bash
-codex review --base main
 ```
 
 ## Step 5: Fix & Iterate

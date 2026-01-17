@@ -72,7 +72,9 @@ Output as:
 
 ## Pass 3: Independent Review (Codex)
 
-Run Codex with custom focus (get diff first, then review):
+**IMPORTANT: Use the custom prompt, NOT `codex review --base main`.**
+
+Get the diff and run Codex with custom focus:
 
 ```bash
 DIFF=$(git diff main)
@@ -97,11 +99,6 @@ For each finding, specify:
 - Issue and recommended fix
 
 Be thorough but don't repeat obvious issues."
-```
-
-Or for standard review without custom prompt:
-```bash
-codex review --base main
 ```
 
 ---
