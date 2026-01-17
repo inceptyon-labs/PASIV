@@ -119,6 +119,47 @@ Commit:
 git add -A && git commit -m "feat: description (#NUMBER)"
 ```
 
+## Step 3.25: Format & Lint
+
+**Run formatters first, then linters.**
+
+Detect and run formatters:
+
+```bash
+# Node.js / TypeScript
+npx prettier --write . || npm run format || yarn format
+
+# Python
+black . || ruff format .
+
+# Go
+go fmt ./...
+
+# Rust
+cargo fmt
+```
+
+Then run linters:
+
+```bash
+# Node.js / TypeScript
+npx eslint --fix . || npm run lint || yarn lint
+
+# Python
+ruff check --fix . || flake8 .
+
+# Go
+golangci-lint run
+
+# Rust
+cargo clippy --fix
+```
+
+If formatting/linting made changes:
+```bash
+git add -A && git commit -m "style: format and lint"
+```
+
 ## Step 3.5: Run Tests
 
 **Tests must pass before review.**
