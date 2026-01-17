@@ -80,9 +80,26 @@ Analyze the issue and codebase. Present:
 - **Approach**: Step-by-step
 - **Risks**: Potential issues
 
-Ask: **"Does this plan look good?"**
+**Use AskUserQuestion tool** to get approval:
 
-Wait for approval before continuing.
+```
+AskUserQuestion(
+  questions: [{
+    question: "Does this implementation plan look good?",
+    header: "Plan",
+    options: [
+      { label: "Approve", description: "Proceed with implementation" },
+      { label: "Revise", description: "I have changes to suggest" },
+      { label: "Cancel", description: "Don't implement this" }
+    ],
+    multiSelect: false
+  }]
+)
+```
+
+- If **Approve**: Continue to Step 3
+- If **Revise**: Ask what to change, update plan, ask again
+- If **Cancel**: Stop and explain why
 
 ## Step 3: Implement
 
