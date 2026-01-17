@@ -1,6 +1,11 @@
 ---
 name: start
-description: Full implementation flow - plan, implement, review, merge. Use when user wants to start working on an issue.
+description: Full implementation flow - plan, implement, review, merge. Use when user says "start issue", "work on issue", "implement issue", "start #42", or wants to fully implement and merge a GitHub issue.
+allowed-tools:
+  - Bash
+  - Read
+  - Edit
+  - Write
 ---
 
 # Start Working on Issue

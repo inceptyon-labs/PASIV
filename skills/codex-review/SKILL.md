@@ -1,6 +1,9 @@
 ---
 name: codex-review
-description: Deep code review using Codex CLI. Use for thorough security and architecture review.
+description: Deep code review using Codex CLI MCP. Use when user says "codex review", "deep review", "security review", or wants thorough analysis of code, PR, or specific files.
+allowed-tools:
+  - Bash
+  - Read
 ---
 
 # Codex Deep Review
