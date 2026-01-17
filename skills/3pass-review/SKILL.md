@@ -72,10 +72,15 @@ Output as:
 
 ## Pass 3: Independent Review (Codex)
 
-Run Codex review with custom focus:
+Run Codex with custom focus (get diff first, then review):
 
 ```bash
-codex review --base main "Independent code review - catch what others missed.
+DIFF=$(git diff main)
+
+codex exec -s read-only "Independent code review - catch what others missed.
+
+Here is the diff:
+$DIFF
 
 Focus on:
 1. Things other reviewers typically miss
@@ -92,6 +97,11 @@ For each finding, specify:
 - Issue and recommended fix
 
 Be thorough but don't repeat obvious issues."
+```
+
+Or for standard review without custom prompt:
+```bash
+codex review --base main
 ```
 
 ---

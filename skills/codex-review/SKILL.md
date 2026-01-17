@@ -18,8 +18,15 @@ codex review --base main
 
 ## Option 2: Review with Custom Focus
 
+Note: `--base` cannot be combined with a custom prompt. Use `codex exec` instead:
+
 ```bash
-codex review --base main "Focus on security vulnerabilities, architecture issues, and edge cases.
+DIFF=$(git diff main)
+
+codex exec -s read-only "Focus on security vulnerabilities, architecture issues, and edge cases.
+
+Here is the diff:
+$DIFF
 
 For each finding:
 - Severity: ERROR / WARNING / SUGGESTION

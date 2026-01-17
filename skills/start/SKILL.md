@@ -143,10 +143,15 @@ Architecture, edge cases, performance, maintainability, **test coverage quality*
 
 ### Pass 3: Codex (independent)
 
-Run Codex review with custom focus:
+Run Codex with custom focus (get diff first, then review):
 
 ```bash
-codex review --base main "Independent code review for Issue #NUMBER.
+DIFF=$(git diff main)
+
+codex exec -s read-only "Independent code review for Issue #NUMBER.
+
+Here is the diff:
+$DIFF
 
 Focus on:
 1. Subtle bugs or logic errors
@@ -155,6 +160,11 @@ Focus on:
 4. What previous reviewers missed
 
 Categorize as ERROR/WARNING/SUGGESTION."
+```
+
+Or for standard review without custom prompt:
+```bash
+codex review --base main
 ```
 
 ## Step 5: Fix & Iterate
