@@ -72,15 +72,10 @@ Output as:
 
 ## Pass 3: Independent Review (Codex)
 
-Get the list of changed files and run Codex CLI:
+Run Codex review with custom focus:
 
 ```bash
-FILES=$(git diff --name-only main)
-
-codex --quiet "Independent code review - catch what others missed.
-
-Files changed:
-$FILES
+codex review --base main "Independent code review - catch what others missed.
 
 Focus on:
 1. Things other reviewers typically miss

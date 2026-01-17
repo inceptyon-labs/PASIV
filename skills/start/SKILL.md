@@ -143,15 +143,10 @@ Architecture, edge cases, performance, maintainability, **test coverage quality*
 
 ### Pass 3: Codex (independent)
 
-Get the list of changed files, then run Codex:
+Run Codex review with custom focus:
 
 ```bash
-FILES=$(git diff --name-only main)
-
-codex --quiet "Independent code review for Issue #NUMBER.
-
-Files changed:
-$FILES
+codex review --base main "Independent code review for Issue #NUMBER.
 
 Focus on:
 1. Subtle bugs or logic errors

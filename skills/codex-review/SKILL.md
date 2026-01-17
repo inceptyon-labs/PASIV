@@ -8,70 +8,50 @@ allowed-tools:
 
 # Codex Deep Review
 
-Run Codex for deep analysis: $ARGUMENTS (files, PR number, or empty for current changes)
+Run Codex for deep analysis: $ARGUMENTS (branch, commit SHA, or empty for current changes)
 
-## Option 1: Quick Review (current changes)
-
-If no arguments or reviewing current branch:
+## Option 1: Review Current Branch vs Main
 
 ```bash
-codex /review --sandbox read-only
+codex review --base main
 ```
 
-## Option 2: Targeted Review (specific files or PR)
+## Option 2: Review with Custom Focus
 
-### For PR number:
 ```bash
-FILES=$(gh pr view NUMBER --json files -q '.files[].path' | tr '\n' ', ')
-
-codex --quiet "Deep code review for PR #NUMBER.
-
-Files changed:
-$FILES
-
-Review for:
-1. Security vulnerabilities (injection, auth bypass, data exposure)
-2. Architecture issues (coupling, SOLID violations, patterns)
-3. Edge cases and error handling
-4. Performance problems
-5. Maintainability concerns
+codex review --base main "Focus on security vulnerabilities, architecture issues, and edge cases.
 
 For each finding:
-- Severity: ERROR (must fix) / WARNING (should fix) / SUGGESTION
+- Severity: ERROR / WARNING / SUGGESTION
 - Location: file:line
-- Description: What's wrong
-- Fix: How to resolve it
+- Description and fix
 
 Be thorough and specific."
 ```
 
-### For specific files:
+## Option 3: Review Specific Commit
+
 ```bash
-codex --quiet "Deep code review of the following files:
-
-$ARGUMENTS
-
-Review for:
-1. Security vulnerabilities
-2. Architecture issues
-3. Edge cases and error handling
-4. Performance problems
-5. Maintainability concerns
-
-Categorize as ERROR/WARNING/SUGGESTION with file:line locations."
+codex review --commit SHA
 ```
 
-### For current changes vs main:
+## Option 4: Review Uncommitted Changes
+
 ```bash
-FILES=$(git diff --name-only main)
+codex review --uncommitted
+```
 
-codex --quiet "Deep code review of current changes.
+## Option 5: Custom Prompt (Non-interactive)
 
-Files changed:
-$FILES
+For complex custom analysis:
 
-Review for security, architecture, edge cases, performance, maintainability.
-Categorize as ERROR/WARNING/SUGGESTION with file:line locations."
+```bash
+codex exec -s read-only "Analyze the codebase for:
+1. Security vulnerabilities
+2. Performance bottlenecks
+3. Code duplication
+
+$ARGUMENTS"
 ```
 
 ## Report Results
