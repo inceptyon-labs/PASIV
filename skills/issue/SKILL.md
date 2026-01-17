@@ -21,10 +21,32 @@ Create a GitHub issue from a short description: $ARGUMENTS
    - Area: frontend, backend, infrastructure, database, documentation
    - Priority: high, medium, low (default: medium)
 
-3. **Create the issue**:
+3. **Setup project**:
 
 ```bash
-gh issue create \
+REPO_NAME=$(gh repo view --json name -q '.name')
+OWNER=$(gh repo view --json owner -q '.owner.login')
+```
+
+Check for existing projects:
+```bash
+gh project list --owner "$OWNER" --format json
+```
+
+**Logic:**
+- If a project named "$REPO_NAME" exists → use it
+- If no projects exist → create one named "$REPO_NAME"
+- If other projects exist (different names) → **ask user**: use existing (list them) or create new "$REPO_NAME"?
+
+Create project if needed:
+```bash
+gh project create --owner "$OWNER" --title "$REPO_NAME" --format json | jq -r '.number'
+```
+
+4. **Create the issue**:
+
+```bash
+ISSUE_URL=$(gh issue create \
   --title "Title" \
   --body "Description
 
@@ -34,9 +56,15 @@ gh issue create \
 
 ---
 **Size:** S/M/L" \
-  --label "enhancement,size:SIZE,priority:PRIORITY,area:AREA"
+  --label "enhancement,size:SIZE,priority:PRIORITY,area:AREA")
 ```
 
-4. If scope is L, ask if user wants an epic with subtasks instead.
+5. **Add to project**:
 
-5. Return the issue URL.
+```bash
+gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$ISSUE_URL"
+```
+
+6. If scope is L, ask if user wants an epic with subtasks instead.
+
+7. Return the issue URL.

@@ -12,10 +12,32 @@ Create an epic and break into tasks: $ARGUMENTS
 
 ## Steps
 
-1. **Create the epic**:
+1. **Setup project**:
 
 ```bash
-gh issue create \
+REPO_NAME=$(gh repo view --json name -q '.name')
+OWNER=$(gh repo view --json owner -q '.owner.login')
+```
+
+Check for existing projects:
+```bash
+gh project list --owner "$OWNER" --format json
+```
+
+**Logic:**
+- If a project named "$REPO_NAME" exists → use it
+- If no projects exist → create one named "$REPO_NAME"
+- If other projects exist (different names) → **ask user**: use existing (list them) or create new "$REPO_NAME"?
+
+Create project if needed:
+```bash
+gh project create --owner "$OWNER" --title "$REPO_NAME" --format json | jq -r '.number'
+```
+
+2. **Create the epic**:
+
+```bash
+EPIC_URL=$(gh issue create \
   --title "[EPIC] Title" \
   --body "Description
 
@@ -26,13 +48,15 @@ gh issue create \
 ## Scope
 **In Scope:** ...
 **Out of Scope:** ..." \
-  --label "epic,priority:PRIORITY"
+  --label "epic,priority:PRIORITY")
+
+gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$EPIC_URL"
 ```
 
-2. **Break into 3-7 child issues** (size S or M each):
+3. **Break into 3-7 child issues** (size S or M each), adding each to project:
 
 ```bash
-gh issue create \
+CHILD_URL=$(gh issue create \
   --title "Subtask title" \
   --body "Description
 
@@ -41,7 +65,9 @@ gh issue create \
 
 ---
 **Epic:** #EPIC_NUMBER" \
-  --label "enhancement,size:S,priority:medium,area:AREA"
+  --label "enhancement,size:S,priority:medium,area:AREA")
+
+gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$CHILD_URL"
 ```
 
-3. **Return summary** with all issue URLs.
+4. **Return summary** with all issue URLs.
