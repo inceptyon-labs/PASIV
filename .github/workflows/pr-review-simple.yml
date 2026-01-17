@@ -1,0 +1,38 @@
+# Simple PR workflow that notifies you to review locally
+# Use this if you don't want to set up ANTHROPIC_API_KEY
+
+name: PR Review Reminder
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Post review reminder
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr comment $PR_NUMBER --body "## PR Ready for Review
+
+          **To review locally with Claude Code (free):**
+
+          \`\`\`bash
+          # Checkout this PR
+          gh pr checkout $PR_NUMBER
+
+          # Ask Claude to review
+          claude \"Review the changes in this PR: \$(git diff main)\"
+          \`\`\`
+
+          **Or if you have ANTHROPIC_API_KEY configured:**
+          Comment \`@claude review\` to trigger automated review.
+
+          ---
+          _Review reminder from GitHub Automation_"

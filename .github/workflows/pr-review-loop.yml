@@ -1,0 +1,461 @@
+name: PR Review Loop
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  # Triggered on PR open/update OR when someone comments "@claude review"
+  should-review:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+    steps:
+      - name: Check trigger conditions
+        id: check
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          IS_PR: ${{ github.event.issue.pull_request != '' }}
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          elif [[ "$EVENT_NAME" == "issue_comment" && "$IS_PR" == "true" ]]; then
+            if echo "$COMMENT_BODY" | grep -qiE "@claude\s+(review|check|analyze)"; then
+              echo "should_run=true" >> $GITHUB_OUTPUT
+              echo "pr_number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+            else
+              echo "should_run=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Multi-pass review using Claude GitHub Action
+  review:
+    needs: should-review
+    if: needs.should-review.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    outputs:
+      has_errors: ${{ steps.aggregate.outputs.has_errors }}
+      iteration: ${{ steps.state.outputs.iteration }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.should-review.outputs.pr_number }}
+        run: |
+          gh pr diff $PR_NUMBER > pr_diff.txt
+          echo "diff_file=pr_diff.txt" >> $GITHUB_OUTPUT
+
+      - name: Check iteration state
+        id: state
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.should-review.outputs.pr_number }}
+        run: |
+          # Get current iteration from PR labels
+          LABELS=$(gh pr view $PR_NUMBER --json labels -q '.labels[].name' 2>/dev/null || echo "")
+          ITERATION=$(echo "$LABELS" | grep -oP 'review-iteration-\K\d+' || echo "0")
+          echo "iteration=$ITERATION" >> $GITHUB_OUTPUT
+
+          # Check if we've hit max iterations
+          MAX_ITERATIONS="${{ vars.MAX_REVIEW_ITERATIONS || '3' }}"
+          if [[ "$ITERATION" -ge "$MAX_ITERATIONS" ]]; then
+            echo "max_reached=true" >> $GITHUB_OUTPUT
+          else
+            echo "max_reached=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Escalate if max iterations
+        if: steps.state.outputs.max_reached == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.should-review.outputs.pr_number }}
+        run: |
+          gh pr comment $PR_NUMBER --body "## Review Loop Limit Reached
+
+          This PR has gone through ${{ steps.state.outputs.iteration }} review iterations without resolving all issues.
+
+          **Manual intervention required.**
+
+          Please review the outstanding issues and either:
+          1. Fix them manually
+          2. Comment \`@claude /force-approve\` to bypass (not recommended)
+          3. Close and re-open the PR to reset the counter
+
+          /cc @${{ github.repository_owner }}"
+
+          gh pr edit $PR_NUMBER --add-label "needs-manual-review"
+          exit 0
+
+      # Pass 1: Fast Review (Sonnet-like) - bugs, style, basic security
+      - name: Fast Review Pass
+        if: steps.state.outputs.max_reached != 'true'
+        id: fast
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-20250514
+          prompt: |
+            You are doing a FAST code review pass. Focus on obvious issues only:
+            - Clear bugs and errors
+            - Basic security issues (XSS, SQL injection, obvious vulnerabilities)
+            - Missing error handling for critical paths
+            - Unused imports/dead code
+
+            Be quick and practical. Only flag issues you're confident about.
+
+            Review this PR diff:
+            ```diff
+            $(cat pr_diff.txt)
+            ```
+
+            Respond with a JSON object:
+            ```json
+            {
+              "pass": "fast",
+              "findings": [
+                {
+                  "severity": "error|warning|suggestion",
+                  "category": "security|bugs|performance|style",
+                  "message": "description",
+                  "file": "path/to/file",
+                  "line": 42,
+                  "suggestion": "how to fix"
+                }
+              ],
+              "summary": "one sentence assessment"
+            }
+            ```
+
+            Severity guide:
+            - error: Must fix (bugs, security)
+            - warning: Should fix (code smells)
+            - suggestion: Nice to have
+          timeout_minutes: 5
+
+      # Pass 2: Deep Review (Opus-like) - architecture, edge cases, perf
+      - name: Deep Review Pass
+        if: steps.state.outputs.max_reached != 'true'
+        id: deep
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-20250514
+          prompt: |
+            You are doing a DEEP code review pass. Think like a senior engineer:
+            - Architecture and design patterns
+            - Edge cases and error scenarios
+            - Performance implications
+            - Over/under-engineering
+            - Maintainability concerns
+            - API design quality
+            - Security in depth
+
+            Be thorough. Consider long-term implications.
+
+            Review this PR diff:
+            ```diff
+            $(cat pr_diff.txt)
+            ```
+
+            Respond with a JSON object:
+            ```json
+            {
+              "pass": "deep",
+              "findings": [
+                {
+                  "severity": "error|warning|suggestion",
+                  "category": "architecture|security|performance|maintainability",
+                  "message": "description",
+                  "file": "path/to/file",
+                  "line": 42,
+                  "suggestion": "how to fix"
+                }
+              ],
+              "summary": "one sentence assessment"
+            }
+            ```
+          timeout_minutes: 10
+
+      # Pass 3: Independent Review - fresh perspective
+      - name: Independent Review Pass
+        if: steps.state.outputs.max_reached != 'true'
+        id: independent
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-20250514
+          prompt: |
+            You are an INDEPENDENT reviewer providing a fresh perspective.
+            Don't repeat obvious issues - focus on:
+            - Things other reviewers might miss
+            - User experience implications
+            - Alternative approaches worth considering
+            - Technical debt being introduced
+            - Test coverage gaps
+            - Documentation clarity
+
+            Review this PR diff:
+            ```diff
+            $(cat pr_diff.txt)
+            ```
+
+            Respond with a JSON object:
+            ```json
+            {
+              "pass": "independent",
+              "findings": [
+                {
+                  "severity": "error|warning|suggestion",
+                  "category": "ux|testing|docs|debt|other",
+                  "message": "description",
+                  "file": "path/to/file",
+                  "suggestion": "recommendation"
+                }
+              ],
+              "summary": "one sentence assessment"
+            }
+            ```
+          timeout_minutes: 5
+
+      - name: Aggregate and Post Results
+        if: steps.state.outputs.max_reached != 'true'
+        id: aggregate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.should-review.outputs.pr_number }}
+          FAST_RESULT: ${{ steps.fast.outputs.response }}
+          DEEP_RESULT: ${{ steps.deep.outputs.response }}
+          INDEP_RESULT: ${{ steps.independent.outputs.response }}
+          ITERATION: ${{ steps.state.outputs.iteration }}
+        run: |
+          # Parse results and count issues
+          cat > /tmp/aggregate.js << 'SCRIPT'
+          const fs = require('fs');
+
+          function parseResult(json) {
+            try {
+              // Handle markdown code blocks
+              const match = json.match(/```json\n([\s\S]*?)\n```/) ||
+                           json.match(/```\n([\s\S]*?)\n```/);
+              const parsed = JSON.parse(match ? match[1] : json);
+              return parsed;
+            } catch (e) {
+              return { pass: 'unknown', findings: [], summary: 'Parse error' };
+            }
+          }
+
+          const fast = parseResult(process.env.FAST_RESULT || '{}');
+          const deep = parseResult(process.env.DEEP_RESULT || '{}');
+          const indep = parseResult(process.env.INDEP_RESULT || '{}');
+
+          const allFindings = [
+            ...(fast.findings || []),
+            ...(deep.findings || []),
+            ...(indep.findings || [])
+          ];
+
+          const errors = allFindings.filter(f => f.severity === 'error');
+          const warnings = allFindings.filter(f => f.severity === 'warning');
+          const suggestions = allFindings.filter(f => f.severity === 'suggestion');
+
+          const formatFinding = (f) => {
+            let line = `- **${f.category}**: ${f.message}`;
+            if (f.file) line += ` (\`${f.file}${f.line ? ':' + f.line : ''}\`)`;
+            if (f.suggestion) line += `\n  > ${f.suggestion}`;
+            return line;
+          };
+
+          const iteration = parseInt(process.env.ITERATION || '0') + 1;
+
+          let comment = `## Review Results (Iteration ${iteration})
+
+          ### Pass Summaries
+          - **Fast Review**: ${fast.summary || 'No issues'}
+          - **Deep Review**: ${deep.summary || 'No issues'}
+          - **Independent**: ${indep.summary || 'No issues'}
+
+          ---
+
+          ### Findings
+          | Type | Count |
+          |------|-------|
+          | Errors | ${errors.length} |
+          | Warnings | ${warnings.length} |
+          | Suggestions | ${suggestions.length} |
+          `;
+
+          if (errors.length > 0) {
+            comment += `\n\n### Errors (Must Fix)\n${errors.map(formatFinding).join('\n')}`;
+          }
+          if (warnings.length > 0) {
+            comment += `\n\n### Warnings (Should Fix)\n${warnings.map(formatFinding).join('\n')}`;
+          }
+          if (suggestions.length > 0) {
+            comment += `\n\n### Suggestions\n${suggestions.map(formatFinding).join('\n')}`;
+          }
+
+          // Determine next action
+          const hasErrors = errors.length > 0;
+          const tooManyWarnings = warnings.length >= 3;
+
+          if (hasErrors || tooManyWarnings) {
+            comment += `\n\n---\n\n**Action Required**: ${hasErrors ? 'Errors must be fixed.' : 'Too many warnings.'} Auto-fix will attempt to resolve these issues.`;
+          } else {
+            comment += `\n\n---\n\n**Ready to Merge**: No blocking issues found.`;
+          }
+
+          // Output
+          console.log(comment);
+          fs.writeFileSync('/tmp/review_comment.md', comment);
+          fs.writeFileSync('/tmp/findings.json', JSON.stringify({ errors, warnings, suggestions }));
+
+          // Set outputs
+          const output = `has_errors=${hasErrors || tooManyWarnings}
+          error_count=${errors.length}
+          warning_count=${warnings.length}
+          new_iteration=${iteration}`;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, output);
+          SCRIPT
+
+          node /tmp/aggregate.js
+
+          # Post comment
+          gh pr comment $PR_NUMBER --body "$(cat /tmp/review_comment.md)"
+
+          # Update iteration label
+          NEW_ITER=$(grep 'new_iteration=' $GITHUB_OUTPUT | cut -d= -f2)
+          gh pr edit $PR_NUMBER --remove-label "review-iteration-$ITERATION" 2>/dev/null || true
+          gh pr edit $PR_NUMBER --add-label "review-iteration-$NEW_ITER"
+
+          # Save findings for auto-fix
+          mkdir -p .task
+          cp /tmp/findings.json .task/review-findings.json
+
+      - name: Upload findings
+        if: steps.state.outputs.max_reached != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-findings
+          path: .task/review-findings.json
+          retention-days: 1
+
+  # Auto-fix job - triggered if review found errors
+  auto-fix:
+    needs: [should-review, review]
+    if: needs.review.outputs.has_errors == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download findings
+        uses: actions/download-artifact@v4
+        with:
+          name: review-findings
+          path: .task
+
+      - name: Auto-fix with Claude
+        id: fix
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-20250514
+          allowed_tools: "Edit,Read,Bash,Glob,Grep"
+          prompt: |
+            You are Claude Code fixing review findings in this PR.
+
+            Read the review findings from .task/review-findings.json
+
+            For each ERROR (and high-priority warnings):
+            1. Read the affected file
+            2. Understand the issue
+            3. Make the minimal fix required
+            4. Verify your fix addresses the finding
+
+            Rules:
+            - Make MINIMAL changes - only fix what's flagged
+            - Maintain existing code style
+            - Don't introduce new issues
+            - Don't refactor unrelated code
+
+            After fixing, provide a summary of what you changed.
+          timeout_minutes: 15
+
+      - name: Commit fixes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.should-review.outputs.pr_number }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet; then
+            echo "No changes to commit"
+            gh pr comment $PR_NUMBER --body "Auto-fix found no changes to make. Manual review required."
+          else
+            git add -A
+            git commit -m "fix: auto-fix review findings (iteration ${{ needs.review.outputs.iteration }})"
+            git push
+
+            gh pr comment $PR_NUMBER --body "Auto-fix applied. Review will re-run automatically."
+          fi
+
+  # Mark ready when all checks pass
+  mark-ready:
+    needs: [should-review, review]
+    if: needs.review.outputs.has_errors == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Mark PR ready to merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.should-review.outputs.pr_number }}
+        run: |
+          # Remove any blocking labels
+          gh pr edit $PR_NUMBER --remove-label "needs-review" 2>/dev/null || true
+          gh pr edit $PR_NUMBER --remove-label "auto-fixing" 2>/dev/null || true
+          gh pr edit $PR_NUMBER --add-label "ready-to-merge"
+
+          gh pr comment $PR_NUMBER --body "## Ready to Merge
+
+          All review passes completed successfully. This PR is safe to merge.
+
+          - Fast review: passed
+          - Deep review: passed
+          - Independent review: passed
+
+          You can merge manually or enable auto-merge."

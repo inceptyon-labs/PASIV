@@ -2,96 +2,94 @@
 
 set -e
 
-echo "🚀 Installing GitHub Automation System..."
-echo ""
-
-# Check if bun is installed
-if ! command -v bun &> /dev/null; then
-    echo "⚠️  Bun is not installed."
-    echo "Installing Bun..."
-    curl -fsSL https://bun.sh/install | bash
-
-    # Source bun
-    export BUN_INSTALL="$HOME/.bun"
-    export PATH="$BUN_INSTALL/bin:$PATH"
-fi
-
-# Install dependencies
-echo "📦 Installing dependencies..."
-cd "$(dirname "$0")"  # Navigate to scripts directory
-bun install
-
-echo ""
-echo "✅ Dependencies installed successfully!"
+echo "GitHub Automation Setup"
+echo "======================="
 echo ""
 
 # Check if gh CLI is installed
 if ! command -v gh &> /dev/null; then
-    echo "⚠️  GitHub CLI (gh) not found."
+    echo "GitHub CLI (gh) not found."
     echo ""
-    echo "Please install GitHub CLI from: https://cli.github.com/"
-    echo "You'll need it to run workflows and create labels."
+    echo "Please install it from: https://cli.github.com/"
+    echo "Then run this script again."
     echo ""
     exit 1
 fi
 
-# Check if config file exists
-if [ ! -f "../automation.config.json" ]; then
-    echo "⚠️  Config file not found!"
+# Check if authenticated
+if ! gh auth status &> /dev/null; then
+    echo "Not authenticated with GitHub CLI."
     echo ""
-    echo "Creating .github/automation.config.json from template..."
+    echo "Run: gh auth login"
+    echo "Then run this script again."
+    echo ""
+    exit 1
+fi
 
-    cat > "../automation.config.json" <<'EOF'
-{
-  "project": {
-    "name": "My Project",
-    "owner": "your-github-username",
-    "repo": "your-repo-name",
-    "projectNumber": 1
-  },
-  "labels": {
-    "areas": ["frontend", "backend", "infrastructure", "database", "documentation"],
-    "priorities": ["high", "medium", "low"],
-    "sizes": ["S", "M", "L"]
-  },
-  "review": {
-    "maxAutoFixIterations": 3,
-    "fastReviewModel": "claude-sonnet-4.5",
-    "deepReviewModel": "claude-opus-4.5"
-  },
-  "backlog": {
-    "defaultSpecPath": "spec.md",
-    "defaultPlanPath": "plan.md"
-  }
-}
-EOF
+echo "GitHub CLI: OK"
+echo ""
 
-    echo "✅ Config file created!"
-    echo "📝 Please edit .github/automation.config.json with your project details"
+# Get repo info
+REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner' 2>/dev/null || echo "")
+
+if [ -z "$REPO" ]; then
+    echo "Not in a GitHub repository."
+    echo "Make sure you're in a git repo linked to GitHub."
+    exit 1
+fi
+
+echo "Repository: $REPO"
+echo ""
+
+# Create labels
+echo "Creating labels..."
+bash "$(dirname "$0")/create-labels.sh"
+echo ""
+
+# Check for Claude GitHub App
+echo "Checking GitHub App setup..."
+echo ""
+echo "For PR reviews to work, you need the Claude GitHub App installed:"
+echo "  https://github.com/apps/claude"
+echo ""
+
+# Check for ANTHROPIC_API_KEY secret (needed for GitHub Actions)
+echo "Checking repository secrets..."
+HAS_SECRET=$(gh secret list 2>/dev/null | grep -c "ANTHROPIC_API_KEY" || echo "0")
+
+if [ "$HAS_SECRET" -eq "0" ]; then
+    echo ""
+    echo "ANTHROPIC_API_KEY secret not found."
+    echo ""
+    echo "For GitHub Actions workflows to use Claude, you need to add your API key:"
+    echo "  gh secret set ANTHROPIC_API_KEY"
+    echo ""
+    echo "Note: This is separate from your Claude Code subscription."
+    echo "The API key is only used by GitHub Actions workflows."
     echo ""
 fi
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "✅ Installation Complete!"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+# Summary
 echo ""
-echo "📋 Next steps:"
+echo "Setup Complete!"
+echo "==============="
 echo ""
-echo "1. Edit .github/automation.config.json with your project details"
-echo "   - Set your GitHub username/repo name"
-echo "   - Update project number after creating GitHub Project"
+echo "What was configured:"
+echo "  - GitHub labels for issues"
 echo ""
-echo "2. Install Claude GitHub App for PR reviews:"
-echo "   https://github.com/apps/claude-code"
+echo "What you can do now:"
 echo ""
-echo "3. Create GitHub labels:"
-echo "   bash .github/scripts/create-labels.sh"
+echo "  LOCAL (uses your Claude Code subscription - FREE):"
+echo "    claude 'Read spec.md and create GitHub issues'"
+echo "    claude 'Create an epic for user authentication'"
 echo ""
-echo "4. Create GitHub Project (Projects → New Project → Board)"
-echo "   - Then update projectNumber in automation.config.json"
+echo "  GITHUB ACTIONS (requires ANTHROPIC_API_KEY secret):"
+echo "    @claude /start     - Start working on an issue"
+echo "    @claude /review    - Review a PR"
 echo ""
-echo "5. Test the system:"
-echo "   gh workflow run spec-to-backlog.yml"
+echo "  WORKFLOWS:"
+echo "    gh workflow run spec-to-backlog.yml  - Create issues from spec.md"
+echo "    gh workflow run quick-task.yml       - Create single issue/epic"
 echo ""
-echo "📖 For detailed instructions, see .github/SETUP_CHECKLIST.md"
+echo "Documentation: See CLAUDE.md and .github/README.md"
 echo ""
