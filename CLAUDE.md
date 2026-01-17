@@ -60,6 +60,22 @@
 | Size | `size:S` (1-4h), `size:M` (4-8h), `size:L` (8+h) |
 | Area | `area:frontend`, `area:backend`, `area:infra`, `area:db` |
 
+## GitHub Projects Integration
+
+Issues are automatically added to a GitHub Project board.
+
+**Auto-created project**: Named after your repository (created on first `/issue`, `/epic`, or `/backlog`)
+
+**Auto-prioritization**: `/backlog` outputs suggested implementation order based on:
+1. Layer dependencies: `area:db` → `area:infra` → `area:backend` → `area:frontend`
+2. Epic relationships: Parents before children
+3. Explicit dependencies: `Depends on #N` in issue body
+
+**Required token scope**:
+```bash
+gh auth refresh -s project
+```
+
 ## Plugin Structure
 
 ```
