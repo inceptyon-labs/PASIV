@@ -1,0 +1,236 @@
+name: Quick Task Creator
+
+# Lightweight way to create new epic/issue from short text
+# Supports both workflow_dispatch and issue comments
+
+on:
+  workflow_dispatch:
+    inputs:
+      type:
+        description: 'Type of item to create'
+        required: true
+        type: choice
+        options:
+          - issue
+          - epic
+        default: 'issue'
+      title:
+        description: 'Title'
+        required: true
+      description:
+        description: 'Brief description'
+        required: true
+      priority:
+        description: 'Priority'
+        required: false
+        type: choice
+        options:
+          - high
+          - medium
+          - low
+        default: 'medium'
+      area:
+        description: 'Area (for issues)'
+        required: false
+        type: choice
+        options:
+          - frontend
+          - backend
+          - infrastructure
+          - database
+          - documentation
+        default: 'backend'
+      size:
+        description: 'Size estimate (for issues)'
+        required: false
+        type: choice
+        options:
+          - S
+          - M
+          - L
+        default: 'M'
+      parent_epic:
+        description: 'Parent epic number (for issues)'
+        required: false
+      project_number:
+        description: 'GitHub Project number'
+        required: false
+        default: '1'
+
+  issue_comment:
+    types: [created]
+
+jobs:
+  # Check if triggered by comment like "@claude /quick-task: Add user auth"
+  parse-comment:
+    if: github.event_name == 'issue_comment'
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.parse.outputs.should_run }}
+      request: ${{ steps.parse.outputs.request }}
+    steps:
+      - name: Parse comment
+        id: parse
+        env:
+          BODY: ${{ github.event.comment.body }}
+        run: |
+          if echo "$BODY" | grep -qiE "@claude\s+/(quick-task|new-task|add)"; then
+            # Extract the request after the command
+            REQUEST=$(echo "$BODY" | sed -E 's/@claude\s+\/(quick-task|new-task|add)[:\s]*//')
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "request=$REQUEST" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Create from comment using Claude to parse intent
+  create-from-comment:
+    needs: parse-comment
+    if: needs.parse-comment.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Parse and Create
+        id: create
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-20250514
+          prompt: |
+            Parse this request and create a GitHub issue or epic.
+
+            Request: "${{ needs.parse-comment.outputs.request }}"
+
+            Determine:
+            1. Is this an epic (large feature) or a task (specific work item)?
+            2. What's a good title?
+            3. What's the priority? (high/medium/low)
+            4. For tasks: what area? (frontend/backend/infrastructure/database/documentation)
+            5. For tasks: what size? S (1-4h), M (4-8h), L (8+h)
+
+            Then create the issue using gh CLI.
+
+            For an EPIC:
+            ```bash
+            gh issue create \
+              --title "[EPIC] Title Here" \
+              --body "Description...
+
+            ## Goals
+            - Goal 1
+            - Goal 2
+
+            ## Scope
+            **In Scope:** ...
+            **Out of Scope:** ..." \
+              --label "epic,priority:PRIORITY"
+            ```
+
+            For an ISSUE:
+            ```bash
+            gh issue create \
+              --title "Title Here" \
+              --body "Description...
+
+            ## Acceptance Criteria
+            - [ ] Criterion 1
+            - [ ] Criterion 2" \
+              --label "enhancement,size:SIZE,priority:PRIORITY,area:AREA"
+            ```
+
+            After creating, respond with the issue URL.
+          timeout_minutes: 5
+          allowed_tools: "Bash"
+
+      - name: Post result
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RESULT: ${{ steps.create.outputs.response }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "## Task Created
+
+          $RESULT"
+
+  # Create from workflow_dispatch
+  create-from-dispatch:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Create Epic
+        if: github.event.inputs.type == 'epic'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE: ${{ github.event.inputs.title }}
+          DESC: ${{ github.event.inputs.description }}
+          PRIORITY: ${{ github.event.inputs.priority }}
+          PROJECT: ${{ github.event.inputs.project_number }}
+        run: |
+          BODY="$DESC
+
+          ## Goals
+          - (Add goals here)
+
+          ## Scope
+          **In Scope:**
+          - (Define scope)
+
+          **Out of Scope:**
+          - (Define exclusions)
+
+          ---
+          _Created via quick-task workflow_"
+
+          ISSUE_URL=$(gh issue create \
+            --title "[EPIC] $TITLE" \
+            --body "$BODY" \
+            --label "epic,priority:$PRIORITY")
+
+          ISSUE_NUM=$(echo "$ISSUE_URL" | grep -oP '\d+$')
+          gh issue edit $ISSUE_NUM --add-project "$PROJECT" || true
+
+          echo "Created epic: $ISSUE_URL"
+
+      - name: Create Issue
+        if: github.event.inputs.type == 'issue'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE: ${{ github.event.inputs.title }}
+          DESC: ${{ github.event.inputs.description }}
+          PRIORITY: ${{ github.event.inputs.priority }}
+          AREA: ${{ github.event.inputs.area }}
+          SIZE: ${{ github.event.inputs.size }}
+          EPIC: ${{ github.event.inputs.parent_epic }}
+          PROJECT: ${{ github.event.inputs.project_number }}
+        run: |
+          EPIC_REF=""
+          if [[ -n "$EPIC" ]]; then
+            EPIC_REF="**Epic:** #$EPIC"
+          fi
+
+          BODY="$DESC
+
+          ## Acceptance Criteria
+          - [ ] (Add acceptance criteria)
+
+          ---
+          $EPIC_REF
+          **Size:** $SIZE
+
+          _Created via quick-task workflow_"
+
+          ISSUE_URL=$(gh issue create \
+            --title "$TITLE" \
+            --body "$BODY" \
+            --label "enhancement,size:$SIZE,priority:$PRIORITY,area:$AREA")
+
+          ISSUE_NUM=$(echo "$ISSUE_URL" | grep -oP '\d+$')
+          gh issue edit $ISSUE_NUM --add-project "$PROJECT" || true
+
+          echo "Created issue: $ISSUE_URL"

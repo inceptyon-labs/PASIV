@@ -1,78 +1,123 @@
-# GitHub Automation Template
+# GitHub Automation Plugin
 
-**Free GitHub automation using Claude Code - no API costs**
+Solo dev workflow: specs → issues → implement → 3-model review → merge.
 
-## Use This Template
-
-### Via GitHub (Recommended)
-
-1. Push this to GitHub
-2. Mark as template repository (Settings → Template repository)
-3. Click "Use this template" for new projects
-
-### Via CLI
+## Install
 
 ```bash
-# Create new project from this
-cp -r github-automation my-new-project
-cd my-new-project
-rm -rf .git
-git init
+# Add marketplace
+/plugin marketplace add your-username/github-automation
+
+# Install plugin
+/plugin install github-automation
 ```
 
-## What It Does
+Or install directly from GitHub:
+```bash
+/plugin install github:your-username/github-automation
+```
 
-- ✅ Organized issue templates (Epic & Task)
-- ✅ GitHub labels (size, priority, area)
-- ✅ Claude Code integration for spec parsing
-- ✅ Claude GitHub App for PR reviews
-- ✅ $0/month cost
+## The Pipeline
 
-## Quick Start (2 min)
+```
+Issue → Plan → Implement → Review (Sonnet→Opus→Codex) → Merge
+```
 
-### 1. Copy to your project
+## Commands
+
+| Command | Example |
+|---------|---------|
+| `/issue` | `/issue add logout button` |
+| `/epic` | `/epic user notifications` |
+| `/start` | `/start 42` or `/start next` |
+| `/review` | `/review` (current branch) |
+| `/backlog` | `/backlog` (parse spec.md) |
+
+## Full Flow
+
+```
+/start 42
+```
+
+1. Read issue #42
+2. Create plan → wait for approval
+3. Implement on feature branch
+4. Review: Sonnet → Opus → Codex
+5. Fix errors (max 3 iterations)
+6. Merge to main & close issue
+
+## Review Pipeline
+
+| Pass | Model | Focus |
+|------|-------|-------|
+| 1 | Sonnet | Bugs, security basics, dead code |
+| 2 | Opus | Architecture, edge cases, performance |
+| 3 | Codex | Fresh eyes, what others missed |
+
+## Requirements
+
+- **GitHub CLI** (`gh`) - https://cli.github.com
+- **Codex MCP** - for Pass 3 reviews (optional)
+
+## Setup for Your Repo
+
+After installing the plugin, run in your project:
 
 ```bash
-cp -r .github /path/to/your-project/
-cd /path/to/your-project
+# Create labels
+bash $(claude plugin path github-automation)/.github/scripts/create-labels.sh
 ```
 
-### 2. Create labels
+Or manually copy the GitHub templates:
+```bash
+cp -r $(claude plugin path github-automation)/.github/ISSUE_TEMPLATE .github/
+```
+
+## Files
+
+```
+.claude-plugin/
+├── plugin.json          # Plugin manifest
+└── marketplace.json     # Marketplace definition
+
+skills/                  # Slash commands
+├── issue/SKILL.md       # /issue
+├── epic/SKILL.md        # /epic
+├── start/SKILL.md       # /start
+├── review/SKILL.md      # /review (3-model)
+├── codex-review/SKILL.md # /codex-review
+└── backlog/SKILL.md     # /backlog
+
+.github/
+├── scripts/             # Setup scripts
+├── workflows/           # GitHub Actions (optional)
+└── ISSUE_TEMPLATE/      # Issue templates
+```
+
+## Labels
+
+| Category | Labels |
+|----------|--------|
+| Type | `epic`, `enhancement`, `bug` |
+| Priority | `priority:high`, `priority:medium`, `priority:low` |
+| Size | `size:S`, `size:M`, `size:L` |
+| Area | `area:frontend`, `area:backend`, `area:infra`, `area:db` |
+
+## Publishing Your Own Marketplace
+
+1. Push to GitHub
+2. Others install with:
+   ```bash
+   /plugin marketplace add your-username/github-automation
+   /plugin install github-automation
+   ```
+
+## GitHub Actions (Optional)
+
+For cloud automation, add API key to your repo:
 
 ```bash
-bash .github/scripts/create-labels.sh
+gh secret set ANTHROPIC_API_KEY
 ```
 
-### 3. Install Claude GitHub App
-
-https://github.com/apps/claude-code
-
-Done!
-
-## Usage
-
-### Create Issues from Spec
-
-In Claude Code:
-```
-Read my spec.md and create GitHub issues for epics and tasks
-```
-
-Claude reads it and creates all issues automatically!
-
-### Review PRs
-
-Comment on PR:
-```
-@claude review this PR
-```
-
-### Work Normally
-
-Use Claude Code as usual for implementation.
-
----
-
-**That's it. Simple. Free. Effective.**
-
-See `.github/README.md` for details.
+Then `@claude /start` works on GitHub.com.

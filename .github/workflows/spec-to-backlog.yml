@@ -1,0 +1,321 @@
+name: Spec to Backlog
+
+on:
+  workflow_dispatch:
+    inputs:
+      spec_path:
+        description: 'Path to spec file'
+        required: false
+        default: 'spec.md'
+      plan_path:
+        description: 'Path to plan file (optional)'
+        required: false
+        default: ''
+      project_number:
+        description: 'GitHub Project number'
+        required: false
+        default: '1'
+      dry_run:
+        description: 'Dry run (no actual issue creation)'
+        required: false
+        type: boolean
+        default: false
+  issue_comment:
+    types: [created]
+
+jobs:
+  # Check if triggered by comment
+  check-trigger:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      spec_path: ${{ steps.check.outputs.spec_path }}
+      plan_path: ${{ steps.check.outputs.plan_path }}
+    steps:
+      - name: Check trigger
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "spec_path=${{ github.event.inputs.spec_path }}" >> $GITHUB_OUTPUT
+            echo "plan_path=${{ github.event.inputs.plan_path }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "issue_comment" ]]; then
+            BODY="${{ github.event.comment.body }}"
+            if echo "$BODY" | grep -qiE "@claude\s+/?(create-backlog|parse-spec|bootstrap)"; then
+              echo "should_run=true" >> $GITHUB_OUTPUT
+              # Extract spec path from comment if provided
+              SPEC=$(echo "$BODY" | grep -oP '(?<=spec=|spec:)\S+' || echo "spec.md")
+              echo "spec_path=$SPEC" >> $GITHUB_OUTPUT
+              echo "plan_path=" >> $GITHUB_OUTPUT
+            else
+              echo "should_run=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  # Parse spec and create backlog
+  create-backlog:
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check spec exists
+        id: check-spec
+        run: |
+          SPEC_PATH="${{ needs.check-trigger.outputs.spec_path || 'spec.md' }}"
+          if [[ ! -f "$SPEC_PATH" ]]; then
+            echo "Spec file not found: $SPEC_PATH"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "spec_path=$SPEC_PATH" >> $GITHUB_OUTPUT
+            cat "$SPEC_PATH" > /tmp/spec_content.md
+          fi
+
+          PLAN_PATH="${{ needs.check-trigger.outputs.plan_path }}"
+          if [[ -n "$PLAN_PATH" && -f "$PLAN_PATH" ]]; then
+            echo "plan_exists=true" >> $GITHUB_OUTPUT
+            cat "$PLAN_PATH" > /tmp/plan_content.md
+          else
+            echo "plan_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Parse Spec with Claude
+        if: steps.check-spec.outputs.exists == 'true'
+        id: parse
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-20250514
+          prompt: |
+            You are a project analyst. Parse the specification and create a structured backlog.
+
+            ## Specification Document
+            ```markdown
+            $(cat /tmp/spec_content.md)
+            ```
+
+            ${{ steps.check-spec.outputs.plan_exists == 'true' && format('## Plan Document\n```markdown\n{0}\n```', '$(cat /tmp/plan_content.md)') || '' }}
+
+            Your task:
+            1. Identify high-level EPICS (major features/milestones)
+            2. Break each epic into small, reviewable ISSUES (tasks)
+            3. Each issue should be:
+               - Completable in 1-8 hours (prefer S/M sizes)
+               - Have clear acceptance criteria
+               - Properly sized and prioritized
+
+            Return a JSON object:
+            ```json
+            {
+              "epics": [
+                {
+                  "title": "Epic title",
+                  "description": "What this epic achieves",
+                  "goals": ["Goal 1", "Goal 2"],
+                  "scope": {
+                    "inScope": ["Item 1"],
+                    "outOfScope": ["Item 1"]
+                  },
+                  "priority": "high|medium|low",
+                  "issues": [
+                    {
+                      "title": "Task title",
+                      "description": "What to do",
+                      "acceptanceCriteria": ["AC 1", "AC 2"],
+                      "size": "S|M|L",
+                      "priority": "high|medium|low",
+                      "area": "frontend|backend|infrastructure|database|documentation",
+                      "dependencies": []
+                    }
+                  ]
+                }
+              ],
+              "gaps": ["Unclear requirement 1"],
+              "questions": ["Question for author 1"]
+            }
+            ```
+
+            Rules:
+            - Prefer multiple small epics over one giant epic
+            - Each issue should take 1-8 hours (most S or M)
+            - Be specific with acceptance criteria
+            - Flag anything unclear as a gap or question
+          timeout_minutes: 10
+
+      - name: Create Issues
+        if: steps.check-spec.outputs.exists == 'true' && github.event.inputs.dry_run != 'true'
+        id: create
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BACKLOG_JSON: ${{ steps.parse.outputs.response }}
+          PROJECT_NUMBER: ${{ github.event.inputs.project_number || '1' }}
+        run: |
+          # Parse the backlog JSON
+          cat > /tmp/create_issues.js << 'SCRIPT'
+          const { execSync } = require('child_process');
+          const fs = require('fs');
+
+          function run(cmd) {
+            console.log(`> ${cmd}`);
+            return execSync(cmd, { encoding: 'utf8' }).trim();
+          }
+
+          function parseJSON(text) {
+            const match = text.match(/```json\n([\s\S]*?)\n```/) ||
+                         text.match(/```\n([\s\S]*?)\n```/);
+            return JSON.parse(match ? match[1] : text);
+          }
+
+          const backlog = parseJSON(process.env.BACKLOG_JSON);
+          const projectNumber = process.env.PROJECT_NUMBER || '1';
+          const owner = process.env.GITHUB_REPOSITORY_OWNER;
+          const repo = process.env.GITHUB_REPOSITORY.split('/')[1];
+
+          const createdItems = [];
+          const issueMap = new Map(); // title -> number for dependencies
+
+          // Create epics first
+          for (const epic of backlog.epics) {
+            console.log(`\nCreating epic: ${epic.title}`);
+
+            const body = `${epic.description}
+
+          ## Goals
+          ${epic.goals.map(g => `- ${g}`).join('\n')}
+
+          ## Scope
+
+          **In Scope:**
+          ${epic.scope.inScope.map(i => `- ${i}`).join('\n')}
+
+          **Out of Scope:**
+          ${epic.scope.outOfScope.map(i => `- ${i}`).join('\n')}
+
+          ---
+          _Generated from spec.md_`;
+
+            const epicTitle = `[EPIC] ${epic.title}`;
+            const labels = `epic,priority:${epic.priority}`;
+
+            try {
+              const result = run(`gh issue create --title "${epicTitle.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}" --label "${labels}"`);
+              const epicNumber = result.match(/#(\d+)/)?.[1] || result.match(/\/(\d+)$/)?.[1];
+
+              if (epicNumber) {
+                console.log(`  Created epic #${epicNumber}`);
+                createdItems.push({ type: 'epic', number: epicNumber, title: epic.title, children: [] });
+                issueMap.set(epic.title, epicNumber);
+
+                // Add to project
+                run(`gh issue edit ${epicNumber} --add-project "${projectNumber}"`) || true;
+              }
+            } catch (e) {
+              console.error(`  Failed to create epic: ${e.message}`);
+            }
+          }
+
+          // Create child issues
+          for (const epic of backlog.epics) {
+            const epicNumber = issueMap.get(epic.title);
+            const epicItem = createdItems.find(i => i.number === epicNumber);
+
+            for (const issue of epic.issues) {
+              console.log(`  Creating issue: ${issue.title}`);
+
+              const body = `${issue.description}
+
+          ## Acceptance Criteria
+          ${issue.acceptanceCriteria.map(ac => `- [ ] ${ac}`).join('\n')}
+
+          ---
+          **Epic:** #${epicNumber}
+          **Size:** ${issue.size}
+          ${issue.dependencies?.length ? `**Dependencies:** ${issue.dependencies.join(', ')}` : ''}
+
+          _Generated from spec.md_`;
+
+              const labels = `enhancement,size:${issue.size},priority:${issue.priority},area:${issue.area}`;
+
+              try {
+                const result = run(`gh issue create --title "${issue.title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}" --label "${labels}"`);
+                const issueNumber = result.match(/#(\d+)/)?.[1] || result.match(/\/(\d+)$/)?.[1];
+
+                if (issueNumber) {
+                  console.log(`    Created #${issueNumber}`);
+                  issueMap.set(issue.title, issueNumber);
+                  if (epicItem) epicItem.children.push({ number: issueNumber, title: issue.title });
+
+                  // Add to project
+                  run(`gh issue edit ${issueNumber} --add-project "${projectNumber}"`) || true;
+                }
+              } catch (e) {
+                console.error(`    Failed: ${e.message}`);
+              }
+            }
+          }
+
+          // Generate summary
+          let summary = `## Backlog Created
+
+          ### Epics and Issues
+
+          `;
+
+          for (const item of createdItems.filter(i => i.type === 'epic')) {
+            summary += `#### #${item.number}: ${item.title}\n`;
+            for (const child of item.children) {
+              summary += `- #${child.number}: ${child.title}\n`;
+            }
+            summary += '\n';
+          }
+
+          if (backlog.gaps?.length) {
+            summary += `### Spec Gaps Detected\n${backlog.gaps.map(g => `- ${g}`).join('\n')}\n\n`;
+          }
+
+          if (backlog.questions?.length) {
+            summary += `### Questions for Spec Author\n${backlog.questions.map(q => `- ${q}`).join('\n')}\n\n`;
+          }
+
+          summary += `\n---\n_View project: https://github.com/${owner}/${repo}/projects/${projectNumber}_`;
+
+          fs.writeFileSync('/tmp/summary.md', summary);
+          console.log('\n' + summary);
+          SCRIPT
+
+          node /tmp/create_issues.js
+
+      - name: Post Summary
+        if: steps.check-spec.outputs.exists == 'true' && github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ -f /tmp/summary.md ]]; then
+            gh issue comment ${{ github.event.issue.number }} --body "$(cat /tmp/summary.md)"
+          fi
+
+      - name: Post Summary (workflow dispatch)
+        if: steps.check-spec.outputs.exists == 'true' && github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ -f /tmp/summary.md ]]; then
+            echo "## Backlog Creation Summary"
+            cat /tmp/summary.md
+          fi
+
+      - name: Dry Run Output
+        if: github.event.inputs.dry_run == 'true'
+        run: |
+          echo "## Dry Run - No issues created"
+          echo ""
+          echo "### Parsed Backlog:"
+          echo "${{ steps.parse.outputs.response }}"

@@ -1,0 +1,20 @@
+{
+  "name": "github-automation",
+  "description": "Solo dev workflow: specs to issues, 3-model code review (Sonnet→Opus→Codex), branch-based development",
+  "version": "1.0.0",
+  "author": {
+    "name": "Jason"
+  },
+  "repository": "https://github.com/your-username/github-automation",
+  "license": "MIT",
+  "keywords": [
+    "github",
+    "automation",
+    "code-review",
+    "issues",
+    "workflow",
+    "solo-dev"
+  ],
+  "category": "productivity",
+  "skills": ["./skills"]
+}

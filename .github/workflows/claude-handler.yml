@@ -1,29 +1,283 @@
-name: Claude Mention Handler
+name: Claude Issue Handler
 
 on:
   issue_comment:
     types: [created]
+  issues:
+    types: [labeled]
 
 jobs:
+  # Handle @claude commands on issues
   handle-command:
-    if: contains(github.event.comment.body, '@claude /start')
     runs-on: ubuntu-latest
     permissions:
+      contents: write
       issues: write
+      pull-requests: write
 
     steps:
-      - name: Respond to command
+      - name: Parse Command
+        id: parse
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          EVENT_ACTION: ${{ github.event.action }}
+          LABELS: ${{ toJson(github.event.issue.labels.*.name) }}
+        run: |
+          # Default values
+          echo "command=none" >> $GITHUB_OUTPUT
+          echo "should_run=false" >> $GITHUB_OUTPUT
+
+          # Check for @claude mentions in comments
+          if [[ -n "$COMMENT_BODY" ]]; then
+            if echo "$COMMENT_BODY" | grep -qiE "@claude\s+/start"; then
+              echo "command=start" >> $GITHUB_OUTPUT
+              echo "should_run=true" >> $GITHUB_OUTPUT
+            elif echo "$COMMENT_BODY" | grep -qiE "@claude\s+/plan"; then
+              echo "command=plan" >> $GITHUB_OUTPUT
+              echo "should_run=true" >> $GITHUB_OUTPUT
+            elif echo "$COMMENT_BODY" | grep -qiE "@claude\s+/(approve|lgtm)"; then
+              echo "command=approve" >> $GITHUB_OUTPUT
+              echo "should_run=true" >> $GITHUB_OUTPUT
+            elif echo "$COMMENT_BODY" | grep -qiE "@claude\s+/implement"; then
+              echo "command=implement" >> $GITHUB_OUTPUT
+              echo "should_run=true" >> $GITHUB_OUTPUT
+            elif echo "$COMMENT_BODY" | grep -qiE "@claude\s+/status"; then
+              echo "command=status" >> $GITHUB_OUTPUT
+              echo "should_run=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Checkout
+        if: steps.parse.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Get Issue Details
+        if: steps.parse.outputs.should_run == 'true'
+        id: issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          gh issue comment $ISSUE_NUMBER --body "👋 Ready to help!
+          gh issue view $ISSUE_NUMBER --json title,body,labels > /tmp/issue.json
+          echo "title=$(jq -r '.title' /tmp/issue.json)" >> $GITHUB_OUTPUT
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          jq -r '.body' /tmp/issue.json >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-          **Next steps:**
-          1. Open Claude Code in your terminal
-          2. Ask me to create a plan for this issue
-          3. Review and approve the plan
-          4. I'll help you implement it
-          5. Create a PR when ready
+      # Command: /start - Begin working on an issue
+      - name: Handle Start Command
+        if: steps.parse.outputs.command == 'start'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue edit $ISSUE_NUMBER --add-label "status:planning"
 
-          Let's build this together! 🚀"
+          gh issue comment $ISSUE_NUMBER --body "## Starting Work on This Issue
+
+          I'll create a plan for implementing this. Here's the process:
+
+          1. **Planning** (current) - I'll analyze requirements and create a plan
+          2. **Review** - You review and approve (or request changes)
+          3. **Implement** - I'll write the code
+          4. **PR Review** - Automated multi-pass review
+          5. **Done** - Merge when ready
+
+          ---
+
+          **Next step:** I'm creating a plan now. This will appear as a comment shortly.
+
+          _Or run \`@claude /plan\` to regenerate the plan._"
+
+      # Command: /plan - Create implementation plan
+      - name: Create Plan
+        if: steps.parse.outputs.command == 'start' || steps.parse.outputs.command == 'plan'
+        id: plan
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-20250514
+          allowed_tools: "Read,Glob,Grep"
+          prompt: |
+            You are Claude Code creating an implementation plan for a GitHub issue.
+
+            ## Issue Details
+            **Title:** ${{ steps.issue.outputs.title }}
+
+            **Description:**
+            ${{ steps.issue.outputs.body }}
+
+            ## Your Task
+            Analyze this issue and the codebase to create a detailed implementation plan.
+
+            Explore the codebase to understand:
+            1. Current architecture and patterns
+            2. Files that will need to be modified
+            3. Dependencies and integrations
+            4. Testing approach
+
+            Create a plan that includes:
+            1. **Summary**: What we're building
+            2. **Files to Modify**: List of files with what changes
+            3. **New Files**: Any new files needed
+            4. **Approach**: Step-by-step implementation
+            5. **Risks**: Potential issues or concerns
+            6. **Testing**: How to verify it works
+
+            Format your response as a clear, reviewable plan.
+          timeout_minutes: 10
+
+      - name: Post Plan
+        if: steps.parse.outputs.command == 'start' || steps.parse.outputs.command == 'plan'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PLAN: ${{ steps.plan.outputs.response }}
+        run: |
+          COMMENT="## Implementation Plan
+
+          $PLAN
+
+          ---
+
+          **Actions:**
+          - \`@claude /approve\` - Approve this plan and start implementation
+          - \`@claude /plan\` - Request a new plan
+          - Comment with feedback to refine the plan"
+
+          gh issue comment $ISSUE_NUMBER --body "$COMMENT"
+          gh issue edit $ISSUE_NUMBER --add-label "status:plan-review"
+          gh issue edit $ISSUE_NUMBER --remove-label "status:planning" 2>/dev/null || true
+
+      # Command: /approve - Approve plan and start implementation
+      - name: Handle Approve Command
+        if: steps.parse.outputs.command == 'approve'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue edit $ISSUE_NUMBER --add-label "status:implementing"
+          gh issue edit $ISSUE_NUMBER --remove-label "status:plan-review" 2>/dev/null || true
+
+          gh issue comment $ISSUE_NUMBER --body "## Plan Approved
+
+          Starting implementation now. I'll:
+          1. Create a feature branch
+          2. Implement the changes
+          3. Open a PR linked to this issue
+
+          You'll be notified when the PR is ready for review."
+
+      - name: Implement Changes
+        if: steps.parse.outputs.command == 'approve' || steps.parse.outputs.command == 'implement'
+        id: implement
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-20250514
+          allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
+          prompt: |
+            You are Claude Code implementing a GitHub issue.
+
+            ## Issue Details
+            **Title:** ${{ steps.issue.outputs.title }}
+            **Issue Number:** ${{ github.event.issue.number }}
+
+            **Description:**
+            ${{ steps.issue.outputs.body }}
+
+            ## Your Task
+            1. Create a feature branch: `feature/issue-${{ github.event.issue.number }}`
+            2. Implement the changes described in the issue
+            3. Follow existing code patterns and style
+            4. Write tests if applicable
+            5. Commit with a clear message referencing the issue
+
+            Use git commands via Bash:
+            - `git checkout -b feature/issue-${{ github.event.issue.number }}`
+            - Make your changes using Edit/Write
+            - `git add -A && git commit -m "feat: <description> (#${{ github.event.issue.number }})"`
+            - `git push -u origin feature/issue-${{ github.event.issue.number }}`
+
+            After implementing, summarize what you did.
+          timeout_minutes: 20
+
+      - name: Create PR
+        if: steps.parse.outputs.command == 'approve' || steps.parse.outputs.command == 'implement'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ steps.issue.outputs.title }}
+          IMPLEMENTATION: ${{ steps.implement.outputs.response }}
+        run: |
+          BRANCH="feature/issue-$ISSUE_NUMBER"
+
+          # Check if branch exists and has commits
+          if git show-ref --verify --quiet refs/heads/$BRANCH; then
+            # Create PR
+            PR_BODY="## Summary
+          Implements #$ISSUE_NUMBER
+
+          ## Changes
+          $IMPLEMENTATION
+
+          ## Test Plan
+          - [ ] Verify acceptance criteria from issue
+          - [ ] Run existing tests
+          - [ ] Manual testing
+
+          ---
+          _Auto-generated by Claude Code_"
+
+            PR_URL=$(gh pr create \
+              --title "$ISSUE_TITLE" \
+              --body "$PR_BODY" \
+              --head "$BRANCH" \
+              --base main \
+              2>&1) || true
+
+            if [[ -n "$PR_URL" ]]; then
+              gh issue comment $ISSUE_NUMBER --body "## PR Created
+
+              Implementation complete! PR ready for review:
+              $PR_URL
+
+              The automated review loop will run on the PR."
+
+              gh issue edit $ISSUE_NUMBER --add-label "status:in-review"
+              gh issue edit $ISSUE_NUMBER --remove-label "status:implementing" 2>/dev/null || true
+            fi
+          else
+            gh issue comment $ISSUE_NUMBER --body "## Implementation Note
+
+            Changes were made but no new branch was created. This might be because:
+            - Changes were minimal
+            - Implementation is still in progress
+
+            Run \`@claude /implement\` to retry."
+          fi
+
+      # Command: /status - Check current status
+      - name: Handle Status Command
+        if: steps.parse.outputs.command == 'status'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          LABELS=$(gh issue view $ISSUE_NUMBER --json labels -q '.labels[].name' | tr '\n' ', ')
+
+          # Check for linked PRs
+          PRS=$(gh pr list --search "linked:issue/$ISSUE_NUMBER" --json number,state,url -q '.[] | "- #\(.number) (\(.state)): \(.url)"' 2>/dev/null || echo "None found")
+
+          gh issue comment $ISSUE_NUMBER --body "## Issue Status
+
+          **Labels:** $LABELS
+
+          **Linked PRs:**
+          $PRS
+
+          **Available Commands:**
+          - \`@claude /start\` - Begin working on this issue
+          - \`@claude /plan\` - Create/recreate implementation plan
+          - \`@claude /approve\` - Approve plan and implement
+          - \`@claude /implement\` - Implement without new plan"
