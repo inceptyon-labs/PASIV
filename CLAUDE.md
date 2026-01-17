@@ -8,8 +8,8 @@
 | `/parent user notifications` | Create parent issue + sub-issues |
 | `/start 42` | Plan → Implement → Review → Merge |
 | `/start next` | Work on highest priority issue |
-| `/review` | Sonnet → Opus → Codex review pipeline |
-| `/review feature-branch` | Review specific branch |
+| `/3pass-review` | Sonnet → Opus → Codex review pipeline |
+| `/3pass-review feature-branch` | Review specific branch |
 | `/codex-review` | Codex-only deep review |
 | `/backlog` | Create issues from spec.md |
 | `/backlog design.md` | Create issues from custom spec |
@@ -80,12 +80,12 @@ gh auth refresh -s project
 
 ```
 skills/
-├── issue/SKILL.md       # /issue
-├── parent/SKILL.md      # /parent
-├── start/SKILL.md       # /start (full flow)
-├── review/SKILL.md      # /review (3-model)
-├── codex-review/SKILL.md # /codex-review
-└── backlog/SKILL.md     # /backlog
+├── issue/SKILL.md         # /issue
+├── parent/SKILL.md        # /parent
+├── start/SKILL.md         # /start (full flow)
+├── 3pass-review/SKILL.md  # /3pass-review (3-model)
+├── codex-review/SKILL.md  # /codex-review
+└── backlog/SKILL.md       # /backlog
 
 .github/
 ├── scripts/
