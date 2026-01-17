@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: Parse a spec file and create GitHub parent issues with sub-issues. Use when user wants to create backlog, parse spec, or bootstrap project.
+description: Parse a spec or document and create GitHub issues from it. Use when user says "create issues from", "parse spec", "create backlog", "create issues for implementing", or wants to generate multiple issues from a specification, design doc, or requirements file.
 allowed-tools:
   - Bash
   - Read

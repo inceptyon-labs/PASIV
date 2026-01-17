@@ -1,6 +1,6 @@
 ---
 name: parent
-description: Creates a parent issue with sub-issues. Use when user wants to create a large feature or multi-part task.
+description: Create a parent issue with sub-issues for large features. Use when user says "create parent issue", "break down feature", "create feature with subtasks", or wants to implement a multi-part feature with sub-issues.
 allowed-tools:
   - Bash
   - Read

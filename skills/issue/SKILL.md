@@ -1,6 +1,6 @@
 ---
 name: issue
-description: Creates a GitHub issue with automatic sizing and labeling. Use when user wants to create an issue, task, or ticket.
+description: Create a GitHub issue with size estimate and labels. Use when user says "create issue", "add issue", "new issue", "create ticket", "add task", or wants to track a single piece of work.
 allowed-tools:
   - Bash
   - Read
