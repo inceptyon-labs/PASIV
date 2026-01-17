@@ -26,12 +26,14 @@ else
   ISSUE_NUM=${ISSUE_NUM#\#}  # Remove # prefix if present
 fi
 
-# Fetch ALL issue details upfront for reliable reference
-ISSUE_DATA=$(gh issue view "$ISSUE_NUM" --json number,title,body,labels,url,state)
-ISSUE_TITLE=$(echo "$ISSUE_DATA" | jq -r '.title')
-ISSUE_BODY=$(echo "$ISSUE_DATA" | jq -r '.body')
-ISSUE_URL=$(echo "$ISSUE_DATA" | jq -r '.url')
-ISSUE_STATE=$(echo "$ISSUE_DATA" | jq -r '.state')
+# Fetch issue details using gh's built-in -q flag (avoids jq control character issues)
+ISSUE_TITLE=$(gh issue view "$ISSUE_NUM" --json title -q '.title')
+ISSUE_URL=$(gh issue view "$ISSUE_NUM" --json url -q '.url')
+ISSUE_STATE=$(gh issue view "$ISSUE_NUM" --json state -q '.state')
+ISSUE_LABELS=$(gh issue view "$ISSUE_NUM" --json labels -q '[.labels[].name] | join(",")')
+
+# For body content, read directly (gh -q handles escaping)
+ISSUE_BODY=$(gh issue view "$ISSUE_NUM" --json body -q '.body')
 
 echo "Issue #$ISSUE_NUM: $ISSUE_TITLE"
 ```
