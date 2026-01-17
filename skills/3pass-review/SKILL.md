@@ -72,32 +72,31 @@ Output as:
 
 ## Pass 3: Independent Review (Codex)
 
-Use `mcp__codex__codex` MCP tool for fresh perspective:
+Get the list of changed files and run Codex CLI:
 
-```
-mcp__codex__codex(
-  prompt: "You are an independent code reviewer. Others have already reviewed this code - your job is to catch what they missed.
+```bash
+FILES=$(git diff --name-only main)
 
-Review this diff:
-[paste diff]
+codex --quiet "Independent code review - catch what others missed.
+
+Files changed:
+$FILES
 
 Focus on:
-- Things other reviewers typically miss
-- Subtle bugs or logic errors
-- Security edge cases
-- Test coverage gaps
-- Documentation clarity
-- Alternative approaches worth considering
-- Technical debt being introduced
+1. Things other reviewers typically miss
+2. Subtle bugs or logic errors
+3. Security edge cases
+4. Test coverage gaps
+5. Documentation clarity
+6. Alternative approaches worth considering
+7. Technical debt being introduced
 
 For each finding, specify:
 - Severity: ERROR / WARNING / SUGGESTION
 - Location: file:line
 - Issue and recommended fix
 
-Be thorough but don't repeat obvious issues.",
-  sandbox: "read-only"
-)
+Be thorough but don't repeat obvious issues."
 ```
 
 ---

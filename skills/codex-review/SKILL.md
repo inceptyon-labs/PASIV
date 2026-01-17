@@ -1,6 +1,6 @@
 ---
 name: codex-review
-description: Deep code review using Codex CLI MCP. Use when user says "codex review", "deep review", "security review", or wants thorough analysis of code, PR, or specific files.
+description: Deep code review using Codex CLI. Use when user says "codex review", "deep review", "security review", or wants thorough analysis of code, PR, or specific files.
 allowed-tools:
   - Bash
   - Read
@@ -8,33 +8,26 @@ allowed-tools:
 
 # Codex Deep Review
 
-Run Codex for deep analysis: $ARGUMENTS (files or PR number)
+Run Codex for deep analysis: $ARGUMENTS (files, PR number, or empty for current changes)
 
-## Get Context
+## Option 1: Quick Review (current changes)
 
-If PR number:
+If no arguments or reviewing current branch:
+
 ```bash
-gh pr diff NUMBER > /tmp/pr_diff.txt
-gh pr view NUMBER --json files -q '.files[].path'
+codex /review --sandbox read-only
 ```
 
-If files specified, read them directly.
+## Option 2: Targeted Review (specific files or PR)
 
-If empty, get current changes:
+### For PR number:
 ```bash
-git diff main > /tmp/changes.txt
-git diff --name-only main
-```
+FILES=$(gh pr view NUMBER --json files -q '.files[].path' | tr '\n' ', ')
 
-## Run Codex Review
+codex --quiet "Deep code review for PR #NUMBER.
 
-Use the `mcp__codex__codex` MCP tool:
-
-```
-mcp__codex__codex(
-  prompt: "Perform a thorough code review of these changes:
-
-[paste diff or file contents]
+Files changed:
+$FILES
 
 Review for:
 1. Security vulnerabilities (injection, auth bypass, data exposure)
@@ -45,13 +38,40 @@ Review for:
 
 For each finding:
 - Severity: ERROR (must fix) / WARNING (should fix) / SUGGESTION
-- Location: file:line if applicable
+- Location: file:line
 - Description: What's wrong
 - Fix: How to resolve it
 
-Be thorough and specific.",
-  sandbox: "read-only"
-)
+Be thorough and specific."
+```
+
+### For specific files:
+```bash
+codex --quiet "Deep code review of the following files:
+
+$ARGUMENTS
+
+Review for:
+1. Security vulnerabilities
+2. Architecture issues
+3. Edge cases and error handling
+4. Performance problems
+5. Maintainability concerns
+
+Categorize as ERROR/WARNING/SUGGESTION with file:line locations."
+```
+
+### For current changes vs main:
+```bash
+FILES=$(git diff --name-only main)
+
+codex --quiet "Deep code review of current changes.
+
+Files changed:
+$FILES
+
+Review for security, architecture, edge cases, performance, maintainability.
+Categorize as ERROR/WARNING/SUGGESTION with file:line locations."
 ```
 
 ## Report Results

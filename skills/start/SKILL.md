@@ -142,12 +142,24 @@ Quick scan for obvious bugs, security basics, dead code, **missing tests**.
 Architecture, edge cases, performance, maintainability, **test coverage quality**.
 
 ### Pass 3: Codex (independent)
-Use `mcp__codex__codex`:
-```
-mcp__codex__codex(
-  prompt: "Independent code review - catch what others missed. Review for subtle bugs, security edge cases, test gaps. Categorize as ERROR/WARNING/SUGGESTION.",
-  sandbox: "read-only"
-)
+
+Get the list of changed files, then run Codex:
+
+```bash
+FILES=$(git diff --name-only main)
+
+codex --quiet "Independent code review for Issue #NUMBER.
+
+Files changed:
+$FILES
+
+Focus on:
+1. Subtle bugs or logic errors
+2. Security edge cases
+3. Test gaps
+4. What previous reviewers missed
+
+Categorize as ERROR/WARNING/SUGGESTION."
 ```
 
 ## Step 5: Fix & Iterate
