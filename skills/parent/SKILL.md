@@ -1,14 +1,14 @@
 ---
-name: epic
-description: Creates a GitHub epic and breaks it into subtasks. Use when user wants to create a large feature, epic, or multi-part task.
+name: parent
+description: Creates a parent issue with sub-issues. Use when user wants to create a large feature or multi-part task.
 allowed-tools:
   - Bash
   - Read
 ---
 
-# Create GitHub Epic
+# Create Parent Issue with Sub-issues
 
-Create an epic and break into tasks: $ARGUMENTS
+Create a parent issue and break into sub-issues: $ARGUMENTS
 
 ## Steps
 
@@ -34,11 +34,11 @@ Create project if needed:
 gh project create --owner "$OWNER" --title "$REPO_NAME" --format json | jq -r '.number'
 ```
 
-2. **Create the epic**:
+2. **Create the parent issue**:
 
 ```bash
-EPIC_URL=$(gh issue create \
-  --title "[EPIC] Title" \
+PARENT_URL=$(gh issue create \
+  --title "Title" \
   --body "Description
 
 ## Goals
@@ -48,26 +48,29 @@ EPIC_URL=$(gh issue create \
 ## Scope
 **In Scope:** ...
 **Out of Scope:** ..." \
-  --label "epic,priority:PRIORITY")
+  --label "priority:PRIORITY")
 
-gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$EPIC_URL"
+gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$PARENT_URL"
 ```
 
-3. **Break into 3-7 child issues** (size S or M each), adding each to project:
+Extract parent issue number from URL.
+
+3. **Create 3-7 sub-issues** (size S or M each):
 
 ```bash
-CHILD_URL=$(gh issue create \
-  --title "Subtask title" \
+SUB_URL=$(gh issue create \
+  --title "Sub-issue title" \
   --body "Description
 
 ## Acceptance Criteria
-- [ ] Criterion 1
+- [ ] Criterion 1" \
+  --label "enhancement,size:S,priority:medium,area:AREA" \
+  --parent PARENT_NUMBER)
 
----
-**Epic:** #EPIC_NUMBER" \
-  --label "enhancement,size:S,priority:medium,area:AREA")
-
-gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$CHILD_URL"
+gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$SUB_URL"
 ```
 
-4. **Return summary** with all issue URLs.
+4. **Return summary** with:
+- Parent issue URL
+- All sub-issue URLs
+- Project URL

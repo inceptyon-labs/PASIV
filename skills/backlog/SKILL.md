@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: Parse a spec file and create GitHub epics and issues. Use when user wants to create backlog, parse spec, or bootstrap project.
+description: Parse a spec file and create GitHub parent issues with sub-issues. Use when user wants to create backlog, parse spec, or bootstrap project.
 allowed-tools:
   - Bash
   - Read
@@ -40,8 +40,8 @@ Read the spec file (and plan.md if exists).
 ## Step 2: Analyze
 
 Break down into:
-- **Epics**: 3-7 major features/milestones
-- **Issues**: 3-10 tasks per epic (size S or M)
+- **Parent issues**: 3-7 major features/milestones
+- **Sub-issues**: 3-10 tasks per parent (size S or M)
 
 Each issue needs:
 - Clear title
@@ -50,12 +50,12 @@ Each issue needs:
 - Size estimate
 - Area label
 
-## Step 3: Create Epics
+## Step 3: Create Parent Issues
 
-For each epic, create and add to project:
+For each parent issue, create and add to project:
 ```bash
-EPIC_URL=$(gh issue create \
-  --title "[EPIC] Title" \
+PARENT_URL=$(gh issue create \
+  --title "Title" \
   --body "Description
 
 ## Goals
@@ -64,27 +64,27 @@ EPIC_URL=$(gh issue create \
 ## Scope
 **In Scope:** ...
 **Out of Scope:** ..." \
-  --label "epic,priority:PRIORITY")
+  --label "priority:PRIORITY")
 
-gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$EPIC_URL"
+gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$PARENT_URL"
 ```
 
-## Step 4: Create Issues
+Extract parent issue number from URL.
 
-For each task, create and add to project:
+## Step 4: Create Sub-issues
+
+For each sub-issue, create with --parent flag and add to project:
 ```bash
-ISSUE_URL=$(gh issue create \
+SUB_URL=$(gh issue create \
   --title "Title" \
   --body "Description
 
 ## Acceptance Criteria
-- [ ] AC 1
+- [ ] AC 1" \
+  --label "enhancement,size:SIZE,priority:PRIORITY,area:AREA" \
+  --parent PARENT_NUMBER)
 
----
-**Epic:** #NUMBER" \
-  --label "enhancement,size:SIZE,priority:PRIORITY,area:AREA")
-
-gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$ISSUE_URL"
+gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$SUB_URL"
 ```
 
 ## Step 5: Suggested Implementation Order
@@ -97,7 +97,7 @@ After creating all issues, output a prioritized list based on:
    - area:backend (3rd)
    - area:frontend (4th)
 
-2. **Epic relationships**: Parent epics before their children
+2. **Parent/sub-issue relationships**: Parents before their sub-issues
 
 3. **Dependencies**: Issues with "Depends on #N" come after their dependency
 
@@ -114,7 +114,7 @@ Format:
 ## Step 6: Summary
 
 Report:
-- Total epics/issues created
+- Total parent issues/sub-issues created
 - Project URL
 - Suggested implementation order
 - Any spec gaps or questions

@@ -5,7 +5,7 @@
 | Command | What it does |
 |---------|-------------|
 | `/issue add dark mode toggle` | Create a sized & labeled issue |
-| `/epic user notifications` | Create epic + break into tasks |
+| `/parent user notifications` | Create parent issue + sub-issues |
 | `/start 42` | Plan → Implement → Review → Merge |
 | `/start next` | Work on highest priority issue |
 | `/review` | Sonnet → Opus → Codex review pipeline |
@@ -21,9 +21,9 @@
 /issue add CSV export to reports page
 ```
 
-**Create an epic:**
+**Create a parent issue with sub-issues:**
 ```
-/epic user notification system with email and push
+/parent user notification system with email and push
 ```
 
 **Full implementation flow:**
@@ -55,7 +55,7 @@
 
 | Category | Labels |
 |----------|--------|
-| Type | `epic`, `enhancement`, `bug`, `documentation` |
+| Type | `enhancement`, `bug`, `documentation` |
 | Priority | `priority:high`, `priority:medium`, `priority:low` |
 | Size | `size:S` (1-4h), `size:M` (4-8h), `size:L` (8+h) |
 | Area | `area:frontend`, `area:backend`, `area:infra`, `area:db` |
@@ -64,11 +64,11 @@
 
 Issues are automatically added to a GitHub Project board.
 
-**Auto-created project**: Named after your repository (created on first `/issue`, `/epic`, or `/backlog`)
+**Auto-created project**: Named after your repository (created on first `/issue`, `/parent`, or `/backlog`)
 
 **Auto-prioritization**: `/backlog` outputs suggested implementation order based on:
 1. Layer dependencies: `area:db` → `area:infra` → `area:backend` → `area:frontend`
-2. Epic relationships: Parents before children
+2. Parent/sub-issue relationships: Parents before children
 3. Explicit dependencies: `Depends on #N` in issue body
 
 **Required token scope**:
@@ -81,7 +81,7 @@ gh auth refresh -s project
 ```
 skills/
 ├── issue/SKILL.md       # /issue
-├── epic/SKILL.md        # /epic
+├── parent/SKILL.md      # /parent
 ├── start/SKILL.md       # /start (full flow)
 ├── review/SKILL.md      # /review (3-model)
 ├── codex-review/SKILL.md # /codex-review
@@ -92,5 +92,5 @@ skills/
 │   ├── install.sh       # Setup script
 │   └── create-labels.sh # Create labels
 ├── workflows/           # GitHub Actions (optional)
-└── ISSUE_TEMPLATE/      # Epic & task templates
+└── ISSUE_TEMPLATE/      # Issue templates
 ```
