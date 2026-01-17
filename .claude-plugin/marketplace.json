@@ -5,16 +5,21 @@
   },
   "metadata": {
     "description": "GitHub automation tools for solo developers",
-    "version": "1.1.1"
+    "version": "1.1.3"
   },
   "plugins": [
     {
       "name": "github-automation",
       "source": "./",
       "description": "Solo dev workflow: specs to issues, 3-model code review (Sonnet→Opus→Codex), branch-based development",
-      "version": "1.1.1",
+      "version": "1.1.3",
       "category": "productivity",
-      "tags": ["github", "automation", "code-review", "workflow"],
+      "tags": [
+        "github",
+        "automation",
+        "code-review",
+        "workflow"
+      ],
       "strict": true
     }
   ]
