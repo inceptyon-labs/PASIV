@@ -76,6 +76,7 @@ Analyze the issue and codebase. Present:
 - **Summary**: What we're building
 - **Files to modify**: With expected changes
 - **New files**: If any
+- **Tests to add**: What tests will verify this works
 - **Approach**: Step-by-step
 - **Risks**: Potential issues
 
@@ -89,21 +90,56 @@ Wait for approval before continuing.
 git checkout -b feature/issue-NUMBER
 ```
 
-Make the changes, then commit:
+Make the changes AND write tests:
+
+1. Implement the feature/fix
+2. **Write tests** that verify the acceptance criteria
+3. Ensure tests cover edge cases
+
+Commit:
 
 ```bash
 git add -A && git commit -m "feat: description (#NUMBER)"
 ```
+
+## Step 3.5: Run Tests
+
+**Tests must pass before review.**
+
+Detect test runner and run tests:
+
+```bash
+# Node.js
+npm test || yarn test || pnpm test
+
+# Python
+pytest || python -m pytest
+
+# Go
+go test ./...
+
+# Rust
+cargo test
+
+# Or check package.json/pyproject.toml for test command
+```
+
+If tests fail:
+1. Fix the failing tests
+2. Commit: `git add -A && git commit -m "fix: failing tests"`
+3. Re-run tests until all pass
+
+**Do not proceed to review until tests pass.**
 
 ## Step 4: 3-Model Review
 
 Run the full review pipeline on the branch:
 
 ### Pass 1: Sonnet (fast)
-Quick scan for obvious bugs, security basics, dead code.
+Quick scan for obvious bugs, security basics, dead code, **missing tests**.
 
 ### Pass 2: Opus (deep)
-Architecture, edge cases, performance, maintainability.
+Architecture, edge cases, performance, maintainability, **test coverage quality**.
 
 ### Pass 3: Codex (independent)
 Use `mcp__codex__codex`:
@@ -138,9 +174,18 @@ Replace all `- [ ]` with `- [x]` in the Acceptance Criteria section, then update
 gh issue edit NUMBER --body "$UPDATED_BODY"
 ```
 
-## Step 6.5: Merge
+## Step 6.5: Final Test Run & Merge
 
-When all passes are clean:
+**Run tests one final time before merge:**
+
+```bash
+# Run the test suite
+npm test  # or appropriate test command
+```
+
+If tests fail, fix and re-run review cycle.
+
+When all tests and review passes are clean:
 
 ```bash
 git checkout main
