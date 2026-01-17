@@ -1,123 +1,143 @@
 # GitHub Automation Plugin
 
-Solo dev workflow: specs → issues → implement → 3-model review → merge.
+Solo dev workflow: specs → issues → implement → test → 3-model review → merge.
 
 ## Install
 
 ```bash
-# Add marketplace
-/plugin marketplace add your-username/github-automation
-
-# Install plugin
-/plugin install github-automation
+claude plugin install github:jnew00/github-automation
 ```
 
-Or install directly from GitHub:
+## Quick Start
+
 ```bash
-/plugin install github:your-username/github-automation
-```
+# Create a single issue
+/issue add logout button to header
 
-## The Pipeline
+# Create a parent issue with sub-issues
+/parent user authentication system
 
-```
-Issue → Plan → Implement → Review (Sonnet→Opus→Codex) → Merge
+# Parse a spec into a full backlog
+/backlog spec.md
+
+# Start working on an issue (full flow)
+/start 42
 ```
 
 ## Commands
 
-| Command | Example |
-|---------|---------|
-| `/issue` | `/issue add logout button` |
-| `/epic` | `/epic user notifications` |
-| `/start` | `/start 42` or `/start next` |
-| `/review` | `/review` (current branch) |
-| `/backlog` | `/backlog` (parse spec.md) |
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/issue` | Create sized & labeled issue | `/issue add CSV export` |
+| `/parent` | Create parent + sub-issues | `/parent user notifications` |
+| `/backlog` | Parse spec into issues | `/backlog design.md` |
+| `/start` | Full implementation flow | `/start 42` or `/start next` |
+| `/3pass-review` | 3-model review pipeline | `/3pass-review feature-branch` |
+| `/codex-review` | Deep Codex-only review | `/codex-review` |
 
-## Full Flow
+## The `/start` Flow
 
 ```
 /start 42
 ```
 
-1. Read issue #42
-2. Create plan → wait for approval
+1. Get issue #42, move to **In Progress**
+2. Create plan (including tests) → wait for approval
 3. Implement on feature branch
-4. Review: Sonnet → Opus → Codex
-5. Fix errors (max 3 iterations)
-6. Merge to main & close issue
+4. **Write tests** for acceptance criteria
+5. **Run tests** (must pass)
+6. Review: Sonnet → Opus → Codex
+7. Fix errors (max 3 iterations)
+8. **Check off acceptance criteria**
+9. Final test run
+10. Merge to main, move to **Done**, close issue
+
+### Parent/Sub-issue Cascading
+
+- Starting a sub-issue → parent moves to In Progress
+- Completing last sub-issue → parent moves to Done & closes
 
 ## Review Pipeline
 
 | Pass | Model | Focus |
 |------|-------|-------|
-| 1 | Sonnet | Bugs, security basics, dead code |
-| 2 | Opus | Architecture, edge cases, performance |
-| 3 | Codex | Fresh eyes, what others missed |
+| 1 | Sonnet | Bugs, security basics, dead code, missing tests |
+| 2 | Opus | Architecture, edge cases, performance, test coverage |
+| 3 | Codex CLI | Fresh eyes, what others missed |
 
-## Requirements
+**Restart logic:**
+- Errors from Opus/Codex → fix → restart from Pass 1
+- Errors from Sonnet only → fix → re-run Pass 1
 
-- **GitHub CLI** (`gh`) - https://cli.github.com
-- **Codex MCP** - for Pass 3 reviews (optional)
+## GitHub Projects Integration
 
-## Setup for Your Repo
+Issues are **automatically added** to a GitHub Project board.
 
-After installing the plugin, run in your project:
+- **Auto-creates project** named after your repo (on first `/issue`, `/parent`, or `/backlog`)
+- **Prompts if other projects exist** (choose existing or create new)
+- **Status updates**: Issues move to In Progress/Done automatically
+- **Prioritization**: `/backlog` outputs suggested implementation order
+
+### Required Token Scope
 
 ```bash
-# Create labels
-bash $(claude plugin path github-automation)/.github/scripts/create-labels.sh
+gh auth refresh -s project
 ```
 
-Or manually copy the GitHub templates:
-```bash
-cp -r $(claude plugin path github-automation)/.github/ISSUE_TEMPLATE .github/
-```
+### Implementation Order
 
-## Files
-
-```
-.claude-plugin/
-├── plugin.json          # Plugin manifest
-└── marketplace.json     # Marketplace definition
-
-skills/                  # Slash commands
-├── issue/SKILL.md       # /issue
-├── epic/SKILL.md        # /epic
-├── start/SKILL.md       # /start
-├── review/SKILL.md      # /review (3-model)
-├── codex-review/SKILL.md # /codex-review
-└── backlog/SKILL.md     # /backlog
-
-.github/
-├── scripts/             # Setup scripts
-├── workflows/           # GitHub Actions (optional)
-└── ISSUE_TEMPLATE/      # Issue templates
-```
+`/backlog` prioritizes issues by:
+1. Layer: `area:db` → `area:infra` → `area:backend` → `area:frontend`
+2. Parent/sub-issue relationships
+3. Explicit `Depends on #N` references
 
 ## Labels
 
 | Category | Labels |
 |----------|--------|
-| Type | `epic`, `enhancement`, `bug` |
+| Type | `enhancement`, `bug`, `documentation` |
 | Priority | `priority:high`, `priority:medium`, `priority:low` |
-| Size | `size:S`, `size:M`, `size:L` |
+| Size | `size:S` (1-4h), `size:M` (4-8h), `size:L` (8+h) |
 | Area | `area:frontend`, `area:backend`, `area:infra`, `area:db` |
 
-## Publishing Your Own Marketplace
+## Requirements
 
-1. Push to GitHub
-2. Others install with:
-   ```bash
-   /plugin marketplace add your-username/github-automation
-   /plugin install github-automation
-   ```
+- **GitHub CLI** (`gh`) - https://cli.github.com
+- **Codex CLI** - for Pass 3 reviews
+- **jq** - for JSON parsing
 
-## GitHub Actions (Optional)
-
-For cloud automation, add API key to your repo:
+## Setup for Your Repo
 
 ```bash
-gh secret set ANTHROPIC_API_KEY
+# Ensure token has project scope
+gh auth refresh -s project
+
+# Create labels (optional)
+bash ~/.claude/plugins/github-automation/.github/scripts/create-labels.sh
 ```
 
-Then `@claude /start` works on GitHub.com.
+## Plugin Structure
+
+```
+skills/
+├── issue/SKILL.md         # /issue
+├── parent/SKILL.md        # /parent (native sub-issues)
+├── start/SKILL.md         # /start (full flow)
+├── 3pass-review/SKILL.md  # /3pass-review
+├── codex-review/SKILL.md  # /codex-review
+└── backlog/SKILL.md       # /backlog
+
+.github/
+├── scripts/
+│   ├── install.sh
+│   └── create-labels.sh
+└── workflows/
+    └── version-bump.yml   # Auto-bump version on push
+```
+
+## Updating
+
+```bash
+rm -rf ~/.claude/plugins/cache
+claude plugin update github-automation
+```
