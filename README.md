@@ -41,18 +41,33 @@ claude plugin install github:jnew00/github-automation
 /start 42
 ```
 
-1. Get issue #42, move to **In Progress**
-2. Create plan (including tests) → wait for approval
-3. Implement on feature branch
-4. **Write tests** for acceptance criteria
-5. **Run tests** (must pass)
-6. Review: Sonnet → Opus → Codex
-7. Fix errors (max 3 iterations)
-8. **Check off acceptance criteria**
-9. Final test run
-10. Merge to main, move to **Done**, close issue
+1. **Fetch issue details** (reliable lookup by number)
+2. **Check for sub-issues** (if parent, work through all)
+3. Move to **In Progress**
+4. Create plan (including tests) → wait for approval
+5. Implement on feature branch
+6. **Write tests** for acceptance criteria
+7. **Run tests** (must pass)
+8. Review: Sonnet → Opus → Codex
+9. Fix errors (max 3 iterations)
+10. **Check off acceptance criteria**
+11. Final test run
+12. Merge to main, move to **Done**, close issue
 
-### Parent/Sub-issue Cascading
+### Parent Issue Support
+
+When you `/start` a **parent issue** that has sub-issues:
+
+1. Lists all sub-issues with suggested implementation order
+2. Moves parent to In Progress
+3. Works through each sub-issue sequentially (full flow for each)
+4. After all sub-issues done, parent auto-closes
+
+**Sub-issue priority order:**
+- `area:db` → `area:infra` → `area:backend` → `area:frontend`
+- Within same area: `priority:high` → `priority:medium` → `priority:low`
+
+### Status Cascading
 
 - Starting a sub-issue → parent moves to In Progress
 - Completing last sub-issue → parent moves to Done & closes
