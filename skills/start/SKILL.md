@@ -52,6 +52,23 @@ gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_NUM" \
   --field-id "$FIELD_ID" --single-select-option-id "$IN_PROGRESS_ID"
 ```
 
+### Cascade to Parent (if sub-issue)
+
+```bash
+# Check if this issue has a parent
+PARENT_NUM=$(gh issue view NUMBER --json parent -q '.parent.number')
+
+if [ -n "$PARENT_NUM" ]; then
+  PARENT_URL=$(gh issue view "$PARENT_NUM" --json url -q '.url')
+  PARENT_ITEM_ID=$(gh project item-list "$PROJECT_NUM" --owner "$OWNER" --format json \
+    | jq -r --arg url "$PARENT_URL" '.items[] | select(.content.url == $url) | .id')
+
+  # Move parent to In Progress too (if not already)
+  gh project item-edit --id "$PARENT_ITEM_ID" --project-id "$PROJECT_NUM" \
+    --field-id "$FIELD_ID" --single-select-option-id "$IN_PROGRESS_ID"
+fi
+```
+
 ## Step 2: Create Plan
 
 Analyze the issue and codebase. Present:
@@ -106,7 +123,22 @@ If errors found:
 4. If errors were only from Sonnet → re-run Pass 1 only
 5. Max 3 iterations before asking user
 
-## Step 6: Merge
+## Step 6: Check Off Acceptance Criteria
+
+Before closing, update the issue body to check off all acceptance criteria:
+
+```bash
+# Get current issue body
+BODY=$(gh issue view NUMBER --json body -q '.body')
+```
+
+Replace all `- [ ]` with `- [x]` in the Acceptance Criteria section, then update:
+
+```bash
+gh issue edit NUMBER --body "$UPDATED_BODY"
+```
+
+## Step 6.5: Merge
 
 When all passes are clean:
 
@@ -118,7 +150,7 @@ git branch -d feature/issue-NUMBER
 gh issue close NUMBER --comment "Completed in $(git rev-parse --short HEAD)"
 ```
 
-## Step 6.5: Move to Done
+## Step 7: Move to Done
 
 Update project status to Done:
 
@@ -129,6 +161,29 @@ DONE_ID=$(echo "$STATUS_FIELD" | jq -r '.options[] | select(.name == "Done") | .
 # Update status to Done
 gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_NUM" \
   --field-id "$FIELD_ID" --single-select-option-id "$DONE_ID"
+```
+
+### Cascade to Parent (if all sub-issues done)
+
+```bash
+if [ -n "$PARENT_NUM" ]; then
+  # Check if all sibling sub-issues are closed
+  OPEN_SIBLINGS=$(gh issue list --parent "$PARENT_NUM" --state open --json number -q 'length')
+
+  if [ "$OPEN_SIBLINGS" -eq 0 ]; then
+    # All sub-issues done - check off parent's acceptance criteria
+    PARENT_BODY=$(gh issue view "$PARENT_NUM" --json body -q '.body')
+    # Replace [ ] with [x] and update parent
+    gh issue edit "$PARENT_NUM" --body "$UPDATED_PARENT_BODY"
+
+    # Move parent to Done
+    gh project item-edit --id "$PARENT_ITEM_ID" --project-id "$PROJECT_NUM" \
+      --field-id "$FIELD_ID" --single-select-option-id "$DONE_ID"
+
+    # Close parent issue
+    gh issue close "$PARENT_NUM" --comment "All sub-issues completed"
+  fi
+fi
 ```
 
 Report:
