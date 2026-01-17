@@ -12,15 +12,65 @@ allowed-tools:
 
 Full flow for: $ARGUMENTS (issue number or "next")
 
-## Step 1: Get Issue
+## Step 0: Get Issue Details
+
+**IMPORTANT: Always fetch full issue details first to ensure reliable lookup.**
 
 ```bash
-gh issue view NUMBER --json title,body,labels,url
+# Get the issue number (from argument or find next priority)
+if [ "$ARGUMENTS" = "next" ]; then
+  ISSUE_NUM=$(gh issue list --label "priority:high" --state open --limit 1 --json number -q '.[0].number')
+  [ -z "$ISSUE_NUM" ] && ISSUE_NUM=$(gh issue list --state open --limit 1 --json number -q '.[0].number')
+else
+  ISSUE_NUM=$ARGUMENTS  # e.g., "42" or "#42"
+  ISSUE_NUM=${ISSUE_NUM#\#}  # Remove # prefix if present
+fi
+
+# Fetch ALL issue details upfront for reliable reference
+ISSUE_DATA=$(gh issue view "$ISSUE_NUM" --json number,title,body,labels,url,state)
+ISSUE_TITLE=$(echo "$ISSUE_DATA" | jq -r '.title')
+ISSUE_BODY=$(echo "$ISSUE_DATA" | jq -r '.body')
+ISSUE_URL=$(echo "$ISSUE_DATA" | jq -r '.url')
+ISSUE_STATE=$(echo "$ISSUE_DATA" | jq -r '.state')
+
+echo "Issue #$ISSUE_NUM: $ISSUE_TITLE"
 ```
 
-If "next", find highest priority:
+## Step 0.5: Check for Sub-Issues (Parent Detection)
+
+**If this is a parent issue with sub-issues, work through each sub-issue sequentially.**
+
 ```bash
-gh issue list --label "priority:high" --state open --limit 1
+# Check if this issue has sub-issues
+SUB_ISSUES=$(gh issue list --parent "$ISSUE_NUM" --state open --json number,title -q '.')
+
+if [ "$(echo "$SUB_ISSUES" | jq 'length')" -gt 0 ]; then
+  echo "This is a parent issue with sub-issues:"
+  echo "$SUB_ISSUES" | jq -r '.[] | "  - #\(.number): \(.title)"'
+
+  # Get prioritized order (by labels: area:db → area:infra → area:backend → area:frontend)
+  # Then work through each one
+fi
+```
+
+**If sub-issues exist:**
+1. Move parent to In Progress (Step 1.5)
+2. For each sub-issue (in priority order):
+   - Run Steps 1-7 for that sub-issue
+   - After completing, continue to next sub-issue
+3. After all sub-issues done, parent auto-closes (Step 7 cascade)
+
+**If no sub-issues:** Continue with normal flow below.
+
+---
+
+## Step 1: Confirm Working Issue
+
+Use the issue data already fetched in Step 0:
+
+```bash
+echo "Working on Issue #$ISSUE_NUM: $ISSUE_TITLE"
+echo "URL: $ISSUE_URL"
 ```
 
 ## Step 1.5: Move to In Progress
@@ -30,7 +80,7 @@ Get project and field info, then update status:
 ```bash
 REPO_NAME=$(gh repo view --json name -q '.name')
 OWNER=$(gh repo view --json owner -q '.owner.login')
-ISSUE_URL=$(gh issue view NUMBER --json url -q '.url')
+# ISSUE_URL already set from Step 0
 
 # Get project number
 PROJECT_NUM=$(gh project list --owner "$OWNER" --format json \
@@ -56,7 +106,7 @@ gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_NUM" \
 
 ```bash
 # Check if this issue has a parent
-PARENT_NUM=$(gh issue view NUMBER --json parent -q '.parent.number')
+PARENT_NUM=$(gh issue view "$ISSUE_NUM" --json parent -q '.parent.number')
 
 if [ -n "$PARENT_NUM" ]; then
   PARENT_URL=$(gh issue view "$PARENT_NUM" --json url -q '.url')
@@ -104,7 +154,7 @@ AskUserQuestion(
 ## Step 3: Implement
 
 ```bash
-git checkout -b feature/issue-NUMBER
+git checkout -b feature/issue-$ISSUE_NUM
 ```
 
 Make the changes AND write tests:
@@ -116,7 +166,7 @@ Make the changes AND write tests:
 Commit:
 
 ```bash
-git add -A && git commit -m "feat: description (#NUMBER)"
+git add -A && git commit -m "feat: description (#$ISSUE_NUM)"
 ```
 
 ## Step 3.25: Format & Lint
@@ -208,7 +258,7 @@ Get the diff and run Codex with custom focus:
 ```bash
 DIFF=$(git diff main)
 
-codex exec -s read-only "Independent code review for Issue #NUMBER.
+codex exec -s read-only "Independent code review for Issue #$ISSUE_NUM.
 
 Here is the diff:
 $DIFF
@@ -236,14 +286,14 @@ If errors found:
 Before closing, update the issue body to check off all acceptance criteria:
 
 ```bash
-# Get current issue body
-BODY=$(gh issue view NUMBER --json body -q '.body')
+# Get current issue body (refresh from server)
+BODY=$(gh issue view "$ISSUE_NUM" --json body -q '.body')
 ```
 
 Replace all `- [ ]` with `- [x]` in the Acceptance Criteria section, then update:
 
 ```bash
-gh issue edit NUMBER --body "$UPDATED_BODY"
+gh issue edit "$ISSUE_NUM" --body "$UPDATED_BODY"
 ```
 
 ## Step 6.5: Final Test Run & Merge
@@ -261,10 +311,10 @@ When all tests and review passes are clean:
 
 ```bash
 git checkout main
-git merge feature/issue-NUMBER
+git merge feature/issue-$ISSUE_NUM
 git push origin main
-git branch -d feature/issue-NUMBER
-gh issue close NUMBER --comment "Completed in $(git rev-parse --short HEAD)"
+git branch -d feature/issue-$ISSUE_NUM
+gh issue close "$ISSUE_NUM" --comment "Completed in $(git rev-parse --short HEAD)"
 ```
 
 ## Step 7: Move to Done
@@ -307,12 +357,34 @@ Report:
 ```
 ## Done
 
-Issue #NUMBER completed and merged to main.
+Issue #$ISSUE_NUM completed and merged to main.
 
 Review passes:
 - Pass 1 (Sonnet): ✓
 - Pass 2 (Opus): ✓
 - Pass 3 (Codex): ✓
 
-Commit: abc1234
+Commit: $(git rev-parse --short HEAD)
 ```
+
+---
+
+## Parent Issue Flow (when sub-issues exist)
+
+When `/start` is called on a parent issue that has sub-issues:
+
+1. **List all sub-issues** and show the suggested order
+2. **Move parent to In Progress**
+3. **For each sub-issue** (in priority order):
+   - Ask user: "Ready to start sub-issue #N: Title?"
+   - Run the full flow (Steps 1-7) for that sub-issue
+   - Report completion
+   - Ask: "Continue to next sub-issue #M?"
+4. **After all sub-issues complete**, parent auto-closes
+
+**Priority order for sub-issues:**
+1. `area:db` (database first)
+2. `area:infra` (infrastructure)
+3. `area:backend` (backend services)
+4. `area:frontend` (frontend last)
+5. Within same area: `priority:high` → `priority:medium` → `priority:low`
