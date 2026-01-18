@@ -68,3 +68,11 @@ gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$ISSUE_URL"
 6. If scope is L, ask if user wants an epic with subtasks instead.
 
 7. Return the issue URL.
+
+---
+
+## STOP
+
+**This skill only creates issues. Do NOT continue to implement the issue.**
+
+If the user wants to implement the issue, they must explicitly use `/start NUMBER`.

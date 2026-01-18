@@ -1,14 +1,20 @@
 ---
 name: 3pass-review
-description: Run 3-model code review pipeline (Sonnet, Opus, Codex). Use when user says "3pass review", "three pass review", "full review", "review pipeline", or wants multi-model feedback on a branch or pull request.
+description: Run 4-model code review pipeline (Haiku, Sonnet, Opus, Codex). Use when user says "3pass review", "three pass review", "full review", "review pipeline", or wants multi-model feedback on a branch or pull request.
 allowed-tools:
   - Bash
   - Read
+  - Edit
+  - Write
 ---
 
-# Code Review (3-Model Pipeline)
+# Code Review (4-Model Pipeline)
 
 Review: $ARGUMENTS (branch name, or empty for current branch vs main)
+
+**Flow: Haiku → fix → Sonnet → fix → Opus → fix → Codex → fix → Done**
+
+Linear progression, no loops. Each pass adds a different perspective.
 
 ## Get the Diff
 
@@ -20,33 +26,65 @@ git diff main..branch-name
 git diff main
 ```
 
-Save the diff for all passes.
-
 ---
 
-## Pass 1: Fast Review (Sonnet)
+## Pass 1: Pre-filter (Haiku)
 
-Use model `claude-sonnet-4-20250514` for quick scan:
+Use model `claude-haiku-4-20250514` for cheap/fast pre-filter:
 
-Focus on obvious issues only:
-- Clear bugs and errors
-- Security basics (XSS, injection, auth flaws)
-- Missing error handling on critical paths
-- Unused imports/dead code
-- Style violations
-
-Be quick - only flag issues you're confident about.
+Catch the obvious stuff:
+- Syntax errors
+- Missing imports / typos
+- Obvious logic errors (null checks, off-by-one)
+- Hardcoded secrets
+- Dead code / unused variables
 
 Output as:
 ```
-### Pass 1: Fast Review (Sonnet)
+### Pass 1: Pre-filter (Haiku)
 - [ERROR] file:line - description
 - [WARNING] file:line - description
 ```
 
+### Fix Pass 1 Errors
+
+**If any ERRORs found:**
+1. Fix all errors
+2. Commit: `git add -A && git commit -m "fix: address Haiku review findings"`
+
+**Proceed to Pass 2.**
+
 ---
 
-## Pass 2: Deep Review (Opus)
+## Pass 2: Fast Review (Sonnet)
+
+Use model `claude-sonnet-4-20250514` for quick scan:
+
+Focus on:
+- Clear bugs and errors
+- Security basics (XSS, injection, auth flaws)
+- Missing error handling on critical paths
+- Style violations
+- Test coverage gaps
+
+Output as:
+```
+### Pass 2: Fast Review (Sonnet)
+- [ERROR] file:line - description
+- [WARNING] file:line - description
+```
+
+### Fix Pass 2 Errors
+
+**If any ERRORs found:**
+1. Fix all errors
+2. Commit: `git add -A && git commit -m "fix: address Sonnet review findings"`
+
+**Proceed to Pass 3.**
+
+---
+
+## Pass 3: Deep Review (Opus)
 
 Use model `claude-opus-4-20250514` for thorough analysis:
 
@@ -63,14 +101,22 @@ Take your time - be thorough.
 
 Output as:
 ```
-### Pass 2: Deep Review (Opus)
+### Pass 3: Deep Review (Opus)
 - [ERROR] file:line - description
 - [WARNING] file:line - description
 ```
 
+### Fix Pass 3 Errors
+
+**If any ERRORs found:**
+1. Fix all errors
+2. Commit: `git add -A && git commit -m "fix: address Opus review findings"`
+
+**Proceed to Pass 4.**
+
 ---
 
-## Pass 3: Independent Review (Codex)
+## Pass 4: Independent Review (Codex)
 
 **IMPORTANT: Use the custom prompt, NOT `codex review --base main`.**
 
@@ -89,9 +135,7 @@ Focus on:
 2. Subtle bugs or logic errors
 3. Security edge cases
 4. Test coverage gaps
-5. Documentation clarity
-6. Alternative approaches worth considering
-7. Technical debt being introduced
+5. Alternative approaches worth considering
 
 For each finding, specify:
 - Severity: ERROR / WARNING / SUGGESTION
@@ -101,30 +145,31 @@ For each finding, specify:
 Be thorough but don't repeat obvious issues."
 ```
 
+### Fix Pass 4 Errors
+
+**If any ERRORs found:**
+1. Fix all errors
+2. Commit: `git add -A && git commit -m "fix: address Codex review findings"`
+
 ---
 
-## Aggregate Results
+## Done
 
-Combine all findings:
+Report final summary:
 
 ```
-## Review Results
+## Review Complete
 
-### Errors (must fix before merge)
-- [Pass X] file:line - description → fix
+Pass 1 (Haiku):  ✓ [N errors fixed]
+Pass 2 (Sonnet): ✓ [N errors fixed]
+Pass 3 (Opus):   ✓ [N errors fixed]
+Pass 4 (Codex):  ✓ [N errors fixed]
 
-### Warnings (should fix)
-- [Pass X] file:line - description
+### Warnings (non-blocking)
+- file:line - description
 
 ### Suggestions
 - description
 
-## Summary
-[Overall assessment - is this ready to merge?]
+Ready to merge.
 ```
-
-If any **Errors** from Pass 2 (Opus) or Pass 3 (Codex), restart from Pass 1 after fixing.
-
-If only Pass 1 errors, fix and re-run Pass 1 only.
-
-Offer to auto-fix errors found.

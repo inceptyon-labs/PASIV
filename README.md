@@ -74,15 +74,16 @@ When you `/start` a **parent issue** that has sub-issues:
 
 ## Review Pipeline
 
+**Flow: Haiku → fix → Sonnet → fix → Opus → fix → Codex → fix → Done**
+
+Linear progression, no loops. Each pass adds a different perspective.
+
 | Pass | Model | Focus |
 |------|-------|-------|
-| 1 | Sonnet | Bugs, security basics, dead code, missing tests |
-| 2 | Opus | Architecture, edge cases, performance, test coverage |
-| 3 | Codex CLI | Fresh eyes, what others missed |
-
-**Restart logic:**
-- Errors from Opus/Codex → fix → restart from Pass 1
-- Errors from Sonnet only → fix → re-run Pass 1
+| 1 | Haiku | Pre-filter: syntax, typos, dead code (cheap) |
+| 2 | Sonnet | Bugs, security basics, missing tests |
+| 3 | Opus | Architecture, edge cases, performance |
+| 4 | Codex CLI | Fresh eyes, what others missed |
 
 ## GitHub Projects Integration
 

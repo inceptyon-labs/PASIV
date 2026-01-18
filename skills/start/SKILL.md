@@ -241,21 +241,27 @@ If tests fail:
 
 **Do not proceed to review until tests pass.**
 
-## Step 4: 3-Model Review
+## Step 4: 4-Model Review
 
-Run the full review pipeline on the branch:
+**Flow: Haiku → fix → Sonnet → fix → Opus → fix → Codex → fix → Done**
 
-### Pass 1: Sonnet (fast)
-Quick scan for obvious bugs, security basics, dead code, **missing tests**.
+Linear progression, no loops. Each pass adds a different perspective.
 
-### Pass 2: Opus (deep)
+### Pass 1: Haiku (pre-filter)
+Cheap/fast scan for obvious stuff: syntax errors, typos, dead code, hardcoded secrets.
+→ Fix any errors, commit, proceed.
+
+### Pass 2: Sonnet (fast)
+Quick scan for bugs, security basics, missing error handling, **missing tests**.
+→ Fix any errors, commit, proceed.
+
+### Pass 3: Opus (deep)
 Architecture, edge cases, performance, maintainability, **test coverage quality**.
+→ Fix any errors, commit, proceed.
 
-### Pass 3: Codex (independent)
+### Pass 4: Codex (independent)
 
 **IMPORTANT: Use the custom prompt, NOT `codex review --base main`.**
-
-Get the diff and run Codex with custom focus:
 
 ```bash
 DIFF=$(git diff main)
@@ -273,15 +279,7 @@ Focus on:
 
 Categorize as ERROR/WARNING/SUGGESTION."
 ```
-
-## Step 5: Fix & Iterate
-
-If errors found:
-1. Fix them
-2. Commit: `git add -A && git commit -m "fix: address review findings"`
-3. If errors were from Opus/Codex → restart from Pass 1
-4. If errors were only from Sonnet → re-run Pass 1 only
-5. Max 3 iterations before asking user
+→ Fix any errors, commit, done with review.
 
 ## Step 6: Check Off Acceptance Criteria
 
