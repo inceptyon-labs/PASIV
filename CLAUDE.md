@@ -1,30 +1,42 @@
 # PASIV
 
+## Issue Type Hierarchy
+
+| Level | Type | Scope | Example |
+|-------|------|-------|---------|
+| **Epic** | Strategic | Multiple features, spans weeks/months | "User Authentication System" |
+| **Feature** | Tactical | Single capability, spans days/week | "OAuth Login" |
+| **Task** | Execution | Single work item, hours | "Create OAuth callback endpoint" |
+
 ## Slash Commands
 
-| Command | What it does |
-|---------|-------------|
-| `/issue add dark mode toggle` | Create a sized & labeled issue |
-| `/parent user notifications` | Create parent issue + sub-issues |
-| `/start 42` | Plan → Implement → Review → Merge |
-| `/start next` | Work on highest priority issue |
-| `/sonnet-review` | Quick Sonnet-only review |
-| `/3pass-review` | Sonnet → Opus → Codex review pipeline |
-| `/3pass-review feature-branch` | Review specific branch |
-| `/codex-review` | Codex-only deep review |
-| `/backlog` | Create issues from spec.md |
-| `/backlog design.md` | Create issues from custom spec |
+| Command | Creates | What it does |
+|---------|---------|-------------|
+| `/issue add dark mode toggle` | Task | Create a single work item |
+| `/parent user notifications` | Feature → Tasks | Create a feature with task sub-issues |
+| `/backlog` | Epic → Feature → Task | Create full hierarchy from spec.md |
+| `/backlog design.md` | Epic → Feature → Task | Create full hierarchy from custom spec |
+| `/start 42` | - | Plan → Implement → Review → Merge |
+| `/start next` | - | Work on highest priority issue |
+| `/sonnet-review` | - | Quick Sonnet-only review |
+| `/3pass-review` | - | Sonnet → Opus → Codex review pipeline |
+| `/codex-review` | - | Codex-only deep review |
 
 ## Examples
 
-**Create an issue:**
+**Create a Task:**
 ```
 /issue add CSV export to reports page
 ```
 
-**Create a parent issue with sub-issues:**
+**Create a Feature with Tasks:**
 ```
 /parent user notification system with email and push
+```
+
+**Create Epics from a spec:**
+```
+/backlog spec.md
 ```
 
 **Full implementation flow:**
@@ -110,10 +122,11 @@ No "should work" or "was passing earlier" - run it fresh.
 
 | Category | Labels |
 |----------|--------|
-| Type | `enhancement`, `bug`, `documentation` |
 | Priority | `priority:high`, `priority:medium`, `priority:low` |
 | Size | `size:S` (1-4h), `size:M` (4-8h), `size:L` (8+h) |
 | Area | `area:frontend`, `area:backend`, `area:infra`, `area:db` |
+
+**Note:** Issue types (Epic, Feature, Task) are set via GitHub's native `--type` flag, not labels.
 
 ## GitHub Projects Integration
 

@@ -11,7 +11,54 @@ allowed-tools:
 
 Parse spec and create issues: $ARGUMENTS (file path, default: spec.md)
 
-## Step 0: Setup Project
+**This skill creates the full hierarchy**: Epics → Features → Tasks
+
+## Issue Type Hierarchy
+
+| Level | Type | Scope | Example |
+|-------|------|-------|---------|
+| **Epic** | Strategic | Multiple features, spans weeks/months | "User Authentication System" |
+| **Feature** | Tactical | Single capability, spans days/week | "OAuth Login" |
+| **Task** | Execution | Single work item, hours | "Create OAuth callback endpoint" |
+
+**Mapping spec to hierarchy:**
+- Major sections/milestones → **Epics**
+- Capabilities within each section → **Features** (children of Epic)
+- Individual work items → **Tasks** (children of Feature)
+
+## Label Definitions
+
+Create missing labels before use:
+
+| Label | Color | Description |
+|-------|-------|-------------|
+| `pasiv` | `1a1a2e` | Created by PASIV automation |
+| `priority:high` | `DC2626` | Critical priority |
+| `priority:medium` | `F59E0B` | Medium priority |
+| `priority:low` | `10B981` | Low priority |
+| `size:S` | `DBEAFE` | Small task (1-4 hours) |
+| `size:M` | `BFDBFE` | Medium task (4-8 hours) |
+| `size:L` | `93C5FD` | Large task (8+ hours) |
+| `area:frontend` | `EC4899` | Web/UI changes |
+| `area:backend` | `8B5CF6` | API/server changes |
+| `area:infra` | `6B7280` | DevOps/CI/CD |
+| `area:db` | `3B82F6` | Database schema/queries |
+
+## Step 0: Setup Project & Labels
+
+**Ensure labels exist:**
+```bash
+# Get existing labels
+EXISTING=$(gh label list --json name -q '.[].name')
+
+# Create any missing labels from the table above
+# Example:
+if ! echo "$EXISTING" | grep -q "^pasiv$"; then
+  gh label create "pasiv" --color "1a1a2e" --description "Created by PASIV automation" --force
+fi
+```
+
+**Setup project:**
 
 ```bash
 REPO_NAME=$(gh repo view --json name -q '.name')
@@ -37,57 +84,96 @@ gh project create --owner "$OWNER" --title "$REPO_NAME" --format json | jq -r '.
 
 Read the spec file (and plan.md if exists).
 
-## Step 2: Analyze
+## Step 2: Analyze & Map to Hierarchy
 
-Break down into:
-- **Parent issues**: 3-7 major features/milestones
-- **Sub-issues**: 3-10 tasks per parent (size S or M)
+Break down the spec using the Issue Type Hierarchy:
+
+| Spec Element | Issue Type | Count |
+|--------------|------------|-------|
+| Major sections/milestones | Epic | 2-5 |
+| Capabilities per section | Feature | 2-5 per Epic |
+| Work items per capability | Task | 2-7 per Feature |
 
 Each issue needs:
-- Clear title
+- Clear title (prefixed with type for Epics/Features)
 - Description
-- Acceptance criteria (checkboxes)
-- Size estimate
+- Acceptance criteria (checkboxes) for Tasks
+- Size estimate (Tasks only)
 - Area label
 
-## Step 3: Create Parent Issues
+## Step 3: Create Epics (type: Epic)
 
-For each parent issue, create and add to project:
+For each major section/milestone:
 ```bash
-PARENT_URL=$(gh issue create \
-  --title "Title" \
+EPIC_URL=$(gh issue create \
+  --title "Epic: Title" \
+  --body "Description
+
+## Vision
+High-level goal of this epic
+
+## Features
+- Feature 1
+- Feature 2
+- Feature 3
+
+## Success Criteria
+- [ ] Criterion 1
+- [ ] Criterion 2" \
+  --label "pasiv,priority:PRIORITY" \
+  --type "Epic")
+
+gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$EPIC_URL"
+```
+
+Extract Epic issue number from URL.
+
+## Step 4: Create Features (type: Feature)
+
+For each capability within an Epic:
+```bash
+FEATURE_URL=$(gh issue create \
+  --title "Feature: Title" \
   --body "Description
 
 ## Goals
 - Goal 1
+- Goal 2
 
 ## Scope
 **In Scope:** ...
 **Out of Scope:** ..." \
-  --label "pasiv,priority:PRIORITY")
+  --label "pasiv,priority:PRIORITY,area:AREA" \
+  --type "Feature" \
+  --parent $EPIC_NUMBER)
 
-gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$PARENT_URL"
+gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$FEATURE_URL"
 ```
 
-Extract parent issue number from URL.
+Extract Feature issue number from URL.
 
-## Step 4: Create Sub-issues
+## Step 5: Create Tasks (type: Task)
 
-For each sub-issue, create with --parent flag and add to project:
+For each work item within a Feature:
 ```bash
-SUB_URL=$(gh issue create \
-  --title "Title" \
+TASK_URL=$(gh issue create \
+  --title "Task title" \
   --body "Description
 
 ## Acceptance Criteria
-- [ ] AC 1" \
-  --label "pasiv,enhancement,size:SIZE,priority:PRIORITY,area:AREA" \
-  --parent PARENT_NUMBER)
+- [ ] AC 1
+- [ ] AC 2
 
-gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$SUB_URL"
+---
+**Size:** S/M" \
+  --label "pasiv,size:SIZE,priority:PRIORITY,area:AREA" \
+  --type "Task" \
+  --parent $FEATURE_NUMBER)
+
+gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$TASK_URL"
 ```
 
-## Step 5: Suggested Implementation Order
+## Step 6: Suggested Implementation Order
 
 After creating all issues, output a prioritized list based on:
 
@@ -97,7 +183,7 @@ After creating all issues, output a prioritized list based on:
    - area:backend (3rd)
    - area:frontend (4th)
 
-2. **Parent/sub-issue relationships**: Parents before their sub-issues
+2. **Hierarchy**: Epics → Features → Tasks (but implement Tasks first within each Feature)
 
 3. **Dependencies**: Issues with "Depends on #N" come after their dependency
 
@@ -105,16 +191,22 @@ Format:
 ```
 ## Suggested Implementation Order
 
-1. #12 - Database schema (area:db)
-2. #15 - Auth service setup (area:backend, depends on #12)
-3. #18 - Login page (area:frontend, depends on #15)
+### Epic: User Authentication (#10)
+
+#### Feature: Email/Password Login (#11)
+1. #14 - Create user table (area:db, size:S)
+2. #15 - Create auth endpoint (area:backend, size:M)
+3. #16 - Create login form (area:frontend, size:S)
+
+#### Feature: OAuth Login (#12)
+4. #17 - Add OAuth config (area:backend, size:S)
 ...
 ```
 
-## Step 6: Summary
+## Step 7: Summary
 
 Report:
-- Total parent issues/sub-issues created
+- Total Epics/Features/Tasks created
 - Project URL
 - Suggested implementation order
 - Any spec gaps or questions

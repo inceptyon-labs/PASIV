@@ -12,18 +12,78 @@ user-invocable: false
 
 Perform issue operation: $ARGUMENTS
 
+## Label Definitions
+
+PASIV labels with their colors and descriptions. Create missing labels before use.
+
+| Label | Color | Description |
+|-------|-------|-------------|
+| `pasiv` | `1a1a2e` | Created by PASIV automation |
+| `enhancement` | `84CC16` | New feature or improvement |
+| `bug` | `EF4444` | Something isn't working |
+| `documentation` | `06B6D4` | Documentation changes |
+| `priority:high` | `DC2626` | Critical priority |
+| `priority:medium` | `F59E0B` | Medium priority |
+| `priority:low` | `10B981` | Low priority |
+| `size:S` | `DBEAFE` | Small task (1-4 hours) |
+| `size:M` | `BFDBFE` | Medium task (4-8 hours) |
+| `size:L` | `93C5FD` | Large task (8+ hours) |
+| `area:frontend` | `EC4899` | Web/UI changes |
+| `area:backend` | `8B5CF6` | API/server changes |
+| `area:infra` | `6B7280` | DevOps/CI/CD |
+| `area:db` | `3B82F6` | Database schema/queries |
+
+## Issue Type Hierarchy
+
+Use the correct issue type based on scope:
+
+| Level | Type | Scope | Example |
+|-------|------|-------|---------|
+| **Epic** | Strategic | Multiple features, spans weeks/months | "User Authentication System" |
+| **Feature** | Tactical | Single capability, spans days/week | "OAuth Login" |
+| **Task** | Execution | Single work item, hours | "Create OAuth callback endpoint" |
+
 ## Available Operations
 
 ### create
 Create a new GitHub issue.
 
-Arguments: title, body, labels (comma-separated)
+Arguments: title, body, labels (comma-separated), type (Epic/Feature/Task), parent (optional issue number)
+
+**Step 1: Ensure labels exist**
+
+For each label in the comma-separated list, create it if missing:
 
 ```bash
+# Get existing labels
+EXISTING=$(gh label list --json name -q '.[].name')
+
+# For each required label, check and create if missing
+# Example for priority:high:
+if ! echo "$EXISTING" | grep -q "^priority:high$"; then
+  gh label create "priority:high" --color "DC2626" --description "Critical priority" --force
+fi
+```
+
+Use the Label Definitions table above for colors and descriptions.
+
+**Step 2: Create the issue**
+
+```bash
+# Without parent:
 gh issue create \
   --title "$TITLE" \
   --body "$BODY" \
-  --label "$LABELS"
+  --label "$LABELS" \
+  --type "$TYPE"
+
+# With parent (for sub-issues):
+gh issue create \
+  --title "$TITLE" \
+  --body "$BODY" \
+  --label "$LABELS" \
+  --type "$TYPE" \
+  --parent $PARENT_NUMBER
 ```
 
 Return the issue URL.

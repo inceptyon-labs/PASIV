@@ -48,17 +48,27 @@ claude plugin install github:inceptyon-labs/PASIV
 /start 42
 ```
 
+## Issue Type Hierarchy
+
+| Level | Type | Scope | Example |
+|-------|------|-------|---------|
+| **Epic** | Strategic | Multiple features, weeks/months | "User Authentication System" |
+| **Feature** | Tactical | Single capability, days/week | "OAuth Login" |
+| **Task** | Execution | Single work item, hours | "Create OAuth callback endpoint" |
+
+Uses GitHub's native issue types (`--type Epic/Feature/Task`).
+
 ## Commands
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `/issue` | Create sized & labeled issue | `/issue add CSV export` |
-| `/parent` | Create parent + sub-issues | `/parent user notifications` |
-| `/backlog` | Parse spec into issues | `/backlog design.md` |
-| `/start` | Full implementation flow | `/start 42` or `/start next` |
-| `/sonnet-review` | Quick Sonnet-only review | `/sonnet-review` |
-| `/3pass-review` | 3-model review pipeline | `/3pass-review feature-branch` |
-| `/codex-review` | Deep Codex-only review | `/codex-review` |
+| Command | Creates | Description |
+|---------|---------|-------------|
+| `/issue` | Task | Create single work item |
+| `/parent` | Feature → Tasks | Create feature with task sub-issues |
+| `/backlog` | Epic → Feature → Task | Parse spec into full hierarchy |
+| `/start` | - | Full implementation flow |
+| `/sonnet-review` | - | Quick Sonnet-only review |
+| `/3pass-review` | - | 3-model review pipeline |
+| `/codex-review` | - | Deep Codex-only review |
 
 ## Flow Diagram
 
@@ -133,28 +143,42 @@ Before merge, fresh evidence is required:
 
 No "should work" - actual runs with actual output.
 
-### Parent Issue Support (Autonomous)
+### Epic & Feature Support (Autonomous)
 
 > *"We need to go deeper."*
 
-When you `/start` a **parent issue** with sub-issues:
+**Reviews always happen at the Task level** - Epics and Features are containers.
+
+| `/start` on | Behavior |
+|-------------|----------|
+| Task | Implement → Review → Merge |
+| Feature | For each Task: Implement → Review → Merge |
+| Epic | For each Feature → For each Task: Implement → Review → Merge |
+
+When you `/start` an **Epic**:
 
 ```
-Parent #41: User Auth System (3 sub-issues)
+Epic #10: User Authentication System
 
-Implementation order:
-  1. #42 Add user model        → Light  (size:S)
-  2. #43 Add auth endpoints    → Full   (size:M) [security]
-  3. #44 Add login UI          → Medium (size:M)
+├── Feature #11: Email/Password Login
+│   ├── #14 Create user table        → Light  (size:S, area:db)
+│   ├── #15 Create auth endpoint     → Full   [security]
+│   └── #16 Create login form        → Medium (area:frontend)
+│
+└── Feature #12: OAuth Login
+    ├── #17 Add OAuth config         → Full   [security]
+    └── #18 Add OAuth callback       → Full   [security]
 
+Total: 5 Tasks across 2 Features
 Approve and start autonomous run? [Yes/Customize/Cancel]
 ```
 
-- **Approve once, walk away** - implements all sub-issues autonomously
+- **Approve once, walk away** - implements all Tasks autonomously
 - **Stops only on error** - asks how to proceed
-- **Auto-closes parent** when all sub-issues complete
+- **Auto-closes Features** when all their Tasks complete
+- **Auto-closes Epic** when all Features complete
 
-**Sub-issue priority order:**
+**Task priority order:**
 - `area:db` → `area:infra` → `area:backend` → `area:frontend`
 - Within same area: `priority:high` → `priority:medium` → `priority:low`
 
@@ -205,10 +229,11 @@ gh auth refresh -s project
 
 | Category | Labels |
 |----------|--------|
-| Type | `enhancement`, `bug`, `documentation` |
 | Priority | `priority:high`, `priority:medium`, `priority:low` |
 | Size | `size:S` (1-4h), `size:M` (4-8h), `size:L` (8+h) |
 | Area | `area:frontend`, `area:backend`, `area:infra`, `area:db` |
+
+**Note:** Issue types (Epic, Feature, Task) use GitHub's native `--type` flag, not labels. Configure types in your organization's Settings → Planning → Issue types.
 
 ## Requirements
 

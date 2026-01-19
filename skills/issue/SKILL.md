@@ -7,9 +7,21 @@ allowed-tools:
   - Skill
 ---
 
-# Create GitHub Issue
+# Create GitHub Issue (Task)
 
 Create a GitHub issue from a short description: $ARGUMENTS
+
+**This skill creates Tasks** - single work items that take hours to complete.
+
+## Issue Type Hierarchy
+
+| Level | Type | Scope | Example |
+|-------|------|-------|---------|
+| **Epic** | Strategic | Multiple features, spans weeks/months | "User Authentication System" |
+| **Feature** | Tactical | Single capability, spans days/week | "OAuth Login" |
+| **Task** | Execution | Single work item, hours | "Create OAuth callback endpoint" |
+
+**This skill creates: Task** (use `/parent` for Features, `/backlog` for Epics)
 
 **Helper skills (run with Haiku in forked context for efficiency):**
 - `issue-ops` - Issue creation
@@ -17,13 +29,13 @@ Create a GitHub issue from a short description: $ARGUMENTS
 
 ## Steps
 
-1. **Assess scope**:
-   - S (1-4h): Single file/component change
-   - M (4-8h): Few files, moderate complexity
-   - L (8+h): Suggest creating a parent issue instead
+1. **Verify scope is Task-level**:
+   - S (1-4h): Single file/component change → **Task**
+   - M (4-8h): Few files, moderate complexity → **Task**
+   - L (8+h): Multiple components → Suggest `/parent` for a **Feature** instead
 
 2. **Determine labels**:
-   - Area: frontend, backend, infrastructure, database, documentation
+   - Area: frontend, backend, infra, db
    - Priority: high, medium, low (default: medium)
 
 3. **Setup project**:
@@ -34,9 +46,9 @@ Returns: PROJECT_NUM, PROJECT_ID, OWNER, REPO_NAME
 
 If project doesn't exist, it will be created.
 
-4. **Create the issue**:
+4. **Create the Task**:
 
-**Use Skill tool:** `issue-ops` with args: `create "Title" "Body with acceptance criteria" "labels"`
+**Use Skill tool:** `issue-ops` with args: `create "Title" "Body" "labels" "Task"`
 
 Body format:
 ```
@@ -47,10 +59,10 @@ Description
 - [ ] Criterion 2
 
 ---
-**Size:** S/M/L
+**Size:** S/M
 ```
 
-Labels: `pasiv,enhancement,size:SIZE,priority:PRIORITY,area:AREA`
+Labels: `pasiv,size:SIZE,priority:PRIORITY,area:AREA`
 
 **Note:** Always include `pasiv` label to distinguish from user-opened issues.
 
@@ -58,7 +70,7 @@ Labels: `pasiv,enhancement,size:SIZE,priority:PRIORITY,area:AREA`
 
 **Use Skill tool:** `project-ops` with args: `add-issue $PROJECT_NUM $OWNER $ISSUE_URL`
 
-6. If scope is L, ask if user wants a parent issue with sub-issues instead.
+6. If scope is L, ask if user wants a Feature (parent issue with sub-tasks) instead.
 
 7. Return the issue URL.
 

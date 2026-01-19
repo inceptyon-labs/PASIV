@@ -13,6 +13,16 @@ allowed-tools:
 
 Full flow for: $ARGUMENTS (issue number or "next")
 
+## Issue Type Hierarchy
+
+| Level | Type | Scope | `/start` Behavior |
+|-------|------|-------|-------------------|
+| **Epic** | Strategic | Multiple features | Process all Features → all Tasks |
+| **Feature** | Tactical | Single capability | Process all Tasks |
+| **Task** | Execution | Single work item | Implement → Review → Merge |
+
+**Reviews always happen at the Task level** - that's where code is written and reviewed.
+
 **Helper skills (run with Haiku in forked context for efficiency):**
 - `issue-ops` - Issue operations (get, create, close, check-off)
 - `project-ops` - Project operations (setup, move status)
@@ -430,14 +440,35 @@ Commit: [short SHA]
 
 ## Parent Issue Flow (Autonomous)
 
-When `/start` is called on a parent issue that has sub-issues, use "approve once, walk away" mode.
+When `/start` is called on an Epic or Feature (issue with sub-issues), use "approve once, walk away" mode.
 
-### Analyze All Sub-Issues
+**Key principle:** Reviews happen at the **Task level only**. Epics and Features are containers - no code is written directly in them.
 
-For each sub-issue, determine recommended review depth:
+### Flatten the Hierarchy to Tasks
+
+Recursively collect ALL Tasks under this issue:
 
 ```
-FOR each sub-issue:
+FUNCTION collect_tasks(issue_num):
+  sub_issues = get_sub_issues(issue_num)
+  tasks = []
+
+  FOR each sub_issue:
+    sub_sub_issues = get_sub_issues(sub_issue.number)
+    IF sub_sub_issues is empty:
+      # This is a Task (leaf node)
+      tasks.append(sub_issue)
+    ELSE:
+      # This is a Feature/Epic (has children) - recurse
+      tasks.extend(collect_tasks(sub_issue.number))
+
+  RETURN tasks
+```
+
+### Determine Review Depth for Each Task
+
+```
+FOR each task:
   Get labels and estimate planned files
   IF likely touches security patterns (auth, crypto, payment, token, etc.):
     → RECOMMEND = "Full" + flag "[security]"
@@ -451,19 +482,38 @@ FOR each sub-issue:
     → RECOMMEND = "Medium"
 ```
 
-### Present Upfront Summary
+### Present Full Hierarchy
 
-Display:
+Display the hierarchy with Tasks and their review depths:
+
+**For Epic:**
 ```
-Parent #$PARENT_NUM: $PARENT_TITLE ($COUNT sub-issues)
+Epic #10: User Authentication System
 
-Implementation order:
-  1. #42 Add user model        → Light  (size:S)
-  2. #43 Add auth endpoints    → Full   (size:M) [security]
-  3. #44 Add login UI          → Medium (size:M)
+├── Feature #11: Email/Password Login
+│   ├── #14 Create user table        → Light  (size:S, area:db)
+│   ├── #15 Create auth endpoint     → Full   (size:M) [security]
+│   └── #16 Create login form        → Medium (size:M, area:frontend)
+│
+└── Feature #12: OAuth Login
+    ├── #17 Add OAuth config         → Full   (size:S) [security]
+    └── #18 Add OAuth callback       → Full   (size:M) [security]
 
-Methodology: TDD (test-first) for all sub-issues
-Verification gate before each merge
+Total: 5 Tasks across 2 Features
+Methodology: TDD (test-first) for all Tasks
+Verification gate before each Task merge
+```
+
+**For Feature:**
+```
+Feature #11: Email/Password Login (3 Tasks)
+
+  1. #14 Create user table        → Light  (size:S, area:db)
+  2. #15 Create auth endpoint     → Full   (size:M) [security]
+  3. #16 Create login form        → Medium (size:M, area:frontend)
+
+Methodology: TDD (test-first) for all Tasks
+Verification gate before each Task merge
 ```
 
 ### Ask for Approval
@@ -471,62 +521,77 @@ Verification gate before each merge
 **Use AskUserQuestion tool:**
 
 **Question**: "Approve implementation plan with these review depths?"
-- Yes, start autonomous run (Recommended) - Implement all sub-issues with shown review depths
+- Yes, start autonomous run (Recommended) - Implement all Tasks with shown review depths
 - Customize review depths - I'll specify different depths
 - Cancel - Stop work
 
 **If "Yes, start autonomous run":**
-- Store REVIEW_DEPTHS map: {42: "light", 43: "full", 44: "medium"}
-- Move parent to In Progress
-- Process each sub-issue autonomously using stored depth
+- Store REVIEW_DEPTHS map: {14: "light", 15: "full", 16: "medium", ...}
+- Move Epic/Feature to In Progress
+- Process each Task autonomously using stored depth
 - No further prompts until all complete or error occurs
 
 **If "Customize review depths":**
-- Ask for each sub-issue's review depth
+- Ask for each Task's review depth
 - Then proceed with autonomous run
 
 **If "Cancel":** Stop and explain why
 
-### Autonomous Sub-Issue Processing
+### Autonomous Task Processing
 
-For each sub-issue (in priority order):
-1. Display: "Starting sub-issue #N: $TITLE (Review: $DEPTH)"
+For each Task (in priority order):
+1. Display: "Starting Task #N: $TITLE (Review: $DEPTH)"
 2. Run Steps 1-8 using REVIEW_DEPTHS[N]
-3. On success: Continue to next sub-issue
+3. On success:
+   - Task closes automatically
+   - Check if parent Feature's Tasks are all done → close Feature
+   - Check if parent Epic's Features are all done → close Epic
+   - Continue to next Task
 4. On error: STOP, report error, ask how to proceed:
    ```
-   ERROR in sub-issue #N: [description]
+   ERROR in Task #N: [description]
 
    Options:
    - Debug together - Help me investigate
-   - Skip this sub-issue - Continue to next
+   - Skip this Task - Continue to next
    - Stop - I'll handle manually
    ```
 
-### After All Sub-Issues Complete
+### After All Tasks Complete
 
-Parent auto-closes via Step 8 cascade.
+All parent issues auto-close via Step 8 cascade.
 
 Report summary:
 ```
-## Parent Issue Complete
+## Epic Complete
 
-Parent #$PARENT_NUM: $PARENT_TITLE
+Epic #10: User Authentication System
 
-Sub-issues completed:
-  ✓ #42 Add user model        (Light review)
-  ✓ #43 Add auth endpoints    (Full review)
-  ✓ #44 Add login UI          (Medium review)
+Feature #11: Email/Password Login
+  ✓ #14 Create user table        (Light review)
+  ✓ #15 Create auth endpoint     (Full review)
+  ✓ #16 Create login form        (Medium review)
 
+Feature #12: OAuth Login
+  ✓ #17 Add OAuth config         (Full review)
+  ✓ #18 Add OAuth callback       (Full review)
+
+5 Tasks completed, 2 Features closed, 1 Epic closed.
 All merged to main.
 ```
 
 ---
 
-## Priority Order for Sub-Issues
+## Priority Order for Tasks
+
+When processing Tasks (from Feature or Epic), order by:
 
 1. `area:db` (database first)
 2. `area:infra` (infrastructure)
 3. `area:backend` (backend services)
 4. `area:frontend` (frontend last)
 5. Within same area: `priority:high` → `priority:medium` → `priority:low`
+
+**Within a Feature:** Process Tasks in the order above.
+
+**Within an Epic:** Process Features in the order their first Task appears (by area priority), then process all Tasks within each Feature before moving to the next Feature.
