@@ -43,15 +43,24 @@ echo "Issue #$ISSUE_NUM: $ISSUE_TITLE"
 **If this is a parent issue with sub-issues, work through each sub-issue sequentially.**
 
 ```bash
-# Check if this issue has sub-issues
-SUB_ISSUES=$(gh issue list --parent "$ISSUE_NUM" --state open --json number,title -q '.')
+# Check if this issue has sub-issues (requires GraphQL - gh issue list doesn't support --parent)
+REPO_NAME=$(gh repo view --json name -q '.name')
+OWNER=$(gh repo view --json owner -q '.owner.login')
+
+SUB_ISSUES=$(gh api graphql -f query="
+query {
+  repository(owner: \"$OWNER\", name: \"$REPO_NAME\") {
+    issue(number: $ISSUE_NUM) {
+      subIssues(first: 50) {
+        nodes { number title state }
+      }
+    }
+  }
+}" --jq '.data.repository.issue.subIssues.nodes | map(select(.state == "OPEN"))')
 
 if [ "$(echo "$SUB_ISSUES" | jq 'length')" -gt 0 ]; then
   echo "This is a parent issue with sub-issues:"
   echo "$SUB_ISSUES" | jq -r '.[] | "  - #\(.number): \(.title)"'
-
-  # Get prioritized order (by labels: area:db → area:infra → area:backend → area:frontend)
-  # Then work through each one
 fi
 ```
 
@@ -108,8 +117,15 @@ gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
 ### Cascade to Parent (if sub-issue)
 
 ```bash
-# Check if this issue has a parent
-PARENT_NUM=$(gh issue view "$ISSUE_NUM" --json parent -q '.parent.number')
+# Check if this issue has a parent (requires GraphQL)
+PARENT_NUM=$(gh api graphql -f query="
+query {
+  repository(owner: \"$OWNER\", name: \"$REPO_NAME\") {
+    issue(number: $ISSUE_NUM) {
+      parent { number }
+    }
+  }
+}" --jq '.data.repository.issue.parent.number // empty')
 
 if [ -n "$PARENT_NUM" ]; then
   PARENT_URL=$(gh issue view "$PARENT_NUM" --json url -q '.url')
@@ -340,8 +356,17 @@ gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
 
 ```bash
 if [ -n "$PARENT_NUM" ]; then
-  # Check if all sibling sub-issues are closed
-  OPEN_SIBLINGS=$(gh issue list --parent "$PARENT_NUM" --state open --json number -q 'length')
+  # Check if all sibling sub-issues are closed (requires GraphQL)
+  OPEN_SIBLINGS=$(gh api graphql -f query="
+  query {
+    repository(owner: \"$OWNER\", name: \"$REPO_NAME\") {
+      issue(number: $PARENT_NUM) {
+        subIssues(first: 50) {
+          nodes { state }
+        }
+      }
+    }
+  }" --jq '[.data.repository.issue.subIssues.nodes[] | select(.state == "OPEN")] | length')
 
   if [ "$OPEN_SIBLINGS" -eq 0 ]; then
     # All sub-issues done - check off parent's acceptance criteria
