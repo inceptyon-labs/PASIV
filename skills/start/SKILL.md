@@ -84,10 +84,11 @@ REPO_NAME=$(gh repo view --json name -q '.name')
 OWNER=$(gh repo view --json owner -q '.owner.login')
 # ISSUE_URL already set from Step 0
 
-# Get project number
-PROJECT_NUM=$(gh project list --owner "$OWNER" --format json \
-  | jq -r --arg name "$REPO_NAME" '.projects[]? | select(.title == $name) | .number' \
-  | head -1)
+# Get project number AND node ID (item-edit needs the node ID, not number)
+PROJECT_DATA=$(gh project list --owner "$OWNER" --format json \
+  | jq -r --arg name "$REPO_NAME" '.projects[]? | select(.title == $name)')
+PROJECT_NUM=$(echo "$PROJECT_DATA" | jq -r '.number')
+PROJECT_ID=$(echo "$PROJECT_DATA" | jq -r '.id')  # Node ID like PVT_kwDO...
 
 # Get project item ID for this issue
 ITEM_ID=$(gh project item-list "$PROJECT_NUM" --owner "$OWNER" --format json \
@@ -99,8 +100,8 @@ STATUS_FIELD=$(gh project field-list "$PROJECT_NUM" --owner "$OWNER" --format js
 FIELD_ID=$(echo "$STATUS_FIELD" | jq -r '.id')
 IN_PROGRESS_ID=$(echo "$STATUS_FIELD" | jq -r '.options[] | select(.name == "In Progress") | .id')
 
-# Update status to In Progress
-gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_NUM" \
+# Update status to In Progress (use PROJECT_ID not PROJECT_NUM)
+gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
   --field-id "$FIELD_ID" --single-select-option-id "$IN_PROGRESS_ID"
 ```
 
@@ -115,8 +116,8 @@ if [ -n "$PARENT_NUM" ]; then
   PARENT_ITEM_ID=$(gh project item-list "$PROJECT_NUM" --owner "$OWNER" --format json \
     | jq -r --arg url "$PARENT_URL" '.items[] | select(.content.url == $url) | .id')
 
-  # Move parent to In Progress too (if not already)
-  gh project item-edit --id "$PARENT_ITEM_ID" --project-id "$PROJECT_NUM" \
+  # Move parent to In Progress too (use PROJECT_ID not PROJECT_NUM)
+  gh project item-edit --id "$PARENT_ITEM_ID" --project-id "$PROJECT_ID" \
     --field-id "$FIELD_ID" --single-select-option-id "$IN_PROGRESS_ID"
 fi
 ```
@@ -325,8 +326,8 @@ Update project status to Done:
 # Get "Done" option ID (reuse FIELD_ID from Step 1.5)
 DONE_ID=$(echo "$STATUS_FIELD" | jq -r '.options[] | select(.name == "Done") | .id')
 
-# Update status to Done
-gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_NUM" \
+# Update status to Done (use PROJECT_ID not PROJECT_NUM)
+gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
   --field-id "$FIELD_ID" --single-select-option-id "$DONE_ID"
 ```
 
@@ -343,8 +344,8 @@ if [ -n "$PARENT_NUM" ]; then
     # Replace [ ] with [x] and update parent
     gh issue edit "$PARENT_NUM" --body "$UPDATED_PARENT_BODY"
 
-    # Move parent to Done
-    gh project item-edit --id "$PARENT_ITEM_ID" --project-id "$PROJECT_NUM" \
+    # Move parent to Done (use PROJECT_ID not PROJECT_NUM)
+    gh project item-edit --id "$PARENT_ITEM_ID" --project-id "$PROJECT_ID" \
       --field-id "$FIELD_ID" --single-select-option-id "$DONE_ID"
 
     # Close parent issue
@@ -360,9 +361,10 @@ Report:
 Issue #$ISSUE_NUM completed and merged to main.
 
 Review passes:
-- Pass 1 (Sonnet): ✓
-- Pass 2 (Opus): ✓
-- Pass 3 (Codex): ✓
+- Pass 1 (Haiku): ✓
+- Pass 2 (Sonnet): ✓
+- Pass 3 (Opus): ✓
+- Pass 4 (Codex): ✓
 
 Commit: $(git rev-parse --short HEAD)
 ```
