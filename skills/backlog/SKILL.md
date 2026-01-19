@@ -64,7 +64,7 @@ PARENT_URL=$(gh issue create \
 ## Scope
 **In Scope:** ...
 **Out of Scope:** ..." \
-  --label "priority:PRIORITY")
+  --label "pasiv,priority:PRIORITY")
 
 gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$PARENT_URL"
 ```
@@ -81,7 +81,7 @@ SUB_URL=$(gh issue create \
 
 ## Acceptance Criteria
 - [ ] AC 1" \
-  --label "enhancement,size:SIZE,priority:PRIORITY,area:AREA" \
+  --label "pasiv,enhancement,size:SIZE,priority:PRIORITY,area:AREA" \
   --parent PARENT_NUMBER)
 
 gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$SUB_URL"

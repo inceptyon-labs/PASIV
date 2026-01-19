@@ -50,7 +50,9 @@ Description
 **Size:** S/M/L
 ```
 
-Labels: `enhancement,size:SIZE,priority:PRIORITY,area:AREA`
+Labels: `pasiv,enhancement,size:SIZE,priority:PRIORITY,area:AREA`
+
+**Note:** Always include `pasiv` label to distinguish from user-opened issues.
 
 5. **Add to project**:
 
