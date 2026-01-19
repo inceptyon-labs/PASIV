@@ -234,15 +234,17 @@ After successful fix:
 
 **Sonnet review only (fast)**
 
-Quick scan for:
+Perform quick review focusing on:
 - Clear bugs and errors
 - Security basics (XSS, injection, auth flaws)
 - Missing error handling
 - Test coverage gaps
 
+**Reference**: `@sonnet-review` skill for standalone use
+
 Output format:
 ```
-### Review (Sonnet)
+### Quick Review (Sonnet)
 - [ERROR] file:line - description
 - [WARNING] file:line - description
 ```

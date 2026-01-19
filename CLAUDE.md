@@ -8,6 +8,7 @@
 | `/parent user notifications` | Create parent issue + sub-issues |
 | `/start 42` | Plan → Implement → Review → Merge |
 | `/start next` | Work on highest priority issue |
+| `/sonnet-review` | Quick Sonnet-only review |
 | `/3pass-review` | Sonnet → Opus → Codex review pipeline |
 | `/3pass-review feature-branch` | Review specific branch |
 | `/codex-review` | Codex-only deep review |
@@ -147,6 +148,7 @@ skills/
 ├── issue/SKILL.md              # /issue
 ├── parent/SKILL.md             # /parent
 ├── start/SKILL.md              # /start (full flow)
+├── sonnet-review/SKILL.md      # /sonnet-review (quick)
 ├── 3pass-review/SKILL.md       # /3pass-review
 ├── codex-review/SKILL.md       # /codex-review
 ├── backlog/SKILL.md            # /backlog

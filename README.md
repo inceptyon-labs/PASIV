@@ -32,6 +32,7 @@ claude plugin install github:jnew00/github-automation
 | `/parent` | Create parent + sub-issues | `/parent user notifications` |
 | `/backlog` | Parse spec into issues | `/backlog design.md` |
 | `/start` | Full implementation flow | `/start 42` or `/start next` |
+| `/sonnet-review` | Quick Sonnet-only review | `/sonnet-review` |
 | `/3pass-review` | 3-model review pipeline | `/3pass-review feature-branch` |
 | `/codex-review` | Deep Codex-only review | `/codex-review` |
 
@@ -212,6 +213,7 @@ skills/
 ├── issue/SKILL.md              # /issue
 ├── parent/SKILL.md             # /parent (native sub-issues)
 ├── start/SKILL.md              # /start (full flow)
+├── sonnet-review/SKILL.md      # /sonnet-review (quick)
 ├── 3pass-review/SKILL.md       # /3pass-review
 ├── codex-review/SKILL.md       # /codex-review
 ├── backlog/SKILL.md            # /backlog
