@@ -29,7 +29,7 @@ Every extraction needs a team. PASIV connects them:
 ## Install
 
 ```bash
-claude plugin install github:jnew00/pasiv
+claude plugin install github:inceptyon-labs/PASIV
 ```
 
 ## Quick Start
@@ -223,7 +223,7 @@ gh auth refresh -s project
 gh auth refresh -s project
 
 # Create labels (optional)
-bash ~/.claude/plugins/pasiv/.github/scripts/create-labels.sh
+bash ~/.claude/plugins/PASIV/.github/scripts/create-labels.sh
 ```
 
 ## Model Optimization
@@ -273,7 +273,7 @@ docs/
 
 ```bash
 rm -rf ~/.claude/plugins/cache
-claude plugin update pasiv
+claude plugin update PASIV
 ```
 
 ## Acknowledgments

@@ -1,19 +1,20 @@
 {
-  "name": "github-automation",
-  "description": "Solo dev workflow: specs to issues, 3-model code review (Sonnet→Opus→Codex), branch-based development",
-  "version": "1.1.37",
+  "name": "pasiv",
+  "description": "The PASIV device enables shared dreaming. This one connects AI agents to extract tested, reviewed implementations from your ideas. TDD-first, 3-model review pipeline, autonomous workflows.",
+  "version": "2.0.0",
   "author": {
-    "name": "Jason"
+    "name": "Inceptyon Labs"
   },
-  "repository": "https://github.com/your-username/github-automation",
+  "repository": "https://github.com/inceptyon-labs/PASIV",
   "license": "MIT",
   "keywords": [
     "github",
     "automation",
     "code-review",
-    "issues",
+    "tdd",
     "workflow",
-    "solo-dev"
+    "inception",
+    "extraction"
   ],
   "skills": [
     "./skills"
