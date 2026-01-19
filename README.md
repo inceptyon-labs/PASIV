@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="assets/logo.png" alt="Extractor Logo" width="128" height="128">
+  <img src="assets/logo.png" alt="PASIV Logo" width="128" height="128">
 </p>
 
-# Extractor
+# PASIV
 
-> *"An idea is like a virus. Resilient. Highly contagious. And even the smallest seed of an idea can grow."*
+> *"The PASIV device enables shared dreaming."*
 >
-> In Inception, the Extractor enters the mind to pull out what matters most. This tool does the same for your codebase - extracting working, tested, reviewed implementations from the seeds of ideas in your issues and specs.
+> In Inception, the PASIV (Portable Automated Somnacin IntraVenous) device connects the team, enabling them to enter dreams together and extract what matters most. This tool does the same for your codebase - connecting your team of AI agents to extract working, tested, reviewed implementations from the seeds of ideas.
 
 **Solo dev workflow: specs → issues → TDD implementation → review → merge.**
 
@@ -14,10 +14,10 @@
 
 ## The Team
 
-Every extraction needs a team:
+Every extraction needs a team. PASIV connects them:
 
-| Role | What They Do | In Extractor |
-|------|--------------|--------------|
+| Role | What They Do | In PASIV |
+|------|--------------|----------|
 | **Extractor** | Leads the operation, pulls value from the target | `/start` - orchestrates the full flow |
 | **Architect** | Designs the dream levels | `/backlog` - structures specs into issues |
 | **Forger** | Transforms and adapts | `/issue`, `/parent` - shapes ideas into trackable work |
@@ -29,7 +29,7 @@ Every extraction needs a team:
 ## Install
 
 ```bash
-claude plugin install github:jnew00/extractor
+claude plugin install github:jnew00/pasiv
 ```
 
 ## Quick Start
@@ -223,7 +223,7 @@ gh auth refresh -s project
 gh auth refresh -s project
 
 # Create labels (optional)
-bash ~/.claude/plugins/extractor/.github/scripts/create-labels.sh
+bash ~/.claude/plugins/pasiv/.github/scripts/create-labels.sh
 ```
 
 ## Model Optimization
@@ -242,21 +242,21 @@ Main skills (Sonnet/Opus) delegate to these helpers automatically.
 
 ```
 skills/
-├── issue/SKILL.md              # /issue
-├── parent/SKILL.md             # /parent (native sub-issues)
-├── start/SKILL.md              # /start (full flow)
-├── sonnet-review/SKILL.md      # /sonnet-review (quick)
+├── issue/SKILL.md              # /issue (Forger)
+├── parent/SKILL.md             # /parent (Forger)
+├── start/SKILL.md              # /start (Extractor)
+├── sonnet-review/SKILL.md      # /sonnet-review
 ├── 3pass-review/SKILL.md       # /3pass-review
 ├── codex-review/SKILL.md       # /codex-review
-├── backlog/SKILL.md            # /backlog
+├── backlog/SKILL.md            # /backlog (Architect)
 │
-├── tdd/SKILL.md                # TDD methodology (internal)
-├── verification/SKILL.md       # Verification gate (internal)
-├── systematic-debugging/SKILL.md # Debug methodology (internal)
+├── tdd/SKILL.md                # TDD methodology (Chemist)
+├── verification/SKILL.md       # Verification gate (Chemist)
+├── systematic-debugging/SKILL.md # Debug methodology (Chemist)
 │
-├── git-ops/SKILL.md            # Helper: git operations (Haiku)
-├── issue-ops/SKILL.md          # Helper: issue operations (Haiku)
-└── project-ops/SKILL.md        # Helper: project operations (Haiku)
+├── git-ops/SKILL.md            # Helper (Point Man)
+├── issue-ops/SKILL.md          # Helper (Point Man)
+└── project-ops/SKILL.md        # Helper (Point Man)
 
 docs/
 └── plans/                      # Implementation plans
@@ -273,7 +273,7 @@ docs/
 
 ```bash
 rm -rf ~/.claude/plugins/cache
-claude plugin update extractor
+claude plugin update pasiv
 ```
 
 ## Acknowledgments
@@ -285,4 +285,4 @@ claude plugin update extractor
 
 > *"Do you want to take a leap of faith? Or become an old man, filled with regret, waiting to die alone?"*
 >
-> Start extracting. `/start next`
+> Connect to PASIV. `/start next`

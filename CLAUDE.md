@@ -1,4 +1,4 @@
-# Extractor
+# PASIV
 
 ## Slash Commands
 
