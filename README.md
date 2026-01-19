@@ -1,6 +1,6 @@
 # GitHub Automation Plugin
 
-Solo dev workflow: specs → issues → implement → test → 3-model review → merge.
+Solo dev workflow: specs → issues → TDD implementation → review → merge.
 
 ## Install
 
@@ -39,10 +39,10 @@ claude plugin install github:jnew00/github-automation
 
 ```mermaid
 graph LR;
-    A[Issue]-->B[Plan]-->C[Implement]-->D[Test]-->E[Sonnet]-->F[Opus]-->G[Codex]-->H[Merge];
+    A[Issue]-->B[Plan]-->C[Review Depth]-->D[TDD Implement]-->E[Review]-->F[Verify]-->G[Merge];
 ```
 
-**Full flow:** Get issue → Plan (approval) → Implement → Test → Review (Sonnet → Opus → Codex, fix after each) → Merge & Close
+**Full flow:** Get issue → Plan (approval) → Select review depth → TDD implement → Review → Verification gate → Merge & Close
 
 **Model delegation:**
 - Simple ops (git, issue, project) → **Haiku** (cheap, forked context)
@@ -55,41 +55,90 @@ graph LR;
 ```
 
 1. **Fetch issue details** (reliable lookup by number)
-2. **Check for sub-issues** (if parent, work through all)
+2. **Check for sub-issues** (if parent, use autonomous flow)
 3. Move to **In Progress**
-4. Create plan (including tests) → wait for approval
-5. Implement on feature branch
-6. **Write tests** for acceptance criteria
-7. **Run tests** (must pass)
-8. Review: Sonnet → Opus → Codex
-9. Fix errors (max 3 iterations)
-10. **Check off acceptance criteria**
-11. Final test run
-12. Merge to main, move to **Done**, close issue
+4. Create plan → **select review depth** → wait for approval
+5. **TDD implementation** (RED → GREEN → REFACTOR → COMMIT)
+6. Run tests (systematic debugging if failures)
+7. **Code review** (Light/Medium/Full based on selection)
+8. **Verification gate** (fresh test/build/lint evidence)
+9. Check off acceptance criteria
+10. Merge to main, move to **Done**, close issue
 
-### Parent Issue Support
+### Review Depth Selection
 
-When you `/start` a **parent issue** that has sub-issues:
+During plan approval, select review depth with smart recommendations:
 
-1. Lists all sub-issues with suggested implementation order
-2. Moves parent to In Progress
-3. Works through each sub-issue sequentially (full flow for each)
-4. After all sub-issues done, parent auto-closes
+| Depth | Models | When Recommended |
+|-------|--------|------------------|
+| **Light** | Sonnet | `size:S`, simple bugs |
+| **Medium** | Codex | `size:M`, moderate features |
+| **Full** | Sonnet → Opus → Codex | `size:L`, security files detected |
+
+### TDD Methodology
+
+All implementation follows test-driven development:
+
+```
+RED → GREEN → REFACTOR → COMMIT → repeat
+```
+
+1. **RED**: Write failing test
+2. **GREEN**: Write minimal code to pass
+3. **REFACTOR**: Clean up
+4. **COMMIT**: After each cycle
+
+**Iron Law**: No production code without a failing test first.
+
+### Verification Gate
+
+Before merge, fresh evidence is required:
+
+| Check | Command |
+|-------|---------|
+| Tests pass | `npm test` with output |
+| Build succeeds | `npm run build` with exit 0 |
+| Lint clean | `npm run lint` with output |
+
+No "should work" - actual runs with actual output.
+
+### Parent Issue Support (Autonomous)
+
+When you `/start` a **parent issue** with sub-issues:
+
+```
+Parent #41: User Auth System (3 sub-issues)
+
+Implementation order:
+  1. #42 Add user model        → Light  (size:S)
+  2. #43 Add auth endpoints    → Full   (size:M) [security]
+  3. #44 Add login UI          → Medium (size:M)
+
+Approve and start autonomous run? [Yes/Customize/Cancel]
+```
+
+- **Approve once, walk away** - implements all sub-issues autonomously
+- **Stops only on error** - asks how to proceed
+- **Auto-closes parent** when all sub-issues complete
 
 **Sub-issue priority order:**
 - `area:db` → `area:infra` → `area:backend` → `area:frontend`
 - Within same area: `priority:high` → `priority:medium` → `priority:low`
 
-### Status Cascading
+### Systematic Debugging
 
-- Starting a sub-issue → parent moves to In Progress
-- Completing last sub-issue → parent moves to Done & closes
+When tests fail, root cause analysis is enforced:
+
+1. **Investigate** - Read full error, find root cause
+2. **Hypothesize** - Form specific theory
+3. **Test** - Make ONE minimal change
+4. **Verify** - Run tests again
+
+**Three Strikes Rule**: After 3 failed fix attempts, stop and reassess.
 
 ## Review Pipeline
 
-**Flow: Sonnet → FIX → Opus → FIX → Codex → FIX → Done**
-
-Linear progression. **STOP and fix errors after each pass before proceeding.**
+**Full 3-pass flow: Sonnet → FIX → Opus → FIX → Codex → FIX → Done**
 
 | Pass | Model | Focus |
 |------|-------|-------|
@@ -160,23 +209,30 @@ Main skills (Sonnet/Opus) delegate to these helpers automatically.
 
 ```
 skills/
-├── issue/SKILL.md         # /issue
-├── parent/SKILL.md        # /parent (native sub-issues)
-├── start/SKILL.md         # /start (full flow)
-├── 3pass-review/SKILL.md  # /3pass-review
-├── codex-review/SKILL.md  # /codex-review
-├── backlog/SKILL.md       # /backlog
+├── issue/SKILL.md              # /issue
+├── parent/SKILL.md             # /parent (native sub-issues)
+├── start/SKILL.md              # /start (full flow)
+├── 3pass-review/SKILL.md       # /3pass-review
+├── codex-review/SKILL.md       # /codex-review
+├── backlog/SKILL.md            # /backlog
 │
-├── git-ops/SKILL.md       # Helper: git operations (Haiku)
-├── issue-ops/SKILL.md     # Helper: issue operations (Haiku)
-└── project-ops/SKILL.md   # Helper: project operations (Haiku)
+├── tdd/SKILL.md                # TDD methodology (internal)
+├── verification/SKILL.md       # Verification gate (internal)
+├── systematic-debugging/SKILL.md # Debug methodology (internal)
+│
+├── git-ops/SKILL.md            # Helper: git operations (Haiku)
+├── issue-ops/SKILL.md          # Helper: issue operations (Haiku)
+└── project-ops/SKILL.md        # Helper: project operations (Haiku)
+
+docs/
+└── plans/                      # Implementation plans
 
 .github/
 ├── scripts/
 │   ├── install.sh
 │   └── create-labels.sh
 └── workflows/
-    └── version-bump.yml   # Auto-bump version on push
+    └── version-bump.yml        # Auto-bump version on push
 ```
 
 ## Updating
@@ -185,3 +241,7 @@ skills/
 rm -rf ~/.claude/plugins/cache
 claude plugin update github-automation
 ```
+
+## Acknowledgments
+
+Development methodology (TDD cycle, verification gates, systematic debugging) inspired by [obra/superpowers](https://github.com/obra/superpowers).
