@@ -152,7 +152,7 @@ Architecture, edge cases, performance, maintainability, **test coverage quality*
 ```bash
 DIFF=$(git diff main)
 
-codex exec -s read-only "Independent code review for Issue #$ISSUE_NUM.
+codex exec -s read-only -o /tmp/codex-review.txt "Independent code review for Issue #$ISSUE_NUM.
 
 Here is the diff:
 $DIFF
@@ -164,6 +164,8 @@ Focus on:
 4. What previous reviewers missed
 
 Categorize as ERROR/WARNING/SUGGESTION."
+
+cat /tmp/codex-review.txt
 ```
 
 **STOP after Pass 3.** If any ERRORs:

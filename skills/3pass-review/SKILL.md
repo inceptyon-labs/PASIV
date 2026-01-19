@@ -28,7 +28,7 @@ git diff main
 
 ## Pass 1: Fast Review (Sonnet)
 
-Use model `claude-sonnet-4-20250514` for quick scan:
+Use model `sonnet` for quick scan:
 
 Focus on:
 - Clear bugs and errors
@@ -60,7 +60,7 @@ If any ERRORs found:
 
 ## Pass 2: Deep Review (Opus)
 
-Use model `claude-opus-4-20250514` for thorough analysis:
+Use model `opus` for thorough analysis:
 
 Think like a senior engineer:
 - Architecture and design patterns
@@ -99,7 +99,7 @@ If any ERRORs found:
 ```bash
 DIFF=$(git diff main)
 
-codex exec -s read-only "Independent code review - catch what others missed.
+codex exec -s read-only -o /tmp/codex-review.txt "Independent code review - catch what others missed.
 
 Here is the diff:
 $DIFF
@@ -116,6 +116,8 @@ For each finding, specify:
 - Issue and recommended fix
 
 Be thorough but don't repeat obvious issues."
+
+cat /tmp/codex-review.txt
 ```
 
 ### STOP - Fix Pass 3 Errors Now
