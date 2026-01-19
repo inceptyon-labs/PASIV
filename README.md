@@ -35,6 +35,62 @@ claude plugin install github:jnew00/github-automation
 | `/3pass-review` | 3-model review pipeline | `/3pass-review feature-branch` |
 | `/codex-review` | Deep Codex-only review | `/codex-review` |
 
+## Flow Diagram
+
+```mermaid
+flowchart TB
+    subgraph Start["/start 42"]
+        direction TB
+        A[Get Issue] --> B{Has Sub-issues?}
+        B -->|Yes| C[Work through each]
+        B -->|No| D[Move to In Progress]
+        C --> D
+        D --> E[Create Plan]
+        E --> F{User Approves?}
+        F -->|Revise| E
+        F -->|Approve| G[Implement + Tests]
+        G --> H[Format & Lint]
+        H --> I[Run Tests]
+        I -->|Fail| G
+        I -->|Pass| J[3-Model Review]
+    end
+
+    subgraph Review["Review Pipeline"]
+        direction TB
+        J --> K["Pass 1: Sonnet"]
+        K -->|Errors| K1[Fix] --> K
+        K -->|Clean| L["Pass 2: Opus"]
+        L -->|Errors| L1[Fix] --> L
+        L -->|Clean| M["Pass 3: Codex"]
+        M -->|Errors| M1[Fix] --> M
+        M -->|Clean| N[All Passes Clean]
+    end
+
+    subgraph Finish["Complete"]
+        N --> O[Check off Criteria]
+        O --> P[Final Test Run]
+        P --> Q[Merge to Main]
+        Q --> R[Move to Done]
+        R --> S[Close Issue]
+    end
+
+    subgraph Helpers["Haiku Helpers (forked context)"]
+        direction LR
+        H1[git-ops]
+        H2[issue-ops]
+        H3[project-ops]
+    end
+
+    D -.->|"move status"| H3
+    G -.->|"commit"| H1
+    Q -.->|"merge"| H1
+    R -.->|"move status"| H3
+    S -.->|"close"| H2
+
+    style Helpers fill:#e8f5e9
+    style Review fill:#fff3e0
+```
+
 ## The `/start` Flow
 
 ```
