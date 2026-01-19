@@ -18,6 +18,11 @@ Full flow for: $ARGUMENTS (issue number or "next")
 - `project-ops` - Project operations (setup, move status)
 - `git-ops` - Git operations (branch, commit, push, merge)
 
+**Methodology skills (referenced inline):**
+- `tdd` - Test-Driven Development cycle
+- `verification` - Pre-completion verification gate
+- `systematic-debugging` - Root cause debugging
+
 ---
 
 ## Step 0: Get Issue Details
@@ -30,7 +35,7 @@ ISSUE_NUM=$(gh issue list --label "priority:high" --state open --limit 1 --json 
 [ -z "$ISSUE_NUM" ] && ISSUE_NUM=$(gh issue list --state open --limit 1 --json number -q '.[0].number')
 ```
 
-Store: ISSUE_NUM, ISSUE_TITLE, ISSUE_URL, ISSUE_BODY
+Store: ISSUE_NUM, ISSUE_TITLE, ISSUE_URL, ISSUE_BODY, ISSUE_LABELS
 
 ---
 
@@ -38,15 +43,9 @@ Store: ISSUE_NUM, ISSUE_TITLE, ISSUE_URL, ISSUE_BODY
 
 **Use Skill tool:** `issue-ops` with args: `get-sub-issues $OWNER $REPO $ISSUE_NUM`
 
-**If sub-issues exist:**
-1. Move parent to In Progress (Step 1.5)
-2. For each sub-issue (in priority order):
-   - Ask user: "Ready to start sub-issue #N: Title?"
-   - Run Steps 1-7 for that sub-issue
-   - After completing, continue to next
-3. After all done, parent auto-closes (Step 7 cascade)
+**If no sub-issues:** Continue with normal flow (Step 1).
 
-**If no sub-issues:** Continue with normal flow.
+**If sub-issues exist:** Follow [Parent Issue Flow](#parent-issue-flow-autonomous).
 
 ---
 
@@ -70,7 +69,7 @@ If parent exists, also move parent to In Progress.
 
 ---
 
-## Step 2: Create Plan
+## Step 2: Create Plan + Select Review Depth
 
 Analyze the issue and codebase. Present:
 
@@ -81,23 +80,89 @@ Analyze the issue and codebase. Present:
 - **Approach**: Step-by-step
 - **Risks**: Potential issues
 
-**Use AskUserQuestion tool** to get approval:
-- **Approve**: Continue to Step 3
-- **Revise**: Ask what to change, update plan, ask again
-- **Cancel**: Stop and explain why
+### Determine Review Depth Recommendation
+
+Check planned files for security patterns:
+```bash
+SECURITY_PATTERNS="auth|crypto|password|payment|token|secret|credential|session|login|oauth|jwt|apikey|private|key"
+```
+
+**Recommendation logic:**
+```
+IF any planned files match SECURITY_PATTERNS:
+  → RECOMMEND = "Full 3-pass" + note "(security files detected)"
+ELSE IF issue has label "size:L" OR "priority:high":
+  → RECOMMEND = "Full 3-pass"
+ELSE IF issue has label "size:M":
+  → RECOMMEND = "Medium (Codex)"
+ELSE IF issue has label "size:S" OR "bug":
+  → RECOMMEND = "Light (Sonnet)"
+ELSE:
+  → RECOMMEND = "Medium (Codex)"
+```
+
+### Ask for Approval + Review Depth
+
+**Use AskUserQuestion tool** with TWO questions:
+
+**Question 1**: "Approve this implementation plan?"
+- Approve - Continue to implementation
+- Revise - Modify the plan
+- Cancel - Stop work on this issue
+
+**Question 2**: "What review depth for this change?"
+- Light (Sonnet only) - simple bug/config {add "(Recommended)" if matches}
+- Medium (Codex only) - moderate complexity {add "(Recommended)" if matches}
+- Full 3-pass (Sonnet → Opus → Codex) - complex/security-sensitive {add "(Recommended)" or "(Recommended - security files detected)" if applicable}
+
+**Store**: REVIEW_DEPTH = "light" | "medium" | "full"
+
+**If Approve**: Continue to Step 3 with selected REVIEW_DEPTH
+**If Revise**: Ask what to change, update plan, ask again
+**If Cancel**: Stop and explain why
 
 ---
 
-## Step 3: Implement
+## Step 3: Implement (TDD)
 
 **Use Skill tool:** `git-ops` with args: `create-branch $ISSUE_NUM`
 
-Make the changes AND write tests:
-1. Implement the feature/fix
-2. **Write tests** that verify acceptance criteria
-3. Ensure tests cover edge cases
+### For each piece of functionality, follow TDD:
 
-**Use Skill tool:** `git-ops` with args: `commit "feat: description (#$ISSUE_NUM)"`
+#### RED Phase
+1. Write ONE minimal failing test
+2. Run tests - must FAIL:
+```bash
+npm test || pytest || go test ./... || cargo test || bun test
+```
+3. Verify: Test fails because feature doesn't exist (not syntax/import error)
+
+#### GREEN Phase
+1. Write the SIMPLEST code to make test pass
+2. Run tests - must PASS:
+```bash
+npm test || pytest || go test ./... || cargo test || bun test
+```
+3. Verify: New test passes, no other tests broken
+
+#### REFACTOR Phase
+1. Clean up if needed (remove duplication, improve names)
+2. Run tests after each change - must stay GREEN
+
+#### COMMIT
+After each RED-GREEN-REFACTOR cycle:
+**Use Skill tool:** `git-ops` with args: `commit "feat: [what was added] (#$ISSUE_NUM)"`
+
+### TDD Violations - STOP
+
+If you find yourself:
+- Writing code before tests → Delete code, write test first
+- Test passes immediately → Test doesn't test what you think, rewrite
+- Adding features beyond the test → Remove extras, stay minimal
+
+**Reference**: `@tdd` skill for full methodology
+
+**Repeat TDD cycle** for each acceptance criterion until all are covered.
 
 ---
 
@@ -116,38 +181,132 @@ If changes made:
 
 **Tests must pass before review.**
 
-Detect and run test suite. If tests fail:
-1. Fix the failing tests
-2. **Use Skill tool:** `git-ops` with args: `commit "fix: failing tests"`
-3. Re-run until pass
+```bash
+npm test || pytest || go test ./... || cargo test || bun test
+```
+
+### If tests fail - Use Systematic Debugging
+
+**Do NOT guess at fixes.** Follow root cause analysis:
+
+1. **Read** the full error output - exact message, stack trace, file:line
+2. **Reproduce** consistently - run the specific failing test
+3. **Hypothesize** - form a SPECIFIC theory ("X fails because Y")
+4. **Test** - make ONE minimal change
+5. **Verify** - run tests again
+
+```bash
+# After each fix attempt
+npm test || pytest || go test ./... || cargo test || bun test
+```
+
+### Three Strikes Rule
+
+**If 3 independent fix attempts fail: STOP**
+
+The failure may indicate deeper design issues. Report to user:
+```
+Tests failing after 3 fix attempts.
+
+Attempts:
+1. [hypothesis] → [result]
+2. [hypothesis] → [result]
+3. [hypothesis] → [result]
+
+Options:
+- Debug together - Help me investigate
+- Skip review - Merge anyway (not recommended)
+- Stop - I'll handle manually
+```
+
+After successful fix:
+**Use Skill tool:** `git-ops` with args: `commit "fix: [root cause description]"`
+
+**Reference**: `@systematic-debugging` skill for full methodology
 
 **Do not proceed to review until tests pass.**
 
 ---
 
-## Step 4: 3-Model Review
+## Step 4: Code Review (based on REVIEW_DEPTH)
+
+### If REVIEW_DEPTH = "light"
+
+**Sonnet review only (fast)**
+
+Quick scan for:
+- Clear bugs and errors
+- Security basics (XSS, injection, auth flaws)
+- Missing error handling
+- Test coverage gaps
+
+Output format:
+```
+### Review (Sonnet)
+- [ERROR] file:line - description
+- [WARNING] file:line - description
+```
+
+**If any ERRORs:**
+1. Fix each error (use TDD - write test first if missing)
+2. **Use Skill tool:** `git-ops` with args: `commit "fix: address Sonnet review findings"`
+
+Proceed to Step 5.
+
+---
+
+### If REVIEW_DEPTH = "medium"
+
+**Codex review only (independent deep review)**
+
+```bash
+DIFF=$(git diff main)
+
+codex exec -s read-only -o /tmp/codex-review.txt "Code review for Issue #$ISSUE_NUM.
+
+Here is the diff:
+$DIFF
+
+Focus on:
+1. Bugs and logic errors
+2. Security issues
+3. Test coverage gaps
+4. Edge cases
+
+Categorize as ERROR/WARNING/SUGGESTION."
+
+cat /tmp/codex-review.txt
+```
+
+**If any ERRORs:**
+1. Fix each error (use TDD - write test first if missing)
+2. **Use Skill tool:** `git-ops` with args: `commit "fix: address Codex review findings"`
+
+Proceed to Step 5.
+
+---
+
+### If REVIEW_DEPTH = "full"
 
 **Flow: Sonnet → FIX → Opus → FIX → Codex → FIX → Done**
 
-### Pass 1: Sonnet (fast)
+#### Pass 1: Sonnet (fast)
 Quick scan for bugs, security basics, missing error handling, **missing tests**.
 
 **STOP after Pass 1.** If any ERRORs:
-1. Fix each error
+1. Fix each error (use TDD)
 2. **Use Skill tool:** `git-ops` with args: `commit "fix: address Sonnet review findings"`
 3. Then proceed to Pass 2
 
-### Pass 2: Opus (deep)
+#### Pass 2: Opus (deep)
 Architecture, edge cases, performance, maintainability, **test coverage quality**.
 
 **STOP after Pass 2.** If any ERRORs:
-1. Fix each error
+1. Fix each error (use TDD)
 2. **Use Skill tool:** `git-ops` with args: `commit "fix: address Opus review findings"`
 3. Then proceed to Pass 3
 
-### Pass 3: Codex (independent)
-
-**IMPORTANT: Use the custom prompt, NOT `codex review --base main`.**
+#### Pass 3: Codex (independent)
 
 ```bash
 DIFF=$(git diff main)
@@ -169,8 +328,10 @@ cat /tmp/codex-review.txt
 ```
 
 **STOP after Pass 3.** If any ERRORs:
-1. Fix each error
+1. Fix each error (use TDD)
 2. **Use Skill tool:** `git-ops` with args: `commit "fix: address Codex review findings"`
+
+Proceed to Step 5.
 
 ---
 
@@ -180,11 +341,52 @@ cat /tmp/codex-review.txt
 
 ---
 
-## Step 6: Final Test Run & Merge
+## Step 6: Verification Gate
 
-Run tests one final time. If fail, fix and re-run review cycle.
+**Before merge, verify ALL with fresh runs.**
 
-When all clean:
+Run each and check output:
+
+```bash
+# 1. Tests pass
+npm test || pytest || go test ./... || cargo test
+
+# 2. Build succeeds (if applicable)
+npm run build || go build ./... || cargo build
+
+# 3. Lint clean (if configured)
+npm run lint || golangci-lint run || cargo clippy
+
+# 4. Type check (if applicable)
+npm run typecheck || tsc --noEmit
+```
+
+**For each command:**
+1. Run it fresh (don't rely on earlier results)
+2. Check exit code is 0
+3. Review output for warnings
+
+**Report:**
+```
+## Verification Gate
+
+Tests:     ✓ [count] passed (exit 0)
+Build:     ✓ completed (exit 0)
+Lint:      ✓ no errors (exit 0)
+
+Ready to merge.
+```
+
+**If any fail:**
+1. Fix the issue (use systematic debugging if tests)
+2. Re-run verification
+3. Only proceed when ALL pass
+
+**Reference**: `@verification` skill for methodology
+
+---
+
+## Step 7: Merge
 
 **Use Skill tool:** `git-ops` with args: `merge-to-main`
 
@@ -192,7 +394,7 @@ When all clean:
 
 ---
 
-## Step 7: Move to Done
+## Step 8: Move to Done
 
 **Use Skill tool:** `project-ops` with args: `move-to-done $PROJECT_ID $PROJECT_NUM $OWNER $ISSUE_URL`
 
@@ -215,30 +417,112 @@ Report:
 
 Issue #$ISSUE_NUM completed and merged to main.
 
-Review passes:
-- Pass 1 (Sonnet): ✓
-- Pass 2 (Opus): ✓
-- Pass 3 (Codex): ✓
+Methodology: TDD (test-first)
+Review: [Light/Medium/Full]
+Verification: ✓ All checks passed
 
 Commit: [short SHA]
 ```
 
 ---
 
-## Parent Issue Flow (when sub-issues exist)
+## Parent Issue Flow (Autonomous)
 
-When `/start` is called on a parent issue that has sub-issues:
+When `/start` is called on a parent issue that has sub-issues, use "approve once, walk away" mode.
 
-1. **List all sub-issues** and show suggested order
-2. **Move parent to In Progress**
-3. **For each sub-issue** (in priority order):
-   - Ask user: "Ready to start sub-issue #N: Title?"
-   - Run the full flow (Steps 1-7) for that sub-issue
-   - Report completion
-   - Ask: "Continue to next sub-issue #M?"
-4. **After all sub-issues complete**, parent auto-closes
+### Analyze All Sub-Issues
 
-**Priority order for sub-issues:**
+For each sub-issue, determine recommended review depth:
+
+```
+FOR each sub-issue:
+  Get labels and estimate planned files
+  IF likely touches security patterns (auth, crypto, payment, token, etc.):
+    → RECOMMEND = "Full" + flag "[security]"
+  ELSE IF has label "size:L" OR "priority:high":
+    → RECOMMEND = "Full"
+  ELSE IF has label "size:M":
+    → RECOMMEND = "Medium"
+  ELSE IF has label "size:S" OR "bug":
+    → RECOMMEND = "Light"
+  ELSE:
+    → RECOMMEND = "Medium"
+```
+
+### Present Upfront Summary
+
+Display:
+```
+Parent #$PARENT_NUM: $PARENT_TITLE ($COUNT sub-issues)
+
+Implementation order:
+  1. #42 Add user model        → Light  (size:S)
+  2. #43 Add auth endpoints    → Full   (size:M) [security]
+  3. #44 Add login UI          → Medium (size:M)
+
+Methodology: TDD (test-first) for all sub-issues
+Verification gate before each merge
+```
+
+### Ask for Approval
+
+**Use AskUserQuestion tool:**
+
+**Question**: "Approve implementation plan with these review depths?"
+- Yes, start autonomous run (Recommended) - Implement all sub-issues with shown review depths
+- Customize review depths - I'll specify different depths
+- Cancel - Stop work
+
+**If "Yes, start autonomous run":**
+- Store REVIEW_DEPTHS map: {42: "light", 43: "full", 44: "medium"}
+- Move parent to In Progress
+- Process each sub-issue autonomously using stored depth
+- No further prompts until all complete or error occurs
+
+**If "Customize review depths":**
+- Ask for each sub-issue's review depth
+- Then proceed with autonomous run
+
+**If "Cancel":** Stop and explain why
+
+### Autonomous Sub-Issue Processing
+
+For each sub-issue (in priority order):
+1. Display: "Starting sub-issue #N: $TITLE (Review: $DEPTH)"
+2. Run Steps 1-8 using REVIEW_DEPTHS[N]
+3. On success: Continue to next sub-issue
+4. On error: STOP, report error, ask how to proceed:
+   ```
+   ERROR in sub-issue #N: [description]
+
+   Options:
+   - Debug together - Help me investigate
+   - Skip this sub-issue - Continue to next
+   - Stop - I'll handle manually
+   ```
+
+### After All Sub-Issues Complete
+
+Parent auto-closes via Step 8 cascade.
+
+Report summary:
+```
+## Parent Issue Complete
+
+Parent #$PARENT_NUM: $PARENT_TITLE
+
+Sub-issues completed:
+  ✓ #42 Add user model        (Light review)
+  ✓ #43 Add auth endpoints    (Full review)
+  ✓ #44 Add login UI          (Medium review)
+
+All merged to main.
+```
+
+---
+
+## Priority Order for Sub-Issues
+
 1. `area:db` (database first)
 2. `area:infra` (infrastructure)
 3. `area:backend` (backend services)
