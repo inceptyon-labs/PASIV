@@ -1,4 +1,4 @@
-# GitHub Automation Plugin
+# Extractor
 
 ## Slash Commands
 

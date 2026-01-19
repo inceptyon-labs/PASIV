@@ -1,11 +1,35 @@
-# GitHub Automation Plugin
+<p align="center">
+  <img src="assets/logo.png" alt="Extractor Logo" width="128" height="128">
+</p>
 
-Solo dev workflow: specs → issues → TDD implementation → review → merge.
+# Extractor
+
+> *"An idea is like a virus. Resilient. Highly contagious. And even the smallest seed of an idea can grow."*
+>
+> In Inception, the Extractor enters the mind to pull out what matters most. This tool does the same for your codebase - extracting working, tested, reviewed implementations from the seeds of ideas in your issues and specs.
+
+**Solo dev workflow: specs → issues → TDD implementation → review → merge.**
+
+---
+
+## The Team
+
+Every extraction needs a team:
+
+| Role | What They Do | In Extractor |
+|------|--------------|--------------|
+| **Extractor** | Leads the operation, pulls value from the target | `/start` - orchestrates the full flow |
+| **Architect** | Designs the dream levels | `/backlog` - structures specs into issues |
+| **Forger** | Transforms and adapts | `/issue`, `/parent` - shapes ideas into trackable work |
+| **Point Man** | Handles the details | `git-ops`, `issue-ops`, `project-ops` - the helpers |
+| **Chemist** | Enables deep dreaming | TDD, verification, systematic debugging - the methodology |
+
+---
 
 ## Install
 
 ```bash
-claude plugin install github:jnew00/github-automation
+claude plugin install github:jnew00/extractor
 ```
 
 ## Quick Start
@@ -20,7 +44,7 @@ claude plugin install github:jnew00/github-automation
 # Parse a spec into a full backlog
 /backlog spec.md
 
-# Start working on an issue (full flow)
+# Start working on an issue (full extraction)
 /start 42
 ```
 
@@ -51,6 +75,8 @@ graph LR;
 
 ## The `/start` Flow
 
+> *"You mustn't be afraid to dream a little bigger, darling."*
+
 ```
 /start 42
 ```
@@ -78,6 +104,8 @@ During plan approval, select review depth with smart recommendations:
 
 ### TDD Methodology
 
+> *"The dreamer can always remember the genesis of the idea."*
+
 All implementation follows test-driven development:
 
 ```
@@ -93,6 +121,8 @@ RED → GREEN → REFACTOR → COMMIT → repeat
 
 ### Verification Gate
 
+> *"What is the most resilient parasite? An idea."*
+
 Before merge, fresh evidence is required:
 
 | Check | Command |
@@ -104,6 +134,8 @@ Before merge, fresh evidence is required:
 No "should work" - actual runs with actual output.
 
 ### Parent Issue Support (Autonomous)
+
+> *"We need to go deeper."*
 
 When you `/start` a **parent issue** with sub-issues:
 
@@ -191,7 +223,7 @@ gh auth refresh -s project
 gh auth refresh -s project
 
 # Create labels (optional)
-bash ~/.claude/plugins/github-automation/.github/scripts/create-labels.sh
+bash ~/.claude/plugins/extractor/.github/scripts/create-labels.sh
 ```
 
 ## Model Optimization
@@ -241,9 +273,16 @@ docs/
 
 ```bash
 rm -rf ~/.claude/plugins/cache
-claude plugin update github-automation
+claude plugin update extractor
 ```
 
 ## Acknowledgments
 
-Development methodology (TDD cycle, verification gates, systematic debugging) inspired by [obra/superpowers](https://github.com/obra/superpowers).
+- Development methodology (TDD cycle, verification gates, systematic debugging) inspired by [obra/superpowers](https://github.com/obra/superpowers)
+- Name and lore inspired by Christopher Nolan's *Inception* (2010)
+
+---
+
+> *"Do you want to take a leap of faith? Or become an old man, filled with regret, waiting to die alone?"*
+>
+> Start extracting. `/start next`
