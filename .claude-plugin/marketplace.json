@@ -1,24 +1,26 @@
 {
-  "name": "solo-dev-tools",
+  "name": "pasiv",
   "owner": {
-    "name": "Jason"
+    "name": "Inceptyon Labs"
   },
   "metadata": {
-    "description": "GitHub automation tools for solo developers",
-    "version": "1.1.37"
+    "description": "The PASIV device enables shared dreaming. Connect AI agents to extract tested, reviewed implementations from ideas.",
+    "version": "2.0.0"
   },
   "plugins": [
     {
-      "name": "github-automation",
+      "name": "pasiv",
       "source": "./",
-      "description": "Solo dev workflow: specs to issues, 3-model code review (Sonnet→Opus→Codex), branch-based development",
-      "version": "1.1.37",
+      "description": "TDD-first, 3-model review pipeline, autonomous workflows. Inception-inspired solo dev automation.",
+      "version": "2.0.0",
       "category": "productivity",
       "tags": [
         "github",
         "automation",
         "code-review",
-        "workflow"
+        "tdd",
+        "workflow",
+        "inception"
       ],
       "strict": true
     }
