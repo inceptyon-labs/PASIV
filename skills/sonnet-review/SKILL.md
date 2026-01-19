@@ -1,6 +1,9 @@
 ---
 name: sonnet-review
 description: Quick code review using Sonnet. Use when user says "sonnet review", "quick review", "light review", or wants fast feedback on simple changes.
+model: sonnet
+context: fork
+user-invocable: true
 allowed-tools:
   - Bash
   - Read

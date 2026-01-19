@@ -1,6 +1,8 @@
 ---
 name: codex-review
 description: Deep code review using Codex CLI. Use when user says "codex review", "deep review", "security review", or wants thorough analysis of code, PR, or specific files.
+context: fork
+user-invocable: true
 allowed-tools:
   - Bash
   - Read
