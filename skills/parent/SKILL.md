@@ -1,18 +1,62 @@
 ---
 name: parent
-description: Create a parent issue with sub-issues for large features. Use when user says "create parent issue", "break down feature", "create feature with subtasks", or wants to implement a multi-part feature with sub-issues.
+description: Create a Feature (parent issue) with Task sub-issues. Use when user says "create parent issue", "break down feature", "create feature with subtasks", or wants to implement a multi-part feature with sub-issues.
 allowed-tools:
   - Bash
   - Read
 ---
 
-# Create Parent Issue with Sub-issues
+# Create Feature with Tasks
 
-Create a parent issue and break into sub-issues: $ARGUMENTS
+Create a Feature and break into Task sub-issues: $ARGUMENTS
+
+**This skill creates Features** - tactical work items that span days/week, broken into Tasks.
+
+## Issue Type Hierarchy
+
+| Level | Type | Scope | Example |
+|-------|------|-------|---------|
+| **Epic** | Strategic | Multiple features, spans weeks/months | "User Authentication System" |
+| **Feature** | Tactical | Single capability, spans days/week | "OAuth Login" |
+| **Task** | Execution | Single work item, hours | "Create OAuth callback endpoint" |
+
+**This skill creates: Feature → Tasks** (use `/backlog` for Epics containing multiple Features)
+
+## Label Definitions
+
+Create missing labels before use:
+
+| Label | Color | Description |
+|-------|-------|-------------|
+| `pasiv` | `1a1a2e` | Created by PASIV automation |
+| `priority:high` | `DC2626` | Critical priority |
+| `priority:medium` | `F59E0B` | Medium priority |
+| `priority:low` | `10B981` | Low priority |
+| `size:S` | `DBEAFE` | Small task (1-4 hours) |
+| `size:M` | `BFDBFE` | Medium task (4-8 hours) |
+| `size:L` | `93C5FD` | Large task (8+ hours) |
+| `area:frontend` | `EC4899` | Web/UI changes |
+| `area:backend` | `8B5CF6` | API/server changes |
+| `area:infra` | `6B7280` | DevOps/CI/CD |
+| `area:db` | `3B82F6` | Database schema/queries |
 
 ## Steps
 
-1. **Setup project**:
+1. **Ensure labels exist**:
+
+```bash
+# Get existing labels
+EXISTING=$(gh label list --json name -q '.[].name')
+
+# Create any missing labels needed for this feature
+# Check each label you plan to use and create if missing
+# Example:
+if ! echo "$EXISTING" | grep -q "^pasiv$"; then
+  gh label create "pasiv" --color "1a1a2e" --description "Created by PASIV automation" --force
+fi
+```
+
+2. **Setup project**:
 
 ```bash
 REPO_NAME=$(gh repo view --json name -q '.name')
@@ -34,11 +78,11 @@ Create project if needed:
 gh project create --owner "$OWNER" --title "$REPO_NAME" --format json | jq -r '.number'
 ```
 
-2. **Create the parent issue**:
+3. **Create the Feature** (type: Feature):
 
 ```bash
-PARENT_URL=$(gh issue create \
-  --title "Title" \
+FEATURE_URL=$(gh issue create \
+  --title "Feature: Title" \
   --body "Description
 
 ## Goals
@@ -48,29 +92,31 @@ PARENT_URL=$(gh issue create \
 ## Scope
 **In Scope:** ...
 **Out of Scope:** ..." \
-  --label "pasiv,priority:PRIORITY")
+  --label "pasiv,priority:PRIORITY,area:AREA" \
+  --type "Feature")
 
-gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$PARENT_URL"
+gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$FEATURE_URL"
 ```
 
-Extract parent issue number from URL.
+Extract Feature issue number from URL.
 
-3. **Create 3-7 sub-issues** (size S or M each):
+4. **Create 3-7 Tasks** (type: Task, size S or M each):
 
 ```bash
-SUB_URL=$(gh issue create \
-  --title "Sub-issue title" \
+TASK_URL=$(gh issue create \
+  --title "Task title" \
   --body "Description
 
 ## Acceptance Criteria
 - [ ] Criterion 1" \
-  --label "pasiv,enhancement,size:S,priority:medium,area:AREA" \
-  --parent PARENT_NUMBER)
+  --label "pasiv,size:S,priority:medium,area:AREA" \
+  --type "Task" \
+  --parent $FEATURE_NUMBER)
 
-gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$SUB_URL"
+gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$TASK_URL"
 ```
 
-4. **Return summary** with:
-- Parent issue URL
-- All sub-issue URLs
+5. **Return summary** with:
+- Feature issue URL
+- All Task sub-issue URLs
 - Project URL
