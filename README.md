@@ -131,6 +131,18 @@ gh auth refresh -s project
 bash ~/.claude/plugins/github-automation/.github/scripts/create-labels.sh
 ```
 
+## Model Optimization
+
+Simple operations run on **Haiku** (cheap) in forked contexts to save tokens:
+
+| Skill | Model | Operations |
+|-------|-------|------------|
+| `git-ops` | Haiku | branch, commit, push, merge |
+| `issue-ops` | Haiku | create, close, check-off criteria |
+| `project-ops` | Haiku | setup, add issue, move status |
+
+Main skills (Sonnet/Opus) delegate to these helpers automatically.
+
 ## Plugin Structure
 
 ```
@@ -140,7 +152,11 @@ skills/
 ├── start/SKILL.md         # /start (full flow)
 ├── 3pass-review/SKILL.md  # /3pass-review
 ├── codex-review/SKILL.md  # /codex-review
-└── backlog/SKILL.md       # /backlog
+├── backlog/SKILL.md       # /backlog
+│
+├── git-ops/SKILL.md       # Helper: git operations (Haiku)
+├── issue-ops/SKILL.md     # Helper: issue operations (Haiku)
+└── project-ops/SKILL.md   # Helper: project operations (Haiku)
 
 .github/
 ├── scripts/

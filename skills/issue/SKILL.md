@@ -4,18 +4,23 @@ description: Create a GitHub issue with size estimate and labels. Use when user 
 allowed-tools:
   - Bash
   - Read
+  - Skill
 ---
 
 # Create GitHub Issue
 
 Create a GitHub issue from a short description: $ARGUMENTS
 
+**Helper skills (run with Haiku in forked context for efficiency):**
+- `issue-ops` - Issue creation
+- `project-ops` - Project setup and adding issues
+
 ## Steps
 
 1. **Assess scope**:
    - S (1-4h): Single file/component change
    - M (4-8h): Few files, moderate complexity
-   - L (8+h): Suggest creating an epic instead
+   - L (8+h): Suggest creating a parent issue instead
 
 2. **Determine labels**:
    - Area: frontend, backend, infrastructure, database, documentation
@@ -23,49 +28,35 @@ Create a GitHub issue from a short description: $ARGUMENTS
 
 3. **Setup project**:
 
-```bash
-REPO_NAME=$(gh repo view --json name -q '.name')
-OWNER=$(gh repo view --json owner -q '.owner.login')
-```
+**Use Skill tool:** `project-ops` with args: `setup`
 
-Check for existing projects:
-```bash
-gh project list --owner "$OWNER" --format json
-```
+Returns: PROJECT_NUM, PROJECT_ID, OWNER, REPO_NAME
 
-**Logic:**
-- If a project named "$REPO_NAME" exists → use it
-- If no projects exist → create one named "$REPO_NAME"
-- If other projects exist (different names) → **ask user**: use existing (list them) or create new "$REPO_NAME"?
-
-Create project if needed:
-```bash
-gh project create --owner "$OWNER" --title "$REPO_NAME" --format json | jq -r '.number'
-```
+If project doesn't exist, it will be created.
 
 4. **Create the issue**:
 
-```bash
-ISSUE_URL=$(gh issue create \
-  --title "Title" \
-  --body "Description
+**Use Skill tool:** `issue-ops` with args: `create "Title" "Body with acceptance criteria" "labels"`
+
+Body format:
+```
+Description
 
 ## Acceptance Criteria
 - [ ] Criterion 1
 - [ ] Criterion 2
 
 ---
-**Size:** S/M/L" \
-  --label "enhancement,size:SIZE,priority:PRIORITY,area:AREA")
+**Size:** S/M/L
 ```
+
+Labels: `enhancement,size:SIZE,priority:PRIORITY,area:AREA`
 
 5. **Add to project**:
 
-```bash
-gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$ISSUE_URL"
-```
+**Use Skill tool:** `project-ops` with args: `add-issue $PROJECT_NUM $OWNER $ISSUE_URL`
 
-6. If scope is L, ask if user wants an epic with subtasks instead.
+6. If scope is L, ask if user wants a parent issue with sub-issues instead.
 
 7. Return the issue URL.
 
