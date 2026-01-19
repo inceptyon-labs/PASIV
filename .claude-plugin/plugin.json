@@ -1,7 +1,7 @@
 {
   "name": "github-automation",
   "description": "Solo dev workflow: specs to issues, 3-model code review (Sonnet→Opus→Codex), branch-based development",
-  "version": "1.1.23",
+  "version": "1.1.24",
   "author": {
     "name": "Jason"
   },
