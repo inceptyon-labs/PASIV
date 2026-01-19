@@ -423,7 +423,16 @@ If this issue has a parent:
 
 ## Done
 
-Report:
+### Find Next Issue
+
+```bash
+# Find next priority issue
+NEXT_ISSUE=$(gh issue list --label "priority:high" --state open --limit 1 --json number,title -q '.[0] | "#\(.number) \(.title)"')
+[ -z "$NEXT_ISSUE" ] && NEXT_ISSUE=$(gh issue list --state open --limit 1 --json number,title -q '.[0] | "#\(.number) \(.title)"')
+```
+
+### Report
+
 ```
 ## Done
 
@@ -434,6 +443,10 @@ Review: [Light/Medium/Full]
 Verification: ✓ All checks passed
 
 Commit: [short SHA]
+
+---
+**Next up:** $NEXT_ISSUE (or "No open issues remaining")
+Run `/start next` to continue.
 ```
 
 ---
@@ -561,6 +574,12 @@ For each Task (in priority order):
 
 All parent issues auto-close via Step 8 cascade.
 
+Find next issue:
+```bash
+NEXT_ISSUE=$(gh issue list --label "priority:high" --state open --limit 1 --json number,title -q '.[0] | "#\(.number) \(.title)"')
+[ -z "$NEXT_ISSUE" ] && NEXT_ISSUE=$(gh issue list --state open --limit 1 --json number,title -q '.[0] | "#\(.number) \(.title)"')
+```
+
 Report summary:
 ```
 ## Epic Complete
@@ -578,6 +597,10 @@ Feature #12: OAuth Login
 
 5 Tasks completed, 2 Features closed, 1 Epic closed.
 All merged to main.
+
+---
+**Next up:** $NEXT_ISSUE (or "No open issues remaining")
+Run `/start next` to continue.
 ```
 
 ---
