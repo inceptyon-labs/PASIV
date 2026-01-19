@@ -1,6 +1,8 @@
 ---
 name: 3pass-review
 description: Run 3-model code review pipeline (Sonnet, Opus, Codex). Use when user says "3pass review", "three pass review", "full review", "review pipeline", or wants multi-model feedback on a branch or pull request.
+context: fork
+user-invocable: true
 allowed-tools:
   - Bash
   - Read
