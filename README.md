@@ -38,47 +38,26 @@ claude plugin install github:jnew00/github-automation
 ## Flow Diagram
 
 ```mermaid
-flowchart TD
-    A[Get Issue #42] --> B{Has Sub-issues?}
+graph TD
+    A[Get Issue] --> B{Sub-issues?}
     B -->|Yes| C[Work through each]
-    B -->|No| D[Move to In Progress]
+    B -->|No| D[In Progress]
     C --> D
-
     D --> E[Create Plan]
-    E --> F{User Approves?}
-    F -->|Revise| E
-    F -->|Approve| G[Implement + Write Tests]
-
-    G --> H[Format & Lint]
-    H --> I[Run Tests]
-    I -->|Fail| G
-    I -->|Pass| R1
-
-    subgraph Review[3-Model Review]
-        R1[Sonnet Review] -->|Errors| R1F[Fix] --> R1
-        R1 -->|Clean| R2[Opus Review]
-        R2 -->|Errors| R2F[Fix] --> R2
-        R2 -->|Clean| R3[Codex Review]
-        R3 -->|Errors| R3F[Fix] --> R3
-        R3 -->|Clean| R4[All Clean]
-    end
-
-    R4 --> O[Check off Criteria]
-    O --> P[Final Test Run]
-    P --> Q[Merge to Main]
-    Q --> S[Close Issue]
-
-    subgraph Helpers[Haiku Helper Skills]
-        H1[git-ops]
-        H2[issue-ops]
-        H3[project-ops]
-    end
-
-    D -.-> H3
-    G -.-> H1
-    Q -.-> H1
-    S -.-> H2
+    E --> F{Approved?}
+    F -->|No| E
+    F -->|Yes| G[Implement]
+    G --> H[Test]
+    H -->|Fail| G
+    H -->|Pass| I[Sonnet Review]
+    I --> J[Opus Review]
+    J --> K[Codex Review]
+    K --> L[Merge & Close]
 ```
+
+**Model delegation:**
+- Simple ops (git, issue, project) → **Haiku** (cheap, forked context)
+- Reviews → **Sonnet/Opus/Codex** (where quality matters)
 
 ## The `/start` Flow
 
