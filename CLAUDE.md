@@ -32,23 +32,78 @@
 ```
 1. Read issue #42
 2. Create implementation plan
-3. Ask for your approval
-4. Implement on a feature branch
-5. Run 3-model review (Sonnet → Opus → Codex)
-6. **STOP and fix errors after each pass**
+3. Select review depth (Light/Medium/Full)
+4. Implement using TDD (test-first)
+5. Run selected review pipeline
+6. Verification gate (fresh evidence)
 7. Merge to main & close issue
+
+**Parent issue (autonomous):**
+```
+/start 41  # parent with sub-issues
+```
+1. Show all sub-issues with recommended review depths
+2. Approve once, walk away
+3. Autonomous implementation of all sub-issues
+4. Stops only on error
 
 ## Review Pipeline
 
-**Flow: Sonnet → FIX → Opus → FIX → Codex → FIX → Done**
+Select review depth during `/start` plan approval:
 
-Linear progression. **STOP and fix errors after each pass before proceeding.**
+| Depth | Models | When to Use | Cost |
+|-------|--------|-------------|------|
+| **Light** | Sonnet | Simple bugs, config, `size:S` | $ |
+| **Medium** | Codex | Moderate features, `size:M` | $$ |
+| **Full** | Sonnet → Opus → Codex | Complex, security-sensitive, `size:L` | $$$ |
+
+**Smart recommendations**: Based on issue size labels and security file detection (auth, crypto, payment, token, etc.)
+
+**Full 3-pass flow**: Sonnet → FIX → Opus → FIX → Codex → FIX → Done
 
 | Pass | Model | Focus |
 |------|-------|-------|
 | 1 | Sonnet | Bugs, security basics, missing tests |
 | 2 | Opus | Architecture, edge cases, performance |
 | 3 | Codex | Fresh eyes, what others missed |
+
+## Development Methodology
+
+### TDD Cycle (enforced in `/start`)
+
+```
+RED → GREEN → REFACTOR → COMMIT → repeat
+```
+
+1. **RED**: Write failing test
+2. **Verify**: Test fails for the RIGHT reason (missing feature, not syntax error)
+3. **GREEN**: Write minimal code to pass
+4. **Verify**: Test passes, no regressions
+5. **REFACTOR**: Clean up if needed
+6. **COMMIT**: After each cycle
+
+**Iron Law**: No production code without a failing test first.
+
+### Verification Gate (before merge)
+
+Fresh evidence required for all claims:
+
+| Claim | Required |
+|-------|----------|
+| "Tests pass" | Run `npm test`, see output |
+| "Build works" | Run `npm run build`, see exit 0 |
+| "Lint clean" | Run `npm run lint`, see output |
+
+No "should work" or "was passing earlier" - run it fresh.
+
+### Systematic Debugging (when tests fail)
+
+1. **Investigate** - Read full error, identify root cause
+2. **Hypothesize** - Form specific theory ("X fails because Y")
+3. **Test** - Make ONE minimal change
+4. **Verify** - Run tests again
+
+**Three Strikes Rule**: After 3 failed fix attempts, stop and reassess architecture.
 
 ## Labels
 
@@ -89,16 +144,20 @@ Simple operations run on **Haiku** in forked contexts to save tokens:
 
 ```
 skills/
-├── issue/SKILL.md         # /issue
-├── parent/SKILL.md        # /parent
-├── start/SKILL.md         # /start (full flow)
-├── 3pass-review/SKILL.md  # /3pass-review
-├── codex-review/SKILL.md  # /codex-review
-├── backlog/SKILL.md       # /backlog
+├── issue/SKILL.md              # /issue
+├── parent/SKILL.md             # /parent
+├── start/SKILL.md              # /start (full flow)
+├── 3pass-review/SKILL.md       # /3pass-review
+├── codex-review/SKILL.md       # /codex-review
+├── backlog/SKILL.md            # /backlog
 │
-├── git-ops/SKILL.md       # Helper (Haiku)
-├── issue-ops/SKILL.md     # Helper (Haiku)
-└── project-ops/SKILL.md   # Helper (Haiku)
+├── tdd/SKILL.md                # TDD methodology (internal)
+├── verification/SKILL.md       # Verification gate (internal)
+├── systematic-debugging/SKILL.md # Debug methodology (internal)
+│
+├── git-ops/SKILL.md            # Helper (Haiku)
+├── issue-ops/SKILL.md          # Helper (Haiku)
+└── project-ops/SKILL.md        # Helper (Haiku)
 
 .github/
 ├── scripts/
@@ -106,4 +165,7 @@ skills/
 │   └── create-labels.sh
 └── workflows/
     └── version-bump.yml
+
+docs/
+└── plans/                      # Implementation plans
 ```
