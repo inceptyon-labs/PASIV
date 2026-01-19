@@ -38,57 +38,46 @@ claude plugin install github:jnew00/github-automation
 ## Flow Diagram
 
 ```mermaid
-flowchart TB
-    subgraph Start["/start 42"]
-        direction TB
-        A[Get Issue] --> B{Has Sub-issues?}
-        B -->|Yes| C[Work through each]
-        B -->|No| D[Move to In Progress]
-        C --> D
-        D --> E[Create Plan]
-        E --> F{User Approves?}
-        F -->|Revise| E
-        F -->|Approve| G[Implement + Tests]
-        G --> H[Format & Lint]
-        H --> I[Run Tests]
-        I -->|Fail| G
-        I -->|Pass| J[3-Model Review]
+flowchart TD
+    A[Get Issue #42] --> B{Has Sub-issues?}
+    B -->|Yes| C[Work through each]
+    B -->|No| D[Move to In Progress]
+    C --> D
+
+    D --> E[Create Plan]
+    E --> F{User Approves?}
+    F -->|Revise| E
+    F -->|Approve| G[Implement + Write Tests]
+
+    G --> H[Format & Lint]
+    H --> I[Run Tests]
+    I -->|Fail| G
+    I -->|Pass| R1
+
+    subgraph Review[3-Model Review]
+        R1[Sonnet Review] -->|Errors| R1F[Fix] --> R1
+        R1 -->|Clean| R2[Opus Review]
+        R2 -->|Errors| R2F[Fix] --> R2
+        R2 -->|Clean| R3[Codex Review]
+        R3 -->|Errors| R3F[Fix] --> R3
+        R3 -->|Clean| R4[All Clean]
     end
 
-    subgraph Review["Review Pipeline"]
-        direction TB
-        J --> K["Pass 1: Sonnet"]
-        K -->|Errors| K1[Fix] --> K
-        K -->|Clean| L["Pass 2: Opus"]
-        L -->|Errors| L1[Fix] --> L
-        L -->|Clean| M["Pass 3: Codex"]
-        M -->|Errors| M1[Fix] --> M
-        M -->|Clean| N[All Passes Clean]
-    end
+    R4 --> O[Check off Criteria]
+    O --> P[Final Test Run]
+    P --> Q[Merge to Main]
+    Q --> S[Close Issue]
 
-    subgraph Finish["Complete"]
-        N --> O[Check off Criteria]
-        O --> P[Final Test Run]
-        P --> Q[Merge to Main]
-        Q --> R[Move to Done]
-        R --> S[Close Issue]
-    end
-
-    subgraph Helpers["Haiku Helpers (forked context)"]
-        direction LR
+    subgraph Helpers[Haiku Helper Skills]
         H1[git-ops]
         H2[issue-ops]
         H3[project-ops]
     end
 
-    D -.->|"move status"| H3
-    G -.->|"commit"| H1
-    Q -.->|"merge"| H1
-    R -.->|"move status"| H3
-    S -.->|"close"| H2
-
-    style Helpers fill:#e8f5e9
-    style Review fill:#fff3e0
+    D -.-> H3
+    G -.-> H1
+    Q -.-> H1
+    S -.-> H2
 ```
 
 ## The `/start` Flow
