@@ -75,6 +75,16 @@ Issues are automatically added to a GitHub Project board.
 gh auth refresh -s project
 ```
 
+## Model Optimization
+
+Simple operations run on **Haiku** in forked contexts to save tokens:
+
+| Skill | Model | Operations |
+|-------|-------|------------|
+| `git-ops` | Haiku | branch, commit, push, merge |
+| `issue-ops` | Haiku | create, close, check-off |
+| `project-ops` | Haiku | setup, add issue, move status |
+
 ## Plugin Structure
 
 ```
@@ -82,14 +92,18 @@ skills/
 ├── issue/SKILL.md         # /issue
 ├── parent/SKILL.md        # /parent
 ├── start/SKILL.md         # /start (full flow)
-├── 3pass-review/SKILL.md  # /3pass-review (3-model)
+├── 3pass-review/SKILL.md  # /3pass-review
 ├── codex-review/SKILL.md  # /codex-review
-└── backlog/SKILL.md       # /backlog
+├── backlog/SKILL.md       # /backlog
+│
+├── git-ops/SKILL.md       # Helper (Haiku)
+├── issue-ops/SKILL.md     # Helper (Haiku)
+└── project-ops/SKILL.md   # Helper (Haiku)
 
 .github/
 ├── scripts/
-│   ├── install.sh       # Setup script
-│   └── create-labels.sh # Create labels
-├── workflows/           # GitHub Actions (optional)
-└── ISSUE_TEMPLATE/      # Issue templates
+│   ├── install.sh
+│   └── create-labels.sh
+└── workflows/
+    └── version-bump.yml
 ```
