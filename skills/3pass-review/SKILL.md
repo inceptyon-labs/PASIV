@@ -1,6 +1,6 @@
 ---
 name: 3pass-review
-description: Run 4-model code review pipeline (Haiku, Sonnet, Opus, Codex). Use when user says "3pass review", "three pass review", "full review", "review pipeline", or wants multi-model feedback on a branch or pull request.
+description: Run 3-model code review pipeline (Sonnet, Opus, Codex). Use when user says "3pass review", "three pass review", "full review", "review pipeline", or wants multi-model feedback on a branch or pull request.
 allowed-tools:
   - Bash
   - Read
@@ -8,13 +8,11 @@ allowed-tools:
   - Write
 ---
 
-# Code Review (4-Model Pipeline)
+# Code Review (3-Model Pipeline)
 
 Review: $ARGUMENTS (branch name, or empty for current branch vs main)
 
-**Flow: Haiku → fix → Sonnet → fix → Opus → fix → Codex → fix → Done**
-
-Linear progression, no loops. Each pass adds a different perspective.
+**Flow: Sonnet → FIX → Opus → FIX → Codex → FIX → Done**
 
 ## Get the Diff
 
@@ -28,35 +26,7 @@ git diff main
 
 ---
 
-## Pass 1: Pre-filter (Haiku)
-
-Use model `claude-haiku-4-20250514` for cheap/fast pre-filter:
-
-Catch the obvious stuff:
-- Syntax errors
-- Missing imports / typos
-- Obvious logic errors (null checks, off-by-one)
-- Hardcoded secrets
-- Dead code / unused variables
-
-Output as:
-```
-### Pass 1: Pre-filter (Haiku)
-- [ERROR] file:line - description
-- [WARNING] file:line - description
-```
-
-### Fix Pass 1 Errors
-
-**If any ERRORs found:**
-1. Fix all errors
-2. Commit: `git add -A && git commit -m "fix: address Haiku review findings"`
-
-**Proceed to Pass 2.**
-
----
-
-## Pass 2: Fast Review (Sonnet)
+## Pass 1: Fast Review (Sonnet)
 
 Use model `claude-sonnet-4-20250514` for quick scan:
 
@@ -64,27 +34,31 @@ Focus on:
 - Clear bugs and errors
 - Security basics (XSS, injection, auth flaws)
 - Missing error handling on critical paths
-- Style violations
+- Dead code / unused variables
 - Test coverage gaps
 
 Output as:
 ```
-### Pass 2: Fast Review (Sonnet)
+### Pass 1: Fast Review (Sonnet)
 - [ERROR] file:line - description
 - [WARNING] file:line - description
 ```
 
-### Fix Pass 2 Errors
+### STOP - Fix Pass 1 Errors Now
 
-**If any ERRORs found:**
-1. Fix all errors
-2. Commit: `git add -A && git commit -m "fix: address Sonnet review findings"`
+**IMPORTANT: You MUST fix all ERRORs before proceeding to Pass 2.**
 
-**Proceed to Pass 3.**
+If any ERRORs found:
+1. STOP reviewing
+2. Fix each error one by one
+3. Commit: `git add -A && git commit -m "fix: address Sonnet review findings"`
+4. Only after ALL errors are fixed, proceed to Pass 2
+
+**DO NOT skip to Pass 2 with unfixed errors.**
 
 ---
 
-## Pass 3: Deep Review (Opus)
+## Pass 2: Deep Review (Opus)
 
 Use model `claude-opus-4-20250514` for thorough analysis:
 
@@ -97,30 +71,30 @@ Think like a senior engineer:
 - Security in depth
 - Maintainability long-term
 
-Take your time - be thorough.
-
 Output as:
 ```
-### Pass 3: Deep Review (Opus)
+### Pass 2: Deep Review (Opus)
 - [ERROR] file:line - description
 - [WARNING] file:line - description
 ```
 
-### Fix Pass 3 Errors
+### STOP - Fix Pass 2 Errors Now
 
-**If any ERRORs found:**
-1. Fix all errors
-2. Commit: `git add -A && git commit -m "fix: address Opus review findings"`
+**IMPORTANT: You MUST fix all ERRORs before proceeding to Pass 3.**
 
-**Proceed to Pass 4.**
+If any ERRORs found:
+1. STOP reviewing
+2. Fix each error one by one
+3. Commit: `git add -A && git commit -m "fix: address Opus review findings"`
+4. Only after ALL errors are fixed, proceed to Pass 3
+
+**DO NOT skip to Pass 3 with unfixed errors.**
 
 ---
 
-## Pass 4: Independent Review (Codex)
+## Pass 3: Independent Review (Codex)
 
 **IMPORTANT: Use the custom prompt, NOT `codex review --base main`.**
-
-Get the diff and run Codex with custom focus:
 
 ```bash
 DIFF=$(git diff main)
@@ -135,7 +109,6 @@ Focus on:
 2. Subtle bugs or logic errors
 3. Security edge cases
 4. Test coverage gaps
-5. Alternative approaches worth considering
 
 For each finding, specify:
 - Severity: ERROR / WARNING / SUGGESTION
@@ -145,11 +118,14 @@ For each finding, specify:
 Be thorough but don't repeat obvious issues."
 ```
 
-### Fix Pass 4 Errors
+### STOP - Fix Pass 3 Errors Now
 
-**If any ERRORs found:**
-1. Fix all errors
-2. Commit: `git add -A && git commit -m "fix: address Codex review findings"`
+**IMPORTANT: You MUST fix all ERRORs before completing the review.**
+
+If any ERRORs found:
+1. STOP
+2. Fix each error one by one
+3. Commit: `git add -A && git commit -m "fix: address Codex review findings"`
 
 ---
 
@@ -160,10 +136,9 @@ Report final summary:
 ```
 ## Review Complete
 
-Pass 1 (Haiku):  ✓ [N errors fixed]
-Pass 2 (Sonnet): ✓ [N errors fixed]
-Pass 3 (Opus):   ✓ [N errors fixed]
-Pass 4 (Codex):  ✓ [N errors fixed]
+Pass 1 (Sonnet): ✓ [N errors fixed]
+Pass 2 (Opus):   ✓ [N errors fixed]
+Pass 3 (Codex):  ✓ [N errors fixed]
 
 ### Warnings (non-blocking)
 - file:line - description

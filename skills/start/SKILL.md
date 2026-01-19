@@ -242,25 +242,27 @@ If tests fail:
 
 **Do not proceed to review until tests pass.**
 
-## Step 4: 4-Model Review
+## Step 4: 3-Model Review
 
-**Flow: Haiku → fix → Sonnet → fix → Opus → fix → Codex → fix → Done**
+**Flow: Sonnet → FIX → Opus → FIX → Codex → FIX → Done**
 
-Linear progression, no loops. Each pass adds a different perspective.
-
-### Pass 1: Haiku (pre-filter)
-Cheap/fast scan for obvious stuff: syntax errors, typos, dead code, hardcoded secrets.
-→ Fix any errors, commit, proceed.
-
-### Pass 2: Sonnet (fast)
+### Pass 1: Sonnet (fast)
 Quick scan for bugs, security basics, missing error handling, **missing tests**.
-→ Fix any errors, commit, proceed.
 
-### Pass 3: Opus (deep)
+**STOP after Pass 1.** If any ERRORs:
+1. Fix each error
+2. Commit: `git add -A && git commit -m "fix: address Sonnet review findings"`
+3. Then proceed to Pass 2
+
+### Pass 2: Opus (deep)
 Architecture, edge cases, performance, maintainability, **test coverage quality**.
-→ Fix any errors, commit, proceed.
 
-### Pass 4: Codex (independent)
+**STOP after Pass 2.** If any ERRORs:
+1. Fix each error
+2. Commit: `git add -A && git commit -m "fix: address Opus review findings"`
+3. Then proceed to Pass 3
+
+### Pass 3: Codex (independent)
 
 **IMPORTANT: Use the custom prompt, NOT `codex review --base main`.**
 
@@ -280,7 +282,10 @@ Focus on:
 
 Categorize as ERROR/WARNING/SUGGESTION."
 ```
-→ Fix any errors, commit, done with review.
+
+**STOP after Pass 3.** If any ERRORs:
+1. Fix each error
+2. Commit: `git add -A && git commit -m "fix: address Codex review findings"`
 
 ## Step 6: Check Off Acceptance Criteria
 
@@ -361,10 +366,9 @@ Report:
 Issue #$ISSUE_NUM completed and merged to main.
 
 Review passes:
-- Pass 1 (Haiku): ✓
-- Pass 2 (Sonnet): ✓
-- Pass 3 (Opus): ✓
-- Pass 4 (Codex): ✓
+- Pass 1 (Sonnet): ✓
+- Pass 2 (Opus): ✓
+- Pass 3 (Codex): ✓
 
 Commit: $(git rev-parse --short HEAD)
 ```

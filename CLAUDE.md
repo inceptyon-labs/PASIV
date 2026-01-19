@@ -8,7 +8,7 @@
 | `/parent user notifications` | Create parent issue + sub-issues |
 | `/start 42` | Plan → Implement → Review → Merge |
 | `/start next` | Work on highest priority issue |
-| `/3pass-review` | Haiku → Sonnet → Opus → Codex review pipeline |
+| `/3pass-review` | Sonnet → Opus → Codex review pipeline |
 | `/3pass-review feature-branch` | Review specific branch |
 | `/codex-review` | Codex-only deep review |
 | `/backlog` | Create issues from spec.md |
@@ -34,22 +34,21 @@
 2. Create implementation plan
 3. Ask for your approval
 4. Implement on a feature branch
-5. Run 4-model review (Haiku → Sonnet → Opus → Codex)
-6. Fix errors after each pass
+5. Run 3-model review (Sonnet → Opus → Codex)
+6. **STOP and fix errors after each pass**
 7. Merge to main & close issue
 
 ## Review Pipeline
 
-**Flow: Haiku → fix → Sonnet → fix → Opus → fix → Codex → fix → Done**
+**Flow: Sonnet → FIX → Opus → FIX → Codex → FIX → Done**
 
-Linear progression, no loops. Each pass adds a different perspective.
+Linear progression. **STOP and fix errors after each pass before proceeding.**
 
 | Pass | Model | Focus |
 |------|-------|-------|
-| 1 | Haiku | Pre-filter: syntax, typos, dead code (cheap) |
-| 2 | Sonnet | Bugs, security basics, missing tests |
-| 3 | Opus | Architecture, edge cases, performance |
-| 4 | Codex | Fresh eyes, what others missed |
+| 1 | Sonnet | Bugs, security basics, missing tests |
+| 2 | Opus | Architecture, edge cases, performance |
+| 3 | Codex | Fresh eyes, what others missed |
 
 ## Labels
 
