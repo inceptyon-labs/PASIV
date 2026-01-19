@@ -38,21 +38,10 @@ claude plugin install github:jnew00/github-automation
 ## Flow Diagram
 
 ```mermaid
-graph TD;
-    A[Get Issue]-->B{Sub-issues?};
-    B-->|Yes|C[Work through each];
-    B-->|No|D[In Progress];
-    C-->D;
-    D-->E[Create Plan];
-    E-->F{Approved?};
-    F-->|No|E;
-    F-->|Yes|G[Implement];
-    G-->H[Test];
-    H-->|Fail|G;
-    H-->|Pass|I[Sonnet Review];
-    I-->J[Opus Review];
-    J-->K[Codex Review];
-    K-->L[Merge and Close];
+graph LR;
+A-->B;
+B-->C;
+C-->D;
 ```
 
 **Model delegation:**
