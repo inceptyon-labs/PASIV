@@ -75,7 +75,29 @@ Display: "Working on Issue #$ISSUE_NUM: $ISSUE_TITLE"
 
 **Use Skill tool:** `issue-ops` with args: `get-parent $OWNER $REPO $ISSUE_NUM`
 
-If parent exists, also move parent to In Progress.
+If parent exists:
+- Store PARENT_NUM for later use
+- Move parent to In Progress
+
+---
+
+## Step 1.75: Load Sibling Context (if has parent)
+
+If this Task has a parent (PARENT_NUM exists), load context from completed sibling Tasks:
+
+**Use Skill tool:** `issue-ops` with args: `get-sibling-context $OWNER $REPO $PARENT_NUM`
+
+This returns completion summaries from closed sibling Tasks containing:
+- Files they changed
+- Key decisions made
+- Notes for subsequent tasks
+
+**Use this context when planning** - it helps understand:
+- What code already exists from previous Tasks
+- Patterns and conventions established
+- Dependencies and APIs available
+
+If no parent or no closed siblings, skip this step.
 
 ---
 
@@ -395,6 +417,39 @@ Ready to merge.
 3. Only proceed when ALL pass
 
 **Reference**: `@verification` skill for methodology
+
+---
+
+## Step 6.5: Add Completion Summary (if has parent)
+
+If this Task has a parent (PARENT_NUM exists), add a completion summary for sibling context:
+
+**Use Skill tool:** `issue-ops` with args: `add-completion-summary $ISSUE_NUM "$FILES" "$DECISIONS" "$NOTES"`
+
+Where:
+- **FILES**: List of files created/modified (from git diff)
+- **DECISIONS**: Key technical decisions made during implementation
+- **NOTES**: Helpful context for the next Task (APIs created, patterns used, gotchas)
+
+Example:
+```
+Files changed:
+- src/auth/jwt.ts (new)
+- src/middleware/requireAuth.ts (new)
+- src/types/auth.ts (modified)
+
+Key decisions:
+- Used RS256 for JWT signing (more secure than HS256)
+- Tokens expire in 1 hour, refresh tokens in 7 days
+- Stored refresh tokens in Redis for revocation support
+
+Notes for next task:
+- Use `requireAuth()` middleware for protected routes
+- Access user via `req.user` after auth
+- Token refresh endpoint is POST /auth/refresh
+```
+
+This helps subsequent Tasks in the same Feature understand what was done.
 
 ---
 
