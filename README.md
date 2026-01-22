@@ -92,21 +92,21 @@ Choose your entry point based on what you have:
 ```mermaid
 flowchart LR
     subgraph Ideation
-        A[Vague Idea] --> B[/brainstorm]
+        A[Vague Idea] --> B["#47;brainstorm"]
         C[Half-baked Plan] --> B
         B --> D[design.md]
     end
 
     subgraph Planning
-        D --> E[/backlog]
+        D --> E["#47;backlog"]
         F[Clear Spec] --> E
         E --> G[Issues]
-        H[Single Task] --> I[/issue]
+        H[Single Task] --> I["#47;issue"]
         I --> G
     end
 
     subgraph Execution
-        G --> J[/start]
+        G --> J["#47;start"]
         J --> K[Plan & Approve]
         K --> L[TDD Implement]
         L --> M[Review]
