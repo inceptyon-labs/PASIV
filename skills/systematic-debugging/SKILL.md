@@ -1,6 +1,7 @@
 ---
 name: systematic-debugging
 description: Systematic debugging methodology with root cause analysis. Use when tests fail or bugs occur. Prevents guess-and-check debugging.
+model: opus
 allowed-tools:
   - Bash
   - Read

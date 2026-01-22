@@ -12,6 +12,8 @@
 
 | Command | Creates | What it does |
 |---------|---------|-------------|
+| `/brainstorm` | Design doc | Socratic dialogue to refine vague ideas |
+| `/brainstorm spec.md` | Design doc | Stress-test and refine existing document |
 | `/issue add dark mode toggle` | Task | Create a single work item |
 | `/parent user notifications` | Feature → Tasks | Create a feature with task sub-issues |
 | `/backlog` | Epic → Feature → Task | Create full hierarchy from spec.md |
@@ -22,7 +24,34 @@
 | `/3pass-review` | - | Sonnet → Opus → Codex review pipeline |
 | `/codex-review` | - | Codex-only deep review |
 
+## Workflow Patterns
+
+**Choose your entry point based on what you have:**
+
+| You have... | Start with | Flow |
+|-------------|------------|------|
+| Vague idea | `/brainstorm` | → design.md → `/backlog` → `/start` |
+| Half-baked plan | `/brainstorm spec.md` | → refined design → `/backlog` → `/start` |
+| Clear requirements | `/backlog spec.md` | → issues → `/start` |
+| Single task | `/issue` | → `/start 42` |
+| Existing issue | `/start 42` | (inline planning) |
+
 ## Examples
+
+**Refine a vague idea:**
+```
+/brainstorm
+```
+1. Socratic dialogue (one question at a time)
+2. Explore 2-3 approaches with trade-offs
+3. Present design in digestible chunks
+4. Save to `docs/designs/YYYY-MM-DD-feature.md`
+5. Offer to create issues with `/backlog`
+
+**Stress-test existing document:**
+```
+/brainstorm half-baked-plan.md
+```
 
 **Create a Task:**
 ```
@@ -157,7 +186,12 @@ Simple operations run on **Haiku** in forked contexts to save tokens:
 ## Plugin Structure
 
 ```
+hooks/
+├── hooks.json                  # SessionStart hook config
+└── session-start.sh            # Injects skill awareness
+
 skills/
+├── brainstorm/SKILL.md         # /brainstorm (ideation)
 ├── issue/SKILL.md              # /issue
 ├── parent/SKILL.md             # /parent
 ├── start/SKILL.md              # /start (full flow)
@@ -166,6 +200,7 @@ skills/
 ├── codex-review/SKILL.md       # /codex-review
 ├── backlog/SKILL.md            # /backlog
 │
+├── using-pasiv/SKILL.md        # Skill awareness (injected at session start)
 ├── tdd/SKILL.md                # TDD methodology (internal)
 ├── verification/SKILL.md       # Verification gate (internal)
 ├── systematic-debugging/SKILL.md # Debug methodology (internal)
@@ -182,5 +217,6 @@ skills/
     └── version-bump.yml
 
 docs/
+├── designs/                    # Design documents from /brainstorm
 └── plans/                      # Implementation plans
 ```

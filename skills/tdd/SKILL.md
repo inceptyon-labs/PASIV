@@ -1,6 +1,7 @@
 ---
 name: tdd
 description: Test-Driven Development cycle. Enforces RED-GREEN-REFACTOR methodology. Used internally by /start.
+model: opus
 allowed-tools:
   - Bash
   - Read
