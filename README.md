@@ -18,6 +18,7 @@ Every extraction needs a team. PASIV connects them:
 
 | Role | What They Do | In PASIV |
 |------|--------------|----------|
+| **Dreamer** | Explores possibilities, refines the vision | `/brainstorm` - Socratic design refinement |
 | **Extractor** | Leads the operation, pulls value from the target | `/start` - orchestrates the full flow |
 | **Architect** | Designs the dream levels | `/backlog` - structures specs into issues |
 | **Forger** | Transforms and adapts | `/issue`, `/parent` - shapes ideas into trackable work |
@@ -35,14 +36,14 @@ claude plugin install github:inceptyon-labs/PASIV
 ## Quick Start
 
 ```bash
-# Create a single issue
-/issue add logout button to header
+# Refine a vague idea into a design
+/brainstorm
 
-# Create a parent issue with sub-issues
-/parent user authentication system
+# Stress-test an existing half-baked plan
+/brainstorm rough-idea.md
 
-# Parse a spec into a full backlog
-/backlog spec.md
+# Parse a design/spec into issues
+/backlog design.md
 
 # Start working on an issue (full extraction)
 /start 42
@@ -62,6 +63,8 @@ Uses GitHub's native issue types (`--type Epic/Feature/Task`).
 
 | Command | Creates | Description |
 |---------|---------|-------------|
+| `/brainstorm` | Design doc | Socratic dialogue to refine ideas |
+| `/brainstorm doc.md` | Design doc | Stress-test existing document |
 | `/issue` | Task | Create single work item |
 | `/parent` | Feature → Tasks | Create feature with task sub-issues |
 | `/backlog` | Epic → Feature → Task | Parse spec into full hierarchy |
@@ -70,18 +73,87 @@ Uses GitHub's native issue types (`--type Epic/Feature/Task`).
 | `/3pass-review` | - | 3-model review pipeline |
 | `/codex-review` | - | Deep Codex-only review |
 
+## Workflow Patterns
+
+> *"An idea is like a virus. Resilient. Highly contagious."*
+
+Choose your entry point based on what you have:
+
+| You have... | Start with | Flow |
+|-------------|------------|------|
+| Vague idea | `/brainstorm` | → design.md → `/backlog` → `/start` |
+| Half-baked plan | `/brainstorm doc.md` | → refined design → `/backlog` → `/start` |
+| Clear requirements | `/backlog spec.md` | → issues → `/start` |
+| Single task | `/issue` | → `/start 42` |
+| Existing issue | `/start 42` | (inline planning) |
+
 ## Flow Diagram
 
 ```mermaid
-graph LR;
-    A[Issue]-->B[Plan]-->C[Review Depth]-->D[TDD Implement]-->E[Review]-->F[Verify]-->G[Merge];
-```
+flowchart LR
+    subgraph Ideation
+        A[Vague Idea] --> B[/brainstorm]
+        C[Half-baked Plan] --> B
+        B --> D[design.md]
+    end
 
-**Full flow:** Get issue → Plan (approval) → Select review depth → TDD implement → Review → Verification gate → Merge & Close
+    subgraph Planning
+        D --> E[/backlog]
+        F[Clear Spec] --> E
+        E --> G[Issues]
+        H[Single Task] --> I[/issue]
+        I --> G
+    end
+
+    subgraph Execution
+        G --> J[/start]
+        J --> K[Plan & Approve]
+        K --> L[TDD Implement]
+        L --> M[Review]
+        M --> N[Verify]
+        N --> O[Merge]
+    end
+
+    style B fill:#e1f5fe
+    style E fill:#fff3e0
+    style J fill:#e8f5e9
+```
 
 **Model delegation:**
 - Simple ops (git, issue, project) → **Haiku** (cheap, forked context)
 - Reviews → **Sonnet/Opus/Codex** (where quality matters)
+
+## The `/brainstorm` Flow
+
+> *"What's the most resilient parasite? An idea."*
+
+Socratic design refinement - turn vague ideas into validated designs before writing code.
+
+```
+/brainstorm                  # Start from a vague idea
+/brainstorm rough-plan.md    # Refine existing document
+```
+
+### Phases
+
+| Phase | What Happens |
+|-------|--------------|
+| **1. Understand** | Read existing doc OR ask "What are you building?" |
+| **2. Socratic Dialogue** | One question at a time (5-10 questions) |
+| **3. Explore Approaches** | Present 2-3 options with trade-offs |
+| **4. Present Design** | 200-300 word chunks, validate each |
+| **5. Document** | Save to `docs/designs/YYYY-MM-DD-feature.md` |
+| **6. Next Steps** | Offer `/backlog`, `/parent`, or `/issue` |
+
+### Question Types
+
+- **Clarifying**: "Who will use this?" "What triggers this flow?"
+- **Challenging**: "What if this fails?" "How does this scale?"
+- **Scoping**: "Is X in scope?" "Can we defer Y?"
+
+**Output:** Validated design document ready for `/backlog`
+
+---
 
 ## The `/start` Flow
 
@@ -266,7 +338,12 @@ Main skills (Sonnet/Opus) delegate to these helpers automatically.
 ## Plugin Structure
 
 ```
+hooks/
+├── hooks.json                  # SessionStart hook config
+└── session-start.sh            # Injects skill awareness at session start
+
 skills/
+├── brainstorm/SKILL.md         # /brainstorm (Dreamer)
 ├── issue/SKILL.md              # /issue (Forger)
 ├── parent/SKILL.md             # /parent (Forger)
 ├── start/SKILL.md              # /start (Extractor)
@@ -275,6 +352,7 @@ skills/
 ├── codex-review/SKILL.md       # /codex-review
 ├── backlog/SKILL.md            # /backlog (Architect)
 │
+├── using-pasiv/SKILL.md        # Skill awareness (injected at session start)
 ├── tdd/SKILL.md                # TDD methodology (Chemist)
 ├── verification/SKILL.md       # Verification gate (Chemist)
 ├── systematic-debugging/SKILL.md # Debug methodology (Chemist)
@@ -284,6 +362,7 @@ skills/
 └── project-ops/SKILL.md        # Helper (Point Man)
 
 docs/
+├── designs/                    # Design documents from /brainstorm
 └── plans/                      # Implementation plans
 
 .github/
@@ -303,7 +382,7 @@ claude plugin update PASIV
 
 ## Acknowledgments
 
-- Development methodology (TDD cycle, verification gates, systematic debugging) inspired by [obra/superpowers](https://github.com/obra/superpowers)
+- Development methodology (TDD cycle, verification gates, systematic debugging) and brainstorming flow inspired by [obra/superpowers](https://github.com/obra/superpowers)
 - Name and lore inspired by Christopher Nolan's *Inception* (2010)
 
 ---

@@ -1,6 +1,7 @@
 ---
 name: start
 description: Full implementation flow - plan, implement, review, merge. Use when user says "start issue", "work on issue", "implement issue", "start #42", or wants to fully implement and merge a GitHub issue.
+model: opus
 allowed-tools:
   - Bash
   - Read

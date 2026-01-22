@@ -1,6 +1,7 @@
 ---
 name: codex-review
 description: Deep code review using Codex CLI. Use when user says "codex review", "deep review", "security review", or wants thorough analysis of code, PR, or specific files.
+model: haiku
 context: fork
 user-invocable: true
 allowed-tools:

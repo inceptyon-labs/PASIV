@@ -1,6 +1,8 @@
 ---
 name: verification
 description: Verification gate before completion claims. Ensures fresh evidence before merge or "done" claims. Used internally by /start.
+model: haiku
+context: fork
 allowed-tools:
   - Bash
   - Read
