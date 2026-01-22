@@ -29,9 +29,29 @@ Every extraction needs a team. PASIV connects them:
 
 ## Install
 
+### CLI
+
 ```bash
-claude plugin install github:inceptyon-labs/PASIV
+# Add the marketplace
+/plugin marketplace add inceptyon-labs/PASIV
+
+# Install the plugin
+/plugin install pasiv@pasiv
 ```
+
+### TARS (Visual Plugin Manager)
+
+Prefer a UI? Use [**TARS**](https://github.com/inceptyon-labs/TARS) - a visual plugin manager for Claude Code:
+
+- Browse and install plugins from a curated library
+- Automatic update notifications
+- Easy enable/disable without uninstalling
+
+<p align="center">
+  <a href="https://github.com/inceptyon-labs/TARS">
+    <img src="https://img.shields.io/badge/Install%20with-TARS-blue?style=for-the-badge" alt="Install with TARS">
+  </a>
+</p>
 
 ## Quick Start
 
