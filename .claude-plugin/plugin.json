@@ -1,7 +1,7 @@
 {
   "name": "pasiv",
   "description": "The PASIV device enables shared dreaming. This one connects AI agents to extract tested, reviewed implementations from your ideas. TDD-first, 3-model review pipeline, autonomous workflows.",
-  "version": "2.0.12",
+  "version": "2.0.13",
   "author": {
     "name": "Inceptyon Labs"
   },
