@@ -1,3 +1,9 @@
+---
+name: using-pasiv
+description: Skill awareness guide injected at session start. NOT user-invocable.
+user-invocable: false
+---
+
 # Using PASIV Skills
 
 This is injected at session start. It is NOT a user-invocable skill.

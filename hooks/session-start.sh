@@ -25,7 +25,7 @@ ESCAPED_CONTENT=$(escape_json "$SKILL_CONTENT")
 cat <<EOF
 {
   "hookSpecificOutput": {
-    "hookEventName": "SessionStart",
+    "hookEventName": "PASIV:SessionStart",
     "additionalContext": "<EXTREMELY_IMPORTANT>\nYou have PASIV installed.\n\n**Below is the full content of your 'pasiv:using-pasiv' skill. For all other skills, use the Skill tool:**\n\n$ESCAPED_CONTENT\n</EXTREMELY_IMPORTANT>"
   }
 }
