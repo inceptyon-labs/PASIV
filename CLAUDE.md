@@ -20,9 +20,12 @@
 | `/backlog design.md` | Epic → Feature → Task | Create full hierarchy from custom spec |
 | `/start 42` | - | Plan → Implement → Review → Merge |
 | `/start next` | - | Work on highest priority issue |
-| `/sonnet-review` | - | Quick Sonnet-only review |
-| `/3pass-review` | - | Sonnet → Opus → Codex review pipeline |
-| `/codex-review` | - | Codex-only deep review |
+| `/s-review` | - | S (Sonnet) - trivial changes |
+| `/o-review` | - | O (Opus) - simple features |
+| `/sc-review` | - | SC (Sonnet → Codex) - moderate, budget |
+| `/oc-review` | - | OC (Opus → Codex) - complex, quality |
+| `/soc-review` | - | SOC (Sonnet → Opus → Codex) - security-critical |
+| `/codex-review` | - | Standalone Codex review |
 
 ## Workflow Patterns
 
@@ -74,7 +77,7 @@
 ```
 1. Read issue #42
 2. Create implementation plan
-3. Select review depth (Light/Medium/Full)
+3. Select review tier (S/O/SC/OC/SOC)
 4. Implement using TDD (test-first)
 5. Run selected review pipeline
 6. Verification gate (fresh evidence)
@@ -84,30 +87,34 @@
 ```
 /start 41  # parent with sub-issues
 ```
-1. Show all sub-issues with recommended review depths
+1. Show all sub-issues with recommended review tiers
 2. Approve once, walk away
 3. Autonomous implementation of all sub-issues
 4. Stops only on error
 
-## Review Pipeline
+## Review Tiers
 
-Select review depth during `/start` plan approval:
+| Tier | Name | Models | Cost | When to Use |
+|------|------|--------|------|-------------|
+| 1 | S | Sonnet | $ | Typos, config, trivial fixes |
+| 2 | O | Opus | $$ | Simple features, clear scope |
+| 3 | SC | Sonnet → Codex | $$ | Moderate changes, budget-conscious |
+| 4 | OC | Opus → Codex | $$$ | Complex features, quality focus |
+| 5 | SOC | Sonnet → Opus → Codex | $$$$ | Security-critical, large refactors |
 
-| Depth | Models | When to Use | Cost |
-|-------|--------|-------------|------|
-| **Light** | Sonnet | Simple bugs, config, `size:S` | $ |
-| **Medium** | Codex | Moderate features, `size:M` | $$ |
-| **Full** | Sonnet → Opus → Codex | Complex, security-sensitive, `size:L` | $$$ |
+All multi-pass reviews are **cascading** - each pass reviews cumulative changes including previous fixes.
 
-**Smart recommendations**: Based on issue size labels and security file detection (auth, crypto, payment, token, etc.)
+### Recommendation Matrix
 
-**Full 3-pass flow**: Sonnet → FIX → Opus → FIX → Codex → FIX → Done
+| Size | Default | If Security Files Detected |
+|------|---------|----------------------------|
+| `size:XS` | S | O |
+| `size:S` | O | SC |
+| `size:M` | SC | OC |
+| `size:L` | OC | SOC |
+| `size:XL` | SOC | SOC |
 
-| Pass | Model | Focus |
-|------|-------|-------|
-| 1 | Sonnet | Bugs, security basics, missing tests |
-| 2 | Opus | Architecture, edge cases, performance |
-| 3 | Codex | Fresh eyes, what others missed |
+**Security files**: `auth`, `crypto`, `payment`, `token`, `secret`, `password`, `session`, `oauth`, `jwt`, `key`, `credential`
 
 ## Development Methodology
 
@@ -152,7 +159,7 @@ No "should work" or "was passing earlier" - run it fresh.
 | Category | Labels |
 |----------|--------|
 | Priority | `priority:high`, `priority:medium`, `priority:low` |
-| Size | `size:S` (1-4h), `size:M` (4-8h), `size:L` (8+h) |
+| Size | `size:XS` (<1h), `size:S` (1-4h), `size:M` (4-8h), `size:L` (8-16h), `size:XL` (16+h) |
 | Area | `area:frontend`, `area:backend`, `area:infra`, `area:db` |
 
 **Note:** Issue types (Epic, Feature, Task) are set via GitHub's native `--type` flag, not labels.
@@ -195,10 +202,14 @@ skills/
 ├── issue/SKILL.md              # /issue
 ├── parent/SKILL.md             # /parent
 ├── start/SKILL.md              # /start (full flow)
-├── sonnet-review/SKILL.md      # /sonnet-review (quick)
-├── 3pass-review/SKILL.md       # /3pass-review
-├── codex-review/SKILL.md       # /codex-review
 ├── backlog/SKILL.md            # /backlog
+│
+├── s-review/SKILL.md           # /s-review (Sonnet)
+├── o-review/SKILL.md           # /o-review (Opus)
+├── sc-review/SKILL.md          # /sc-review (Sonnet → Codex)
+├── oc-review/SKILL.md          # /oc-review (Opus → Codex)
+├── soc-review/SKILL.md         # /soc-review (Sonnet → Opus → Codex)
+├── codex-review/SKILL.md       # /codex-review (standalone)
 │
 ├── using-pasiv/SKILL.md        # Skill awareness (injected at session start)
 ├── tdd/SKILL.md                # TDD methodology (internal)

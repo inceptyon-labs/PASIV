@@ -7,61 +7,37 @@ user-invocable: true
 allowed-tools:
   - Bash
   - Read
+  - mcp__my-codex-mcp__codex
 ---
 
 # Codex Deep Review
 
 Run Codex for deep analysis: $ARGUMENTS (branch, commit SHA, or empty for current changes)
 
-## Option 1: Review Current Branch vs Main
+## Step 1: Get the Code to Review
 
 ```bash
-codex review --base main
+# Get the diff (current branch vs main, or specific commit/branch)
+git diff main
 ```
 
-## Option 2: Review with Custom Focus
+## Step 2: Call Codex MCP Tool
 
-Note: `--base` cannot be combined with a custom prompt. Use `codex exec` instead:
+Use the `mcp__my-codex-mcp__codex` tool with:
 
-```bash
-DIFF=$(git diff main)
+| Parameter | Value |
+|-----------|-------|
+| `prompt` | "Focus on security vulnerabilities, architecture issues, and edge cases. For each finding: Severity (ERROR/WARNING/SUGGESTION), Location (file:line), Description and fix. Be thorough and specific." |
+| `code` | The diff output from Step 1 |
+| `context` | "Code review of git diff" |
 
-codex exec -s read-only "Focus on security vulnerabilities, architecture issues, and edge cases.
-
-Here is the diff:
-$DIFF
-
-For each finding:
-- Severity: ERROR / WARNING / SUGGESTION
-- Location: file:line
-- Description and fix
-
-Be thorough and specific."
+**Example tool call:**
 ```
-
-## Option 3: Review Specific Commit
-
-```bash
-codex review --commit SHA
-```
-
-## Option 4: Review Uncommitted Changes
-
-```bash
-codex review --uncommitted
-```
-
-## Option 5: Custom Prompt (Non-interactive)
-
-For complex custom analysis:
-
-```bash
-codex exec -s read-only "Analyze the codebase for:
-1. Security vulnerabilities
-2. Performance bottlenecks
-3. Code duplication
-
-$ARGUMENTS"
+mcp__my-codex-mcp__codex(
+  prompt: "Focus on security vulnerabilities, architecture issues, and edge cases...",
+  code: "<diff output>",
+  context: "Code review of git diff against main branch"
+)
 ```
 
 ## Report Results
