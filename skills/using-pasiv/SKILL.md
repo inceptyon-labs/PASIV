@@ -14,6 +14,18 @@ This is injected at session start. It is NOT a user-invocable skill.
 
 If a skill applies to your task, you must use it. This is not optional.
 
+## CRITICAL: Do NOT Use EnterPlanMode
+
+**PASIV skills have their own planning built in. Do NOT use the `EnterPlanMode` tool when executing PASIV skills.**
+
+- `/kick` has Step 2 (Create Plan + Select Review Depth) - this IS the planning phase
+- `/brainstorm` IS a planning/design skill
+- `/backlog` creates structured work from plans
+
+Using `EnterPlanMode` during a PASIV skill derails the workflow. The skill instructions ARE the plan.
+
+**When to use EnterPlanMode:** Only for ad-hoc work that doesn't fit any PASIV skill (rare).
+
 ## Available Skills
 
 ### Ideation & Planning
@@ -79,6 +91,7 @@ These are used by `/kick` internally, not invoked directly:
 
 Stop and reconsider if you find yourself:
 
+- **Using `EnterPlanMode` during a PASIV skill** - the skill IS the plan
 - Writing code without checking for applicable skills
 - Treating a request as "too simple" for skills
 - Skipping brainstorming when requirements are unclear
