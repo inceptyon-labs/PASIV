@@ -19,7 +19,7 @@ Every extraction needs a team. PASIV connects them:
 | Role | What They Do | In PASIV |
 |------|--------------|----------|
 | **Dreamer** | Explores possibilities, refines the vision | `/brainstorm` - Socratic design refinement |
-| **Extractor** | Leads the operation, pulls value from the target | `/start` - orchestrates the full flow |
+| **Extractor** | Leads the operation, pulls value from the target | `/kick` - orchestrates the full flow |
 | **Architect** | Designs the dream levels | `/backlog` - structures specs into issues |
 | **Forger** | Transforms and adapts | `/issue`, `/parent` - shapes ideas into trackable work |
 | **Point Man** | Handles the details | `git-ops`, `issue-ops`, `project-ops` - the helpers |
@@ -66,7 +66,7 @@ Prefer a UI? Use [**TARS**](https://github.com/inceptyon-labs/TARS) - a visual p
 /backlog design.md
 
 # Start working on an issue (full extraction)
-/start 42
+/kick 42
 ```
 
 ## Issue Type Hierarchy
@@ -88,7 +88,7 @@ Uses GitHub's native issue types (`--type Epic/Feature/Task`).
 | `/issue` | Task | Create single work item |
 | `/parent` | Feature → Tasks | Create feature with task sub-issues |
 | `/backlog` | Epic → Feature → Task | Parse spec into full hierarchy |
-| `/start` | - | Full implementation flow |
+| `/kick` | - | Full implementation flow |
 | `/s-review` | - | S (Sonnet) - trivial changes |
 | `/o-review` | - | O (Opus) - simple features |
 | `/sc-review` | - | SC (Sonnet → Codex) - moderate, budget |
@@ -104,11 +104,11 @@ Choose your entry point based on what you have:
 
 | You have... | Start with | Flow |
 |-------------|------------|------|
-| Vague idea | `/brainstorm` | → design.md → `/backlog` → `/start` |
-| Half-baked plan | `/brainstorm doc.md` | → refined design → `/backlog` → `/start` |
-| Clear requirements | `/backlog spec.md` | → issues → `/start` |
-| Single task | `/issue` | → `/start 42` |
-| Existing issue | `/start 42` | (inline planning) |
+| Vague idea | `/brainstorm` | → design.md → `/backlog` → `/kick` |
+| Half-baked plan | `/brainstorm doc.md` | → refined design → `/backlog` → `/kick` |
+| Clear requirements | `/backlog spec.md` | → issues → `/kick` |
+| Single task | `/issue` | → `/kick 42` |
+| Existing issue | `/kick 42` | (inline planning) |
 
 ## Flow Diagram
 
@@ -178,12 +178,12 @@ Socratic design refinement - turn vague ideas into validated designs before writ
 
 ---
 
-## The `/start` Flow
+## The `/kick` Flow
 
 > *"You mustn't be afraid to dream a little bigger, darling."*
 
 ```
-/start 42
+/kick 42
 ```
 
 1. **Fetch issue details** (reliable lookup by number)
@@ -246,13 +246,13 @@ No "should work" - actual runs with actual output.
 
 **Reviews always happen at the Task level** - Epics and Features are containers.
 
-| `/start` on | Behavior |
+| `/kick` on | Behavior |
 |-------------|----------|
 | Task | Implement → Review → Merge |
 | Feature | For each Task: Implement → Review → Merge |
 | Epic | For each Feature → For each Task: Implement → Review → Merge |
 
-When you `/start` an **Epic**:
+When you `/kick` an **Epic**:
 
 ```
 Epic #10: User Authentication System
@@ -385,7 +385,7 @@ skills/
 ├── brainstorm/SKILL.md         # /brainstorm (Dreamer)
 ├── issue/SKILL.md              # /issue (Forger)
 ├── parent/SKILL.md             # /parent (Forger)
-├── start/SKILL.md              # /start (Extractor)
+├── kick/SKILL.md               # /kick (Extractor)
 ├── backlog/SKILL.md            # /backlog (Architect)
 │
 ├── s-review/SKILL.md           # /s-review (Sonnet)
@@ -425,11 +425,11 @@ PASIV uses a session-start hook to make Claude aware of available skills without
 | When | What Loads | Size |
 |------|------------|------|
 | Session start | `using-pasiv/SKILL.md` (skill index/guide) | ~100 lines |
-| You run `/start` | `start/SKILL.md` (full instructions) | On-demand |
+| You run `/kick` | `start/SKILL.md` (full instructions) | On-demand |
 | You run `/codex-review` | `codex-review/SKILL.md` (full instructions) | On-demand |
 
 The session-start hook (`hooks/session-start.sh`) injects only the lightweight skill awareness guide. This tells Claude:
-- What skills exist (`/brainstorm`, `/start`, `/issue`, etc.)
+- What skills exist (`/brainstorm`, `/kick`, `/issue`, etc.)
 - When to use each one
 - Workflow patterns and decision flow
 
@@ -453,4 +453,4 @@ claude plugin update PASIV
 
 > *"Do you want to take a leap of faith? Or become an old man, filled with regret, waiting to die alone?"*
 >
-> Connect to PASIV. `/start next`
+> Connect to PASIV. `/kick next`
