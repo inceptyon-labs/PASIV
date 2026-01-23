@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "The PASIV device enables shared dreaming. Connect AI agents to extract tested, reviewed implementations from ideas.",
-    "version": "2.0.16"
+    "version": "2.0.17"
   },
   "plugins": [
     {
       "name": "pasiv",
       "source": "./",
       "description": "TDD-first, 3-model review pipeline, autonomous workflows. Inception-inspired solo dev automation.",
-      "version": "2.0.16",
+      "version": "2.0.17",
       "category": "productivity",
       "tags": [
         "github",
