@@ -26,8 +26,8 @@ If a skill applies to your task, you must use it. This is not optional.
 ### Implementation
 | Skill | When to Use |
 |-------|-------------|
-| `/start 42` | Implement a specific issue (plan → TDD → review → merge) |
-| `/start next` | Work on highest priority open issue |
+| `/kick 42` | Implement a specific issue (plan → TDD → review → merge) |
+| `/kick next` | Work on highest priority open issue |
 
 ### Code Review (standalone)
 | Skill | When to Use |
@@ -43,27 +43,27 @@ If a skill applies to your task, you must use it. This is not optional.
 
 **New idea, unclear scope:**
 ```
-/brainstorm → design.md → /backlog design.md → /start next
+/brainstorm → design.md → /backlog design.md → /kick next
 ```
 
 **Clear requirements:**
 ```
-/backlog spec.md → /start next
+/backlog spec.md → /kick next
 ```
 
 **Single task:**
 ```
-/issue add feature X → /start 42
+/issue add feature X → /kick 42
 ```
 
 **Existing half-baked plan:**
 ```
-/brainstorm existing-plan.md → refined design → /backlog → /start
+/brainstorm existing-plan.md → refined design → /backlog → /kick
 ```
 
 ## Methodology Skills (Internal)
 
-These are used by `/start` internally, not invoked directly:
+These are used by `/kick` internally, not invoked directly:
 
 - `tdd` - Test-Driven Development (RED → GREEN → REFACTOR)
 - `verification` - Pre-merge verification gate
@@ -77,7 +77,7 @@ Stop and reconsider if you find yourself:
 - Treating a request as "too simple" for skills
 - Skipping brainstorming when requirements are unclear
 - Creating issues without using `/issue`, `/parent`, or `/backlog`
-- Implementing without `/start`
+- Implementing without `/kick`
 
 ## Decision Flow
 
@@ -88,7 +88,7 @@ Is this about refining an idea? → /brainstorm
     ↓
 Is this about creating issues? → /issue, /parent, or /backlog
     ↓
-Is this about implementing an issue? → /start
+Is this about implementing an issue? → /kick
     ↓
 Is this a standalone review? → /s-review, /o-review, /sc-review, /oc-review, /soc-review
     ↓

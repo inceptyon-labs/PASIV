@@ -1,6 +1,6 @@
 ---
-name: start
-description: Full implementation flow - plan, implement, review, merge. Use when user says "start issue", "work on issue", "implement issue", "start #42", or wants to fully implement and merge a GitHub issue.
+name: kick
+description: Full implementation flow - plan, implement, review, merge. Use when user says "kick issue", "kick #42", "work on issue", "implement issue", or wants to fully implement and merge a GitHub issue. Named after the "kick" in Inception that brings you from dream to reality.
 model: opus
 allowed-tools:
   - Bash
@@ -9,16 +9,20 @@ allowed-tools:
   - Write
   - Skill
   - mcp__my-codex-mcp__codex
+  - TaskCreate
+  - TaskUpdate
+  - TaskList
+  - TaskGet
 ---
 
-# Start Working on Issue
+# Kick Issue Into Reality
 
 Full flow for: $ARGUMENTS (issue number or "next")
 
 ## Issue Type Hierarchy
 
-| Level | Type | Scope | `/start` Behavior |
-|-------|------|-------|-------------------|
+| Level | Type | Scope | `/kick` Behavior |
+|-------|------|-------|------------------|
 | **Epic** | Strategic | Multiple features | Process all Features → all Tasks |
 | **Feature** | Tactical | Single capability | Process all Tasks |
 | **Task** | Execution | Single work item | Implement → Review → Merge |
@@ -169,15 +173,87 @@ ELSE (no security files):
 
 **Store**: REVIEW_TIER = "S" | "O" | "SC" | "OC" | "SOC"
 
-**If Approve**: Continue to Step 3 with selected REVIEW_TIER
+**If Approve**: Continue to Step 2.5 (Create Tasks)
 **If Revise**: Ask what to change, update plan, ask again
 **If Cancel**: Stop and explain why
+
+---
+
+## Step 2.5: Create Native Tasks from Plan
+
+**REQUIRED:** Create native tasks to track progress throughout implementation.
+
+### Create Implementation Tasks
+
+For each step in the approved plan:
+
+```
+TaskCreate:
+  subject: "Step N: [Component Name]"
+  description: |
+    [Details from plan]
+
+    Files: [files to create/modify]
+
+    Acceptance Criteria:
+    - [ ] Test exists and fails initially
+    - [ ] Implementation passes test
+    - [ ] Committed with descriptive message
+  activeForm: "Implementing [Component Name]"
+```
+
+### Create Review Task
+
+```
+TaskCreate:
+  subject: "Review: [REVIEW_TIER]"
+  description: "Run [REVIEW_TIER] review pipeline on all changes"
+  activeForm: "Running [REVIEW_TIER] review"
+```
+
+### Create Verification Task
+
+```
+TaskCreate:
+  subject: "Verification Gate"
+  description: "Run tests, build, lint - fresh evidence required"
+  activeForm: "Verifying implementation"
+```
+
+### Set Up Dependencies
+
+```
+TaskUpdate:
+  taskId: [step-2-id]
+  addBlockedBy: [step-1-id]
+
+TaskUpdate:
+  taskId: [review-task-id]
+  addBlockedBy: [all-step-ids]
+
+TaskUpdate:
+  taskId: [verification-task-id]
+  addBlockedBy: [review-task-id]
+```
+
+### Display Task Structure
+
+Run `TaskList` to show the complete structure before starting implementation.
 
 ---
 
 ## Step 3: Implement (TDD)
 
 **Use Skill tool:** `git-ops` with args: `create-branch $ISSUE_NUM`
+
+### For each implementation step:
+
+**Start of step:**
+```
+TaskUpdate:
+  taskId: [current-step-id]
+  status: in_progress
+```
 
 ### For each piece of functionality, follow TDD:
 
@@ -204,6 +280,15 @@ npm test || pytest || go test ./... || cargo test || bun test
 #### COMMIT
 After each RED-GREEN-REFACTOR cycle:
 **Use Skill tool:** `git-ops` with args: `commit "feat: [what was added] (#$ISSUE_NUM)"`
+
+**End of step (after all cycles for this step):**
+```
+TaskUpdate:
+  taskId: [current-step-id]
+  status: completed
+```
+
+Run `TaskList` to show progress.
 
 ### TDD Violations - STOP
 
@@ -281,6 +366,13 @@ After successful fix:
 ---
 
 ## Step 4: Code Review (based on REVIEW_TIER)
+
+**Start of review:**
+```
+TaskUpdate:
+  taskId: [review-task-id]
+  status: in_progress
+```
 
 All multi-pass reviews are **cascading** - get fresh `git diff main` before each pass to include previous fixes.
 
@@ -435,11 +527,25 @@ Proceed to Step 5.
 
 ## Step 5: Check Off Acceptance Criteria
 
+**Mark review complete:**
+```
+TaskUpdate:
+  taskId: [review-task-id]
+  status: completed
+```
+
 **Use Skill tool:** `issue-ops` with args: `check-off-criteria $ISSUE_NUM`
 
 ---
 
 ## Step 6: Verification Gate
+
+**Start verification:**
+```
+TaskUpdate:
+  taskId: [verification-task-id]
+  status: in_progress
+```
 
 **Before merge, verify ALL with fresh runs.**
 
@@ -481,6 +587,15 @@ Ready to merge.
 3. Only proceed when ALL pass
 
 **Reference**: `@verification` skill for methodology
+
+**Mark verification complete:**
+```
+TaskUpdate:
+  taskId: [verification-task-id]
+  status: completed
+```
+
+Run `TaskList` to show all tasks completed.
 
 ---
 
@@ -565,14 +680,14 @@ Commit: [short SHA]
 
 ---
 **Next up:** $NEXT_ISSUE (or "No open issues remaining")
-Run `/start next` to continue.
+Run `/kick next` to continue.
 ```
 
 ---
 
 ## Parent Issue Flow (Autonomous)
 
-When `/start` is called on an Epic or Feature (issue with sub-issues), use "approve once, walk away" mode.
+When `/kick` is called on an Epic or Feature (issue with sub-issues), use "approve once, walk away" mode.
 
 **Key principle:** Reviews happen at the **Task level only**. Epics and Features are containers - no code is written directly in them.
 
@@ -723,7 +838,7 @@ All merged to main.
 
 ---
 **Next up:** $NEXT_ISSUE (or "No open issues remaining")
-Run `/start next` to continue.
+Run `/kick next` to continue.
 ```
 
 ---

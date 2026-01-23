@@ -18,8 +18,8 @@
 | `/parent user notifications` | Feature → Tasks | Create a feature with task sub-issues |
 | `/backlog` | Epic → Feature → Task | Create full hierarchy from spec.md |
 | `/backlog design.md` | Epic → Feature → Task | Create full hierarchy from custom spec |
-| `/start 42` | - | Plan → Implement → Review → Merge |
-| `/start next` | - | Work on highest priority issue |
+| `/kick 42` | - | Plan → Implement → Review → Merge |
+| `/kick next` | - | Work on highest priority issue |
 | `/s-review` | - | S (Sonnet) - trivial changes |
 | `/o-review` | - | O (Opus) - simple features |
 | `/sc-review` | - | SC (Sonnet → Codex) - moderate, budget |
@@ -33,11 +33,11 @@
 
 | You have... | Start with | Flow |
 |-------------|------------|------|
-| Vague idea | `/brainstorm` | → design.md → `/backlog` → `/start` |
-| Half-baked plan | `/brainstorm spec.md` | → refined design → `/backlog` → `/start` |
-| Clear requirements | `/backlog spec.md` | → issues → `/start` |
-| Single task | `/issue` | → `/start 42` |
-| Existing issue | `/start 42` | (inline planning) |
+| Vague idea | `/brainstorm` | → design.md → `/backlog` → `/kick` |
+| Half-baked plan | `/brainstorm spec.md` | → refined design → `/backlog` → `/kick` |
+| Clear requirements | `/backlog spec.md` | → issues → `/kick` |
+| Single task | `/issue` | → `/kick 42` |
+| Existing issue | `/kick 42` | (inline planning) |
 
 ## Examples
 
@@ -73,7 +73,7 @@
 
 **Full implementation flow:**
 ```
-/start 42
+/kick 42
 ```
 1. Read issue #42
 2. Create implementation plan
@@ -85,7 +85,7 @@
 
 **Parent issue (autonomous):**
 ```
-/start 41  # parent with sub-issues
+/kick 41  # parent with sub-issues
 ```
 1. Show all sub-issues with recommended review tiers
 2. Approve once, walk away
@@ -118,7 +118,7 @@ All multi-pass reviews are **cascading** - each pass reviews cumulative changes 
 
 ## Development Methodology
 
-### TDD Cycle (enforced in `/start`)
+### TDD Cycle (enforced in `/kick`)
 
 ```
 RED → GREEN → REFACTOR → COMMIT → repeat
@@ -201,7 +201,7 @@ skills/
 ├── brainstorm/SKILL.md         # /brainstorm (ideation)
 ├── issue/SKILL.md              # /issue
 ├── parent/SKILL.md             # /parent
-├── start/SKILL.md              # /start (full flow)
+├── kick/SKILL.md               # /kick (full flow)
 ├── backlog/SKILL.md            # /backlog
 │
 ├── s-review/SKILL.md           # /s-review (Sonnet)
