@@ -189,13 +189,14 @@ Socratic design refinement - turn vague ideas into validated designs before writ
 1. **Fetch issue details** (reliable lookup by number)
 2. **Check for sub-issues** (if parent, use autonomous flow)
 3. Move to **In Progress**
-4. Create plan → **select review depth** → wait for approval
-5. **TDD implementation** (RED → GREEN → REFACTOR → COMMIT)
-6. Run tests (systematic debugging if failures)
-7. **Code review** (S/O/SC/OC/SOC based on selection)
-8. **Verification gate** (fresh test/build/lint evidence)
-9. Check off acceptance criteria
-10. Merge to main, move to **Done**, close issue
+4. **Load design system** (if `area:frontend` - see [Design System Integration](#design-system-integration))
+5. Create plan → **select review depth** → wait for approval
+6. **TDD implementation** (RED → GREEN → REFACTOR → COMMIT)
+7. Run tests (systematic debugging if failures)
+8. **Code review** (S/O/SC/OC/SOC based on selection)
+9. **Verification gate** (fresh test/build/lint evidence)
+10. Check off acceptance criteria
+11. Merge to main, move to **Done**, close issue
 
 ### Review Tier Selection
 
@@ -444,9 +445,37 @@ rm -rf ~/.claude/plugins/cache
 claude plugin update PASIV
 ```
 
+## Design System Integration
+
+PASIV integrates with [interface-design](https://github.com/Dammyjay93/interface-design) for consistent UI implementation.
+
+**How it works:**
+- When `/kick` processes an issue with `area:frontend` label, it automatically loads `.interface-design/system.md`
+- The design system defines tokens (spacing, colors, typography) and patterns (buttons, cards, forms)
+- Implementation must reference established tokens and follow documented patterns
+
+**Setup (per project):**
+```bash
+# Initialize design system in your project
+/interface-design:init
+```
+
+**During frontend work:**
+1. State design direction before component decisions
+2. Use established tokens (e.g., "spacing-4 (16px)", "radius-md")
+3. Follow documented patterns for similar components
+4. After implementation, offer to save new reusable patterns
+
+**Verification:**
+```bash
+# Audit code against design system
+/interface-design:audit src/components
+```
+
 ## Acknowledgments
 
 - Development methodology (TDD cycle, verification gates, systematic debugging) and brainstorming flow inspired by [obra/superpowers](https://github.com/obra/superpowers)
+- Design system integration powered by [interface-design](https://github.com/Dammyjay93/interface-design) by [@Dammyjay93](https://github.com/Dammyjay93)
 - Name and lore inspired by Christopher Nolan's *Inception* (2010)
 
 ---

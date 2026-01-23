@@ -107,6 +107,31 @@ If no parent or no closed siblings, skip this step.
 
 ---
 
+## Step 1.9: Load Design System (if frontend)
+
+If ISSUE_LABELS contains `area:frontend`:
+
+1. Check for design system:
+   ```bash
+   [ -f ".interface-design/system.md" ] && echo "found"
+   ```
+
+2. If found, read `.interface-design/system.md` and store as DESIGN_SYSTEM
+
+3. **During planning and implementation, you MUST:**
+   - State the design direction before making component decisions
+   - Use established tokens (spacing, colors, typography, radii)
+   - Follow documented patterns for similar components
+   - Reference specific token values in your plan (e.g., "using spacing-4 (16px)")
+
+4. **After implementation is complete:**
+   - If you created new reusable patterns, offer to update system.md
+   - Use `/interface-design:audit` to verify compliance (if available)
+
+If no `.interface-design/system.md` exists, note in plan: "No design system found - consider running `/interface-design:init`"
+
+---
+
 ## Step 2: Create Plan + Select Review Depth
 
 Analyze the issue and codebase. Present:
