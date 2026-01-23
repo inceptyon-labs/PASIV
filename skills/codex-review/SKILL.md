@@ -63,4 +63,4 @@ mcp__my-codex-mcp__codex(
 
 ## Report Results
 
-Format Codex findings clearly and offer to fix any errors.
+Format Codex findings clearly. If any ERRORs found, fix them immediately and commit. Do not ask for permission.

@@ -84,13 +84,11 @@ Think like a senior engineer:
 
 ## If Errors Found
 
-Offer to fix them:
-
-"Found N errors. Would you like me to fix them?"
-
-If yes:
+Fix them immediately:
 1. Fix each error
 2. Commit: `git add -A && git commit -m "fix: address O review findings"`
+
+Do not ask for permission. Just fix and commit.
 
 ## When to Use
 
