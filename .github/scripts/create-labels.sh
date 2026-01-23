@@ -17,9 +17,11 @@ gh label create "priority:medium" --color "F59E0B" --description "Medium priorit
 gh label create "priority:low" --color "10B981" --description "Low priority" --force
 
 # Size labels (no spaces - matches skill expectations)
+gh label create "size:XS" --color "EFF6FF" --description "Trivial task (< 1 hour)" --force
 gh label create "size:S" --color "DBEAFE" --description "Small task (1-4 hours)" --force
 gh label create "size:M" --color "BFDBFE" --description "Medium task (4-8 hours)" --force
-gh label create "size:L" --color "93C5FD" --description "Large task (8+ hours)" --force
+gh label create "size:L" --color "93C5FD" --description "Large task (8-16 hours)" --force
+gh label create "size:XL" --color "60A5FA" --description "Extra large task (16+ hours)" --force
 
 # Area labels (no spaces - matches skill expectations)
 gh label create "area:frontend" --color "EC4899" --description "Web/UI changes" --force

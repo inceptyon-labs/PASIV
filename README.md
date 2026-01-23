@@ -89,9 +89,12 @@ Uses GitHub's native issue types (`--type Epic/Feature/Task`).
 | `/parent` | Feature → Tasks | Create feature with task sub-issues |
 | `/backlog` | Epic → Feature → Task | Parse spec into full hierarchy |
 | `/start` | - | Full implementation flow |
-| `/sonnet-review` | - | Quick Sonnet-only review |
-| `/3pass-review` | - | 3-model review pipeline |
-| `/codex-review` | - | Deep Codex-only review |
+| `/s-review` | - | S (Sonnet) - trivial changes |
+| `/o-review` | - | O (Opus) - simple features |
+| `/sc-review` | - | SC (Sonnet → Codex) - moderate, budget |
+| `/oc-review` | - | OC (Opus → Codex) - complex, quality |
+| `/soc-review` | - | SOC (Sonnet → Opus → Codex) - security-critical |
+| `/codex-review` | - | Standalone Codex review |
 
 ## Workflow Patterns
 
@@ -189,20 +192,22 @@ Socratic design refinement - turn vague ideas into validated designs before writ
 4. Create plan → **select review depth** → wait for approval
 5. **TDD implementation** (RED → GREEN → REFACTOR → COMMIT)
 6. Run tests (systematic debugging if failures)
-7. **Code review** (Light/Medium/Full based on selection)
+7. **Code review** (S/O/SC/OC/SOC based on selection)
 8. **Verification gate** (fresh test/build/lint evidence)
 9. Check off acceptance criteria
 10. Merge to main, move to **Done**, close issue
 
-### Review Depth Selection
+### Review Tier Selection
 
-During plan approval, select review depth with smart recommendations:
+During plan approval, select review tier with smart recommendations based on size and security:
 
-| Depth | Models | When Recommended |
-|-------|--------|------------------|
-| **Light** | Sonnet | `size:S`, simple bugs |
-| **Medium** | Codex | `size:M`, moderate features |
-| **Full** | Sonnet → Opus → Codex | `size:L`, security files detected |
+| Tier | Models | When Recommended |
+|------|--------|------------------|
+| **S** | Sonnet | `size:XS`, trivial |
+| **O** | Opus | `size:S`, simple features |
+| **SC** | Sonnet → Codex | `size:M`, moderate |
+| **OC** | Opus → Codex | `size:L`, complex |
+| **SOC** | Sonnet → Opus → Codex | `size:XL`, security-critical |
 
 ### TDD Methodology
 
@@ -253,13 +258,13 @@ When you `/start` an **Epic**:
 Epic #10: User Authentication System
 
 ├── Feature #11: Email/Password Login
-│   ├── #14 Create user table        → Light  (size:S, area:db)
-│   ├── #15 Create auth endpoint     → Full   [security]
-│   └── #16 Create login form        → Medium (area:frontend)
+│   ├── #14 Create user table        → S   (size:XS, area:db)
+│   ├── #15 Create auth endpoint     → OC  (size:M) [security]
+│   └── #16 Create login form        → SC  (size:M, area:frontend)
 │
 └── Feature #12: OAuth Login
-    ├── #17 Add OAuth config         → Full   [security]
-    └── #18 Add OAuth callback       → Full   [security]
+    ├── #17 Add OAuth config         → SC  (size:S) [security]
+    └── #18 Add OAuth callback       → OC  (size:M) [security]
 
 Total: 5 Tasks across 2 Features
 Approve and start autonomous run? [Yes/Customize/Cancel]
@@ -285,15 +290,29 @@ When tests fail, root cause analysis is enforced:
 
 **Three Strikes Rule**: After 3 failed fix attempts, stop and reassess.
 
-## Review Pipeline
+## Review Tiers
 
-**Full 3-pass flow: Sonnet → FIX → Opus → FIX → Codex → FIX → Done**
+| Tier | Name | Models | Cost | When to Use |
+|------|------|--------|------|-------------|
+| 1 | S | Sonnet | $ | Typos, config, trivial fixes |
+| 2 | O | Opus | $$ | Simple features, clear scope |
+| 3 | SC | Sonnet → Codex | $$ | Moderate changes, budget-conscious |
+| 4 | OC | Opus → Codex | $$$ | Complex features, quality focus |
+| 5 | SOC | Sonnet → Opus → Codex | $$$$ | Security-critical, large refactors |
 
-| Pass | Model | Focus |
-|------|-------|-------|
-| 1 | Sonnet | Bugs, security basics, missing tests |
-| 2 | Opus | Architecture, edge cases, performance |
-| 3 | Codex CLI | Fresh eyes, what others missed |
+All multi-pass reviews are **cascading** - each pass reviews cumulative changes including previous fixes.
+
+### Recommendation Matrix
+
+| Size | Default | If Security Files Detected |
+|------|---------|----------------------------|
+| `size:XS` | S | O |
+| `size:S` | O | SC |
+| `size:M` | SC | OC |
+| `size:L` | OC | SOC |
+| `size:XL` | SOC | SOC |
+
+**Security files**: `auth`, `crypto`, `payment`, `token`, `secret`, `password`, `session`, `oauth`, `jwt`, `key`, `credential`
 
 ## GitHub Projects Integration
 
@@ -322,7 +341,7 @@ gh auth refresh -s project
 | Category | Labels |
 |----------|--------|
 | Priority | `priority:high`, `priority:medium`, `priority:low` |
-| Size | `size:S` (1-4h), `size:M` (4-8h), `size:L` (8+h) |
+| Size | `size:XS` (<1h), `size:S` (1-4h), `size:M` (4-8h), `size:L` (8-16h), `size:XL` (16+h) |
 | Area | `area:frontend`, `area:backend`, `area:infra`, `area:db` |
 
 **Note:** Issue types (Epic, Feature, Task) use GitHub's native `--type` flag, not labels. Configure types in your organization's Settings → Planning → Issue types.
@@ -367,10 +386,14 @@ skills/
 ├── issue/SKILL.md              # /issue (Forger)
 ├── parent/SKILL.md             # /parent (Forger)
 ├── start/SKILL.md              # /start (Extractor)
-├── sonnet-review/SKILL.md      # /sonnet-review
-├── 3pass-review/SKILL.md       # /3pass-review
-├── codex-review/SKILL.md       # /codex-review
 ├── backlog/SKILL.md            # /backlog (Architect)
+│
+├── s-review/SKILL.md           # /s-review (Sonnet)
+├── o-review/SKILL.md           # /o-review (Opus)
+├── sc-review/SKILL.md          # /sc-review (Sonnet → Codex)
+├── oc-review/SKILL.md          # /oc-review (Opus → Codex)
+├── soc-review/SKILL.md         # /soc-review (Sonnet → Opus → Codex)
+├── codex-review/SKILL.md       # /codex-review (standalone)
 │
 ├── using-pasiv/SKILL.md        # Skill awareness (injected at session start)
 ├── tdd/SKILL.md                # TDD methodology (Chemist)
@@ -392,6 +415,27 @@ docs/
 └── workflows/
     └── version-bump.yml        # Auto-bump version on push
 ```
+
+## Session-Start Hook (Context Efficiency)
+
+PASIV uses a session-start hook to make Claude aware of available skills without bloating context.
+
+**How it works:**
+
+| When | What Loads | Size |
+|------|------------|------|
+| Session start | `using-pasiv/SKILL.md` (skill index/guide) | ~100 lines |
+| You run `/start` | `start/SKILL.md` (full instructions) | On-demand |
+| You run `/codex-review` | `codex-review/SKILL.md` (full instructions) | On-demand |
+
+The session-start hook (`hooks/session-start.sh`) injects only the lightweight skill awareness guide. This tells Claude:
+- What skills exist (`/brainstorm`, `/start`, `/issue`, etc.)
+- When to use each one
+- Workflow patterns and decision flow
+
+**The actual skill content is loaded lazily** - only when you invoke a skill does its full instructions enter context.
+
+This means you get skill-aware behavior from the first message without paying the context cost of loading every skill upfront.
 
 ## Updating
 

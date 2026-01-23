@@ -1,6 +1,6 @@
 ---
-name: 3pass-review
-description: Run 3-model code review pipeline (Sonnet, Opus, Codex). Use when user says "3pass review", "three pass review", "full review", "review pipeline", or wants multi-model feedback on a branch or pull request.
+name: soc-review
+description: Run SOC (Sonnet → Opus → Codex) cascading review pipeline. Use when user says "soc review", "full review", "3pass review", or wants comprehensive multi-model feedback.
 context: fork
 user-invocable: true
 allowed-tools:
@@ -8,27 +8,26 @@ allowed-tools:
   - Read
   - Edit
   - Write
+  - mcp__my-codex-mcp__codex
 ---
 
-# Code Review (3-Model Pipeline)
+# SOC Review (Sonnet → Opus → Codex)
 
 Review: $ARGUMENTS (branch name, or empty for current branch vs main)
 
 **Flow: Sonnet → FIX → Opus → FIX → Codex → FIX → Done**
 
-## Get the Diff
-
-```bash
-# If branch name provided
-git diff main..branch-name
-
-# Otherwise current branch vs main
-git diff main
-```
+All passes are **cascading** - each pass reviews cumulative changes including previous fixes.
 
 ---
 
-## Pass 1: Fast Review (Sonnet)
+## Pass 1: Sonnet
+
+Get the current diff:
+
+```bash
+git diff main
+```
 
 Use model `sonnet` for quick scan:
 
@@ -41,7 +40,7 @@ Focus on:
 
 Output as:
 ```
-### Pass 1: Fast Review (Sonnet)
+### Pass 1: Sonnet
 - [ERROR] file:line - description
 - [WARNING] file:line - description
 ```
@@ -60,7 +59,13 @@ If any ERRORs found:
 
 ---
 
-## Pass 2: Deep Review (Opus)
+## Pass 2: Opus
+
+Get a fresh diff (now includes Pass 1 fixes):
+
+```bash
+git diff main
+```
 
 Use model `opus` for thorough analysis:
 
@@ -75,7 +80,7 @@ Think like a senior engineer:
 
 Output as:
 ```
-### Pass 2: Deep Review (Opus)
+### Pass 2: Opus
 - [ERROR] file:line - description
 - [WARNING] file:line - description
 ```
@@ -94,33 +99,21 @@ If any ERRORs found:
 
 ---
 
-## Pass 3: Independent Review (Codex)
+## Pass 3: Codex
 
-**IMPORTANT: Use the custom prompt, NOT `codex review --base main`.**
+Get a fresh diff (now includes Pass 1 + Pass 2 fixes):
 
 ```bash
-DIFF=$(git diff main)
-
-codex exec -s read-only -o /tmp/codex-review.txt "Independent code review - catch what others missed.
-
-Here is the diff:
-$DIFF
-
-Focus on:
-1. Things other reviewers typically miss
-2. Subtle bugs or logic errors
-3. Security edge cases
-4. Test coverage gaps
-
-For each finding, specify:
-- Severity: ERROR / WARNING / SUGGESTION
-- Location: file:line
-- Issue and recommended fix
-
-Be thorough but don't repeat obvious issues."
-
-cat /tmp/codex-review.txt
+git diff main
 ```
+
+Then call the `mcp__my-codex-mcp__codex` tool with:
+
+| Parameter | Value |
+|-----------|-------|
+| `prompt` | "Independent code review - catch what others missed. Focus on: 1) Things other reviewers typically miss, 2) Subtle bugs or logic errors, 3) Security edge cases, 4) Test coverage gaps. For each finding: Severity (ERROR/WARNING/SUGGESTION), Location (file:line), Issue and recommended fix. Be thorough but don't repeat obvious issues." |
+| `code` | The diff output |
+| `context` | "Pass 3 of SOC review. Looking for issues Sonnet and Opus may have missed." |
 
 ### STOP - Fix Pass 3 Errors Now
 
@@ -138,7 +131,7 @@ If any ERRORs found:
 Report final summary:
 
 ```
-## Review Complete
+## SOC Review Complete
 
 Pass 1 (Sonnet): ✓ [N errors fixed]
 Pass 2 (Opus):   ✓ [N errors fixed]

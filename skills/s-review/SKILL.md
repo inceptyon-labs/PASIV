@@ -1,6 +1,6 @@
 ---
-name: sonnet-review
-description: Quick code review using Sonnet. Use when user says "sonnet review", "quick review", "light review", or wants fast feedback on simple changes.
+name: s-review
+description: Run S (Sonnet) single-pass review. Use when user says "s review", "quick review", "sonnet review", or wants fast feedback on trivial changes.
 model: sonnet
 context: fork
 user-invocable: true
@@ -11,9 +11,13 @@ allowed-tools:
   - Write
 ---
 
-# Sonnet Quick Review
+# S Review (Sonnet)
 
-Fast review for: $ARGUMENTS (branch name, or empty for current branch vs main)
+Fast single-pass review for: $ARGUMENTS (branch name, or empty for current branch vs main)
+
+**Best for:** Typos, config changes, trivial fixes, `size:XS` issues.
+
+---
 
 ## Get the Diff
 
@@ -58,7 +62,7 @@ Quick scan for practical issues:
 ## Output Format
 
 ```
-### Quick Review (Sonnet)
+### S Review (Sonnet)
 
 **Errors (must fix):**
 - [ERROR] file:line - description
@@ -78,13 +82,13 @@ Offer to fix them:
 
 If yes:
 1. Fix each error
-2. Commit: `git add -A && git commit -m "fix: address Sonnet review findings"`
+2. Commit: `git add -A && git commit -m "fix: address S review findings"`
 
 ## When to Use
 
-- Simple bug fixes
+- Trivial fixes and typos
 - Small config changes
-- `size:S` issues
+- `size:XS` issues
 - Quick sanity check before deeper review
 
-For complex changes, use `/3pass-review` or `/codex-review` instead.
+For moderate changes, use `/sc-review`. For complex changes, use `/oc-review` or `/soc-review`.

@@ -32,9 +32,12 @@ If a skill applies to your task, you must use it. This is not optional.
 ### Code Review (standalone)
 | Skill | When to Use |
 |-------|-------------|
-| `/sonnet-review` | Quick review (simple changes) |
-| `/codex-review` | Deep review (moderate complexity) |
-| `/3pass-review` | Full pipeline (complex/security-sensitive) |
+| `/s-review` | S (Sonnet) - trivial changes |
+| `/o-review` | O (Opus) - simple features |
+| `/sc-review` | SC (Sonnet → Codex) - moderate, budget |
+| `/oc-review` | OC (Opus → Codex) - complex, quality |
+| `/soc-review` | SOC (Sonnet → Opus → Codex) - security-critical |
+| `/codex-review` | Standalone Codex review |
 
 ## Workflow Patterns
 
@@ -87,7 +90,7 @@ Is this about creating issues? → /issue, /parent, or /backlog
     ↓
 Is this about implementing an issue? → /start
     ↓
-Is this a standalone review? → /sonnet-review, /codex-review, or /3pass-review
+Is this a standalone review? → /s-review, /o-review, /sc-review, /oc-review, /soc-review
     ↓
 None apply? → Proceed normally
 ```

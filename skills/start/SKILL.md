@@ -8,6 +8,7 @@ allowed-tools:
   - Edit
   - Write
   - Skill
+  - mcp__my-codex-mcp__codex
 ---
 
 # Start Working on Issue
@@ -113,7 +114,19 @@ Analyze the issue and codebase. Present:
 - **Approach**: Step-by-step
 - **Risks**: Potential issues
 
-### Determine Review Depth Recommendation
+### Review Tiers
+
+| Tier | Name | Models | Cost | When to Use |
+|------|------|--------|------|-------------|
+| 1 | S | Sonnet | $ | Typos, config, trivial fixes |
+| 2 | O | Opus | $$ | Simple features, clear scope |
+| 3 | SC | Sonnet → Codex | $$ | Moderate changes, budget-conscious |
+| 4 | OC | Opus → Codex | $$$ | Complex features, quality focus |
+| 5 | SOC | Sonnet → Opus → Codex | $$$$ | Security-critical, large refactors |
+
+All multi-pass reviews are **cascading** - each pass reviews cumulative changes including previous fixes.
+
+### Determine Review Tier Recommendation
 
 Check planned files for security patterns:
 ```bash
@@ -123,18 +136,22 @@ SECURITY_PATTERNS="auth|crypto|password|payment|token|secret|credential|session|
 **Recommendation logic:**
 ```
 IF any planned files match SECURITY_PATTERNS:
-  → RECOMMEND = "Full 3-pass" + note "(security files detected)"
-ELSE IF issue has label "size:L" OR "priority:high":
-  → RECOMMEND = "Full 3-pass"
-ELSE IF issue has label "size:M":
-  → RECOMMEND = "Medium (Codex)"
-ELSE IF issue has label "size:S" OR "bug":
-  → RECOMMEND = "Light (Sonnet)"
-ELSE:
-  → RECOMMEND = "Medium (Codex)"
+  IF size:XS → O + note "[security]"
+  IF size:S  → SC + note "[security]"
+  IF size:M  → OC + note "[security]"
+  IF size:L  → SOC + note "[security]"
+  IF size:XL → SOC + note "[security]"
+  ELSE       → OC + note "[security]"
+ELSE (no security files):
+  IF size:XS → S
+  IF size:S  → O
+  IF size:M  → SC
+  IF size:L  → OC
+  IF size:XL → SOC
+  ELSE       → SC (default)
 ```
 
-### Ask for Approval + Review Depth
+### Ask for Approval + Review Tier
 
 **Use AskUserQuestion tool** with TWO questions:
 
@@ -143,14 +160,16 @@ ELSE:
 - Revise - Modify the plan
 - Cancel - Stop work on this issue
 
-**Question 2**: "What review depth for this change?"
-- Light (Sonnet only) - simple bug/config {add "(Recommended)" if matches}
-- Medium (Codex only) - moderate complexity {add "(Recommended)" if matches}
-- Full 3-pass (Sonnet → Opus → Codex) - complex/security-sensitive {add "(Recommended)" or "(Recommended - security files detected)" if applicable}
+**Question 2**: "What review tier for this change?"
+- S (Sonnet) - trivial changes {add "(Recommended)" if matches}
+- O (Opus) - simple features {add "(Recommended)" if matches}
+- SC (Sonnet → Codex) - moderate, budget {add "(Recommended)" if matches}
+- OC (Opus → Codex) - complex, quality {add "(Recommended)" or "[security]" if applicable}
+- SOC (Sonnet → Opus → Codex) - security-critical {add "(Recommended)" or "[security]" if applicable}
 
-**Store**: REVIEW_DEPTH = "light" | "medium" | "full"
+**Store**: REVIEW_TIER = "S" | "O" | "SC" | "OC" | "SOC"
 
-**If Approve**: Continue to Step 3 with selected REVIEW_DEPTH
+**If Approve**: Continue to Step 3 with selected REVIEW_TIER
 **If Revise**: Ask what to change, update plan, ask again
 **If Cancel**: Stop and explain why
 
@@ -261,11 +280,13 @@ After successful fix:
 
 ---
 
-## Step 4: Code Review (based on REVIEW_DEPTH)
+## Step 4: Code Review (based on REVIEW_TIER)
 
-### If REVIEW_DEPTH = "light"
+All multi-pass reviews are **cascading** - get fresh `git diff main` before each pass to include previous fixes.
 
-**Sonnet review only (fast)**
+---
+
+### If REVIEW_TIER = "S" (Sonnet only)
 
 Perform quick review focusing on:
 - Clear bugs and errors
@@ -273,11 +294,9 @@ Perform quick review focusing on:
 - Missing error handling
 - Test coverage gaps
 
-**Reference**: `@sonnet-review` skill for standalone use
-
 Output format:
 ```
-### Quick Review (Sonnet)
+### Review: S (Sonnet)
 - [ERROR] file:line - description
 - [WARNING] file:line - description
 ```
@@ -290,77 +309,121 @@ Proceed to Step 5.
 
 ---
 
-### If REVIEW_DEPTH = "medium"
+### If REVIEW_TIER = "O" (Opus only)
 
-**Codex review only (independent deep review)**
+Perform thorough single-pass review:
+- Architecture and design patterns
+- Edge cases and error scenarios
+- Performance implications
+- Security in depth
+- Test coverage quality
 
-```bash
-DIFF=$(git diff main)
-
-codex exec -s read-only -o /tmp/codex-review.txt "Code review for Issue #$ISSUE_NUM.
-
-Here is the diff:
-$DIFF
-
-Focus on:
-1. Bugs and logic errors
-2. Security issues
-3. Test coverage gaps
-4. Edge cases
-
-Categorize as ERROR/WARNING/SUGGESTION."
-
-cat /tmp/codex-review.txt
+Output format:
+```
+### Review: O (Opus)
+- [ERROR] file:line - description
+- [WARNING] file:line - description
 ```
 
 **If any ERRORs:**
-1. Fix each error (use TDD - write test first if missing)
-2. **Use Skill tool:** `git-ops` with args: `commit "fix: address Codex review findings"`
+1. Fix each error (use TDD)
+2. **Use Skill tool:** `git-ops` with args: `commit "fix: address Opus review findings"`
 
 Proceed to Step 5.
 
 ---
 
-### If REVIEW_DEPTH = "full"
+### If REVIEW_TIER = "SC" (Sonnet → Codex)
 
-**Flow: Sonnet → FIX → Opus → FIX → Codex → FIX → Done**
+**Flow: Sonnet → FIX → Codex → FIX → Done**
 
-#### Pass 1: Sonnet (fast)
-Quick scan for bugs, security basics, missing error handling, **missing tests**.
+#### Pass 1: Sonnet
+Get diff: `git diff main`
+
+Quick scan for bugs, security basics, missing error handling, missing tests.
 
 **STOP after Pass 1.** If any ERRORs:
 1. Fix each error (use TDD)
 2. **Use Skill tool:** `git-ops` with args: `commit "fix: address Sonnet review findings"`
 3. Then proceed to Pass 2
 
-#### Pass 2: Opus (deep)
-Architecture, edge cases, performance, maintainability, **test coverage quality**.
+#### Pass 2: Codex
+Get fresh diff (includes Pass 1 fixes): `git diff main`
+
+Use `mcp__my-codex-mcp__codex` tool with:
+- `prompt`: "Independent code review. Focus on: 1) Things Sonnet missed, 2) Subtle bugs, 3) Security edge cases, 4) Test gaps. Categorize as ERROR/WARNING/SUGGESTION."
+- `code`: The diff output
+- `context`: "Pass 2 of SC review. Looking for issues Sonnet missed."
+
+**STOP after Pass 2.** If any ERRORs:
+1. Fix each error (use TDD)
+2. **Use Skill tool:** `git-ops` with args: `commit "fix: address Codex review findings"`
+
+Proceed to Step 5.
+
+---
+
+### If REVIEW_TIER = "OC" (Opus → Codex)
+
+**Flow: Opus → FIX → Codex → FIX → Done**
+
+#### Pass 1: Opus
+Get diff: `git diff main`
+
+Deep review: architecture, edge cases, performance, maintainability, test coverage quality.
+
+**STOP after Pass 1.** If any ERRORs:
+1. Fix each error (use TDD)
+2. **Use Skill tool:** `git-ops` with args: `commit "fix: address Opus review findings"`
+3. Then proceed to Pass 2
+
+#### Pass 2: Codex
+Get fresh diff (includes Pass 1 fixes): `git diff main`
+
+Use `mcp__my-codex-mcp__codex` tool with:
+- `prompt`: "Independent code review. Focus on: 1) Things Opus missed, 2) Subtle bugs, 3) Security edge cases, 4) Test gaps. Categorize as ERROR/WARNING/SUGGESTION."
+- `code`: The diff output
+- `context`: "Pass 2 of OC review. Looking for issues Opus missed."
+
+**STOP after Pass 2.** If any ERRORs:
+1. Fix each error (use TDD)
+2. **Use Skill tool:** `git-ops` with args: `commit "fix: address Codex review findings"`
+
+Proceed to Step 5.
+
+---
+
+### If REVIEW_TIER = "SOC" (Sonnet → Opus → Codex)
+
+**Flow: Sonnet → FIX → Opus → FIX → Codex → FIX → Done**
+
+#### Pass 1: Sonnet
+Get diff: `git diff main`
+
+Quick scan for bugs, security basics, missing error handling, missing tests.
+
+**STOP after Pass 1.** If any ERRORs:
+1. Fix each error (use TDD)
+2. **Use Skill tool:** `git-ops` with args: `commit "fix: address Sonnet review findings"`
+3. Then proceed to Pass 2
+
+#### Pass 2: Opus
+Get fresh diff (includes Pass 1 fixes): `git diff main`
+
+Deep review: architecture, edge cases, performance, maintainability, test coverage quality.
 
 **STOP after Pass 2.** If any ERRORs:
 1. Fix each error (use TDD)
 2. **Use Skill tool:** `git-ops` with args: `commit "fix: address Opus review findings"`
 3. Then proceed to Pass 3
 
-#### Pass 3: Codex (independent)
+#### Pass 3: Codex
+Get fresh diff (includes Pass 1 + Pass 2 fixes): `git diff main`
 
-```bash
-DIFF=$(git diff main)
-
-codex exec -s read-only -o /tmp/codex-review.txt "Independent code review for Issue #$ISSUE_NUM.
-
-Here is the diff:
-$DIFF
-
-Focus on:
-1. Subtle bugs or logic errors
-2. Security edge cases
-3. Test gaps
-4. What previous reviewers missed
-
-Categorize as ERROR/WARNING/SUGGESTION."
-
-cat /tmp/codex-review.txt
-```
+Use `mcp__my-codex-mcp__codex` tool with:
+- `prompt`: "Independent code review - catch what others missed. Focus on: 1) Things Sonnet and Opus missed, 2) Subtle bugs, 3) Security edge cases, 4) Test gaps. Categorize as ERROR/WARNING/SUGGESTION."
+- `code`: The diff output
+- `context`: "Pass 3 of SOC review. Looking for issues Sonnet and Opus missed."
 
 **STOP after Pass 3.** If any ERRORs:
 1. Fix each error (use TDD)
@@ -495,7 +558,7 @@ NEXT_ISSUE=$(gh issue list --label "priority:high" --state open --limit 1 --json
 Issue #$ISSUE_NUM completed and merged to main.
 
 Methodology: TDD (test-first)
-Review: [Light/Medium/Full]
+Review: [S/O/SC/OC/SOC]
 Verification: ✓ All checks passed
 
 Commit: [short SHA]
@@ -534,39 +597,43 @@ FUNCTION collect_tasks(issue_num):
   RETURN tasks
 ```
 
-### Determine Review Depth for Each Task
+### Determine Review Tier for Each Task
 
 ```
 FOR each task:
   Get labels and estimate planned files
   IF likely touches security patterns (auth, crypto, payment, token, etc.):
-    → RECOMMEND = "Full" + flag "[security]"
-  ELSE IF has label "size:L" OR "priority:high":
-    → RECOMMEND = "Full"
-  ELSE IF has label "size:M":
-    → RECOMMEND = "Medium"
-  ELSE IF has label "size:S" OR "bug":
-    → RECOMMEND = "Light"
-  ELSE:
-    → RECOMMEND = "Medium"
+    IF size:XS → O + "[security]"
+    IF size:S  → SC + "[security]"
+    IF size:M  → OC + "[security]"
+    IF size:L  → SOC + "[security]"
+    IF size:XL → SOC + "[security]"
+    ELSE       → OC + "[security]"
+  ELSE (no security files):
+    IF size:XS → S
+    IF size:S  → O
+    IF size:M  → SC
+    IF size:L  → OC
+    IF size:XL → SOC
+    ELSE       → SC
 ```
 
 ### Present Full Hierarchy
 
-Display the hierarchy with Tasks and their review depths:
+Display the hierarchy with Tasks and their review tiers:
 
 **For Epic:**
 ```
 Epic #10: User Authentication System
 
 ├── Feature #11: Email/Password Login
-│   ├── #14 Create user table        → Light  (size:S, area:db)
-│   ├── #15 Create auth endpoint     → Full   (size:M) [security]
-│   └── #16 Create login form        → Medium (size:M, area:frontend)
+│   ├── #14 Create user table        → S   (size:XS, area:db)
+│   ├── #15 Create auth endpoint     → OC  (size:M) [security]
+│   └── #16 Create login form        → SC  (size:M, area:frontend)
 │
 └── Feature #12: OAuth Login
-    ├── #17 Add OAuth config         → Full   (size:S) [security]
-    └── #18 Add OAuth callback       → Full   (size:M) [security]
+    ├── #17 Add OAuth config         → SC  (size:S) [security]
+    └── #18 Add OAuth callback       → OC  (size:M) [security]
 
 Total: 5 Tasks across 2 Features
 Methodology: TDD (test-first) for all Tasks
@@ -577,9 +644,9 @@ Verification gate before each Task merge
 ```
 Feature #11: Email/Password Login (3 Tasks)
 
-  1. #14 Create user table        → Light  (size:S, area:db)
-  2. #15 Create auth endpoint     → Full   (size:M) [security]
-  3. #16 Create login form        → Medium (size:M, area:frontend)
+  1. #14 Create user table        → S   (size:XS, area:db)
+  2. #15 Create auth endpoint     → OC  (size:M) [security]
+  3. #16 Create login form        → SC  (size:M, area:frontend)
 
 Methodology: TDD (test-first) for all Tasks
 Verification gate before each Task merge
@@ -589,19 +656,19 @@ Verification gate before each Task merge
 
 **Use AskUserQuestion tool:**
 
-**Question**: "Approve implementation plan with these review depths?"
-- Yes, start autonomous run (Recommended) - Implement all Tasks with shown review depths
-- Customize review depths - I'll specify different depths
+**Question**: "Approve implementation plan with these review tiers?"
+- Yes, start autonomous run (Recommended) - Implement all Tasks with shown tiers
+- Customize review tiers - I'll specify different tiers
 - Cancel - Stop work
 
 **If "Yes, start autonomous run":**
-- Store REVIEW_DEPTHS map: {14: "light", 15: "full", 16: "medium", ...}
+- Store REVIEW_TIERS map: {14: "S", 15: "OC", 16: "SC", ...}
 - Move Epic/Feature to In Progress
-- Process each Task autonomously using stored depth
+- Process each Task autonomously using stored tier
 - No further prompts until all complete or error occurs
 
-**If "Customize review depths":**
-- Ask for each Task's review depth
+**If "Customize review tiers":**
+- Ask for each Task's review tier
 - Then proceed with autonomous run
 
 **If "Cancel":** Stop and explain why
@@ -609,8 +676,8 @@ Verification gate before each Task merge
 ### Autonomous Task Processing
 
 For each Task (in priority order):
-1. Display: "Starting Task #N: $TITLE (Review: $DEPTH)"
-2. Run Steps 1-8 using REVIEW_DEPTHS[N]
+1. Display: "Starting Task #N: $TITLE (Review: $TIER)"
+2. Run Steps 1-8 using REVIEW_TIERS[N]
 3. On success:
    - Task closes automatically
    - Check if parent Feature's Tasks are all done → close Feature
@@ -643,13 +710,13 @@ Report summary:
 Epic #10: User Authentication System
 
 Feature #11: Email/Password Login
-  ✓ #14 Create user table        (Light review)
-  ✓ #15 Create auth endpoint     (Full review)
-  ✓ #16 Create login form        (Medium review)
+  ✓ #14 Create user table        (S)
+  ✓ #15 Create auth endpoint     (OC)
+  ✓ #16 Create login form        (SC)
 
 Feature #12: OAuth Login
-  ✓ #17 Add OAuth config         (Full review)
-  ✓ #18 Add OAuth callback       (Full review)
+  ✓ #17 Add OAuth config         (SC)
+  ✓ #18 Add OAuth callback       (OC)
 
 5 Tasks completed, 2 Features closed, 1 Epic closed.
 All merged to main.
