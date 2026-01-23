@@ -107,9 +107,9 @@ If no parent or no closed siblings, skip this step.
 
 ---
 
-## Step 1.9: Load Design System (if frontend)
+## Step 1.9: Load Design System (if UI work)
 
-If ISSUE_LABELS contains `area:frontend`:
+If ISSUE_LABELS contains `area:frontend` OR `area:mobile`:
 
 1. Check for design system:
    ```bash

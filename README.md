@@ -189,7 +189,7 @@ Socratic design refinement - turn vague ideas into validated designs before writ
 1. **Fetch issue details** (reliable lookup by number)
 2. **Check for sub-issues** (if parent, use autonomous flow)
 3. Move to **In Progress**
-4. **Load design system** (if `area:frontend` - see [Design System Integration](#design-system-integration))
+4. **Load design system** (if `area:frontend` or `area:mobile` - see [Design System Integration](#design-system-integration))
 5. Create plan → **select review depth** → wait for approval
 6. **TDD implementation** (RED → GREEN → REFACTOR → COMMIT)
 7. Run tests (systematic debugging if failures)
@@ -450,7 +450,7 @@ claude plugin update PASIV
 PASIV integrates with [interface-design](https://github.com/Dammyjay93/interface-design) for consistent UI implementation.
 
 **How it works:**
-- When `/kick` processes an issue with `area:frontend` label, it automatically loads `.interface-design/system.md`
+- When `/kick` processes an issue with `area:frontend` or `area:mobile` label, it automatically loads `.interface-design/system.md`
 - The design system defines tokens (spacing, colors, typography) and patterns (buttons, cards, forms)
 - Implementation must reference established tokens and follow documented patterns
 
@@ -460,7 +460,7 @@ PASIV integrates with [interface-design](https://github.com/Dammyjay93/interface
 /interface-design:init
 ```
 
-**During frontend work:**
+**During UI work:**
 1. State design direction before component decisions
 2. Use established tokens (e.g., "spacing-4 (16px)", "radius-md")
 3. Follow documented patterns for similar components
