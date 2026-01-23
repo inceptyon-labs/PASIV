@@ -67,6 +67,29 @@ Get a fresh diff (now includes Pass 1 fixes):
 git diff main
 ```
 
+### Check Diff Size
+
+```bash
+git diff main --stat | tail -1  # Shows total lines changed
+```
+
+**If diff is large (> 500 lines changed):** Split by file to avoid timeout.
+
+```bash
+# Get list of changed files
+git diff main --name-only
+```
+
+For each file (or logical group of related files):
+1. Get file-specific diff: `git diff main -- path/to/file.ts`
+2. Call Codex with that chunk
+3. Collect findings
+4. Move to next file
+
+**If diff is small (≤ 500 lines):** Review entire diff at once.
+
+### Call Codex
+
 Then call the `mcp__my-codex-mcp__codex` tool with:
 
 | Parameter | Value |
