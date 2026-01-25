@@ -33,6 +33,7 @@ Full flow for: $ARGUMENTS (issue number or "next")
 - `issue-ops` - Issue operations (get, create, close, check-off)
 - `project-ops` - Project operations (setup, move status)
 - `git-ops` - Git operations (branch, commit, push, merge)
+- `test-runner` - Test suite execution and reporting
 
 **Methodology skills (referenced inline):**
 - `tdd` - Test-Driven Development cycle
@@ -59,9 +60,62 @@ Store: ISSUE_NUM, ISSUE_TITLE, ISSUE_URL, ISSUE_BODY, ISSUE_LABELS
 
 **Use Skill tool:** `issue-ops` with args: `get-sub-issues $OWNER $REPO $ISSUE_NUM`
 
-**If no sub-issues:** Continue with normal flow (Step 1).
+**If no sub-issues:** Continue with normal flow (Step 0.75).
 
 **If sub-issues exist:** Follow [Parent Issue Flow](#parent-issue-flow-autonomous).
+
+---
+
+## Step 0.75: Baseline Test Run
+
+**REQUIRED:** Run tests before starting work to establish clean baseline.
+
+**Use Skill tool:** `test-runner` (Haiku will run tests and report back)
+
+### If tests pass (✓)
+
+Continue to Step 1.
+
+### If tests fail (✗)
+
+Display the test failure details:
+```
+⚠ Baseline tests are failing
+
+[test-runner output with failed test details]
+
+This means tests were failing BEFORE your changes. How would you like to proceed?
+```
+
+**Use AskUserQuestion tool:**
+
+**Question**: "Baseline tests are failing. How should we proceed?"
+- Fix tests first (Recommended) - I'll fix these before starting the issue
+- Proceed anyway - Continue with the issue (tests were already broken)
+- Cancel - Stop, I'll handle manually
+
+**If "Fix tests first":**
+1. Use systematic debugging to fix failing tests
+2. Re-run test-runner until all pass
+3. Commit fixes: `fix: repair baseline test failures`
+4. Continue to Step 1
+
+**If "Proceed anyway":**
+1. Note in plan: "⚠ Baseline tests failing - not related to this issue"
+2. Continue to Step 1
+
+**If "Cancel":** Stop and explain next steps.
+
+### If no tests found (⚠)
+
+Display warning:
+```
+⚠ No tests detected
+
+The project has no tests configured. TDD will require setting up tests first.
+```
+
+Continue to Step 1 (tests will be created during TDD).
 
 ---
 
@@ -572,44 +626,31 @@ TaskUpdate:
   status: in_progress
 ```
 
-**Before merge, verify ALL with fresh runs.**
+**Use Skill tool:** `verification` (Haiku with smart escalation to Opus)
 
-Run each and check output:
+The verification skill:
+1. **Tests**: Run test-runner (Haiku)
+   - If fail: Haiku tries simple fixes (syntax, imports) - max 2 attempts
+   - Still failing: Escalate to Opus (systematic-debugging skill)
+   - Loop until all pass
+   - NEVER skip tests
+2. **Build**: Same strategy - simple fixes first, escalate if needed
+3. **Lint**: Haiku auto-fixes (usually works), escalate if complex
+4. **Type Check**: Simple fixes first, escalate if complex
 
-```bash
-# 1. Tests pass
-npm test || pytest || go test ./... || cargo test
+**Smart escalation**: Haiku handles obvious issues, Opus handles complex debugging. Most verifications pass or only need Haiku.
 
-# 2. Build succeeds (if applicable)
-npm run build || go build ./... || cargo build
-
-# 3. Lint clean (if configured)
-npm run lint || golangci-lint run || cargo clippy
-
-# 4. Type check (if applicable)
-npm run typecheck || tsc --noEmit
+When verification completes, it will report:
 ```
-
-**For each command:**
-1. Run it fresh (don't rely on earlier results)
-2. Check exit code is 0
-3. Review output for warnings
-
-**Report:**
-```
-## Verification Gate
+## Verification Gate ✓
 
 Tests:     ✓ [count] passed (exit 0)
 Build:     ✓ completed (exit 0)
 Lint:      ✓ no errors (exit 0)
+TypeCheck: ✓ no errors (exit 0)
 
-Ready to merge.
+All verification checks passed. Ready to merge.
 ```
-
-**If any fail:**
-1. Fix the issue (use systematic debugging if tests)
-2. Re-run verification
-3. Only proceed when ALL pass
 
 **Reference**: `@verification` skill for methodology
 

@@ -118,6 +118,19 @@ All multi-pass reviews are **cascading** - each pass reviews cumulative changes 
 
 ## Development Methodology
 
+### Baseline Test Run (at start)
+
+Before starting work on an issue, `/kick` runs the full test suite to establish a clean baseline:
+
+1. **Haiku runs tests** in background and reports results
+2. **If tests pass**: Continue with implementation
+3. **If tests fail**: Ask user how to proceed:
+   - Fix tests first (recommended) - repair baseline before starting
+   - Proceed anyway - note that tests were already broken
+   - Cancel - handle manually
+
+This ensures you're not blamed for pre-existing test failures.
+
 ### TDD Cycle (enforced in `/kick`)
 
 ```
@@ -135,15 +148,23 @@ RED → GREEN → REFACTOR → COMMIT → repeat
 
 ### Verification Gate (before merge)
 
-Fresh evidence required for all claims:
+**Automated, smart escalation** - Haiku handles simple issues, Opus handles complex:
 
-| Claim | Required |
-|-------|----------|
-| "Tests pass" | Run `npm test`, see output |
-| "Build works" | Run `npm run build`, see exit 0 |
-| "Lint clean" | Run `npm run lint`, see output |
+1. **Tests**: Haiku runs test-runner
+   - If pass: Continue to next check
+   - If fail: Haiku tries simple fixes (syntax, imports) - max 2 attempts
+   - Still failing: Escalate to Opus for systematic debugging
+   - Loop until all pass
+   - NEVER skip tests
+2. **Build**: Same strategy - simple fixes first, escalate if needed
+3. **Lint**: Haiku auto-fixes (usually works), escalate if complex
+4. **Type Check**: Simple type fixes first, escalate if complex
 
-No "should work" or "was passing earlier" - run it fresh.
+**Cost optimization**: Most verifications pass or need only simple Haiku fixes. Opus only invoked for complex failures.
+
+**Only proceeds to merge when ALL checks pass.**
+
+No "should work" or "was passing earlier" - verification gate ensures fresh evidence.
 
 ### Systematic Debugging (when tests fail)
 
@@ -218,6 +239,10 @@ Simple operations run on **Haiku** in forked contexts to save tokens:
 | `git-ops` | Haiku | branch, commit, push, merge |
 | `issue-ops` | Haiku | create, close, check-off |
 | `project-ops` | Haiku | setup, add issue, move status |
+| `test-runner` | Haiku | run tests, parse results, report |
+| `verification` | Haiku → Opus | simple fixes (Haiku), complex debugging (Opus) |
+
+**Smart escalation**: Verification starts with Haiku for simple fixes, escalates to Opus only when needed for complex debugging.
 
 ## Plugin Structure
 
@@ -242,12 +267,13 @@ skills/
 │
 ├── using-pasiv/SKILL.md        # Skill awareness (injected at session start)
 ├── tdd/SKILL.md                # TDD methodology (internal)
-├── verification/SKILL.md       # Verification gate (internal)
-├── systematic-debugging/SKILL.md # Debug methodology (internal)
+├── verification/SKILL.md       # Verification gate (internal, Haiku→Opus)
+├── systematic-debugging/SKILL.md # Debug methodology (internal, Opus)
 │
 ├── git-ops/SKILL.md            # Helper (Haiku)
 ├── issue-ops/SKILL.md          # Helper (Haiku)
-└── project-ops/SKILL.md        # Helper (Haiku)
+├── project-ops/SKILL.md        # Helper (Haiku)
+└── test-runner/SKILL.md        # Helper (Haiku)
 
 .github/
 ├── scripts/
