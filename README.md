@@ -143,7 +143,8 @@ flowchart LR
 ```
 
 **Model delegation:**
-- Simple ops (git, issue, project) → **Haiku** (cheap, forked context)
+- Simple ops (git, issue, project, test-runner) → **Haiku** (cheap, forked context)
+- Verification → **Haiku→Opus** (simple fixes then smart escalation)
 - Reviews → **Sonnet/Opus/Codex** (where quality matters)
 
 ## The `/brainstorm` Flow
@@ -188,15 +189,16 @@ Socratic design refinement - turn vague ideas into validated designs before writ
 
 1. **Fetch issue details** (reliable lookup by number)
 2. **Check for sub-issues** (if parent, use autonomous flow)
-3. Move to **In Progress**
-4. **Load design system** (if `area:frontend` or `area:mobile` - see [Design System Integration](#design-system-integration))
-5. Create plan → **select review depth** → wait for approval
-6. **TDD implementation** (RED → GREEN → REFACTOR → COMMIT)
-7. Run tests (systematic debugging if failures)
-8. **Code review** (S/O/SC/OC/SOC based on selection)
-9. **Verification gate** (fresh test/build/lint evidence)
-10. Check off acceptance criteria
-11. Merge to main, move to **Done**, close issue
+3. **Baseline test run** (Haiku runs tests before starting - ensures clean baseline)
+4. Move to **In Progress**
+5. **Load design system** (if `area:frontend` or `area:mobile` - see [Design System Integration](#design-system-integration))
+6. Create plan → **select review depth** → wait for approval
+7. **TDD implementation** (RED → GREEN → REFACTOR → COMMIT)
+8. Run tests (systematic debugging if failures)
+9. **Code review** (S/O/SC/OC/SOC based on selection)
+10. **Verification gate** (Haiku fixes simple issues, escalates complex to Opus)
+11. Check off acceptance criteria
+12. Merge to main, move to **Done**, close issue
 
 ### Review Tier Selection
 
@@ -227,19 +229,45 @@ RED → GREEN → REFACTOR → COMMIT → repeat
 
 **Iron Law**: No production code without a failing test first.
 
+### Baseline Test Run
+
+> *"Every dream has a foundation."*
+
+Before starting work on any issue, PASIV runs the test suite to establish a clean baseline:
+
+- **Haiku runs tests** and reports results
+- **If tests pass**: Continue with implementation
+- **If tests fail**: Ask user how to proceed (fix first, proceed anyway, or cancel)
+
+This ensures you're not blamed for pre-existing test failures.
+
 ### Verification Gate
 
 > *"What is the most resilient parasite? An idea."*
 
-Before merge, fresh evidence is required:
+Before merge, fresh evidence is required with **smart escalation**:
 
-| Check | Command |
-|-------|---------|
-| Tests pass | `npm test` with output |
-| Build succeeds | `npm run build` with exit 0 |
-| Lint clean | `npm run lint` with output |
+**Haiku handles:**
+- Running all checks (tests, build, lint, typecheck)
+- Simple fixes (syntax errors, missing imports, lint auto-fixes)
+- Max 2 simple fix attempts per check
 
-No "should work" - actual runs with actual output.
+**Escalates to Opus when:**
+- Simple fixes don't work after 2 attempts
+- Logic errors detected
+- Complex debugging needed
+- Architectural issues found
+
+**The gate loops until all checks pass** - no manual intervention, never skips tests.
+
+| Check | How It Works |
+|-------|--------------|
+| Tests | Haiku runs → tries simple fixes → escalates to Opus if needed |
+| Build | Same strategy - simple first, escalate if complex |
+| Lint | Haiku auto-fixes (usually works) |
+| TypeCheck | Simple types first, escalate if complex |
+
+**Cost optimization**: Most verifications pass or need only simple Haiku fixes. Opus only invoked for complex failures.
 
 ### Epic & Feature Support (Autonomous)
 
@@ -372,6 +400,10 @@ Simple operations run on **Haiku** (cheap) in forked contexts to save tokens:
 | `git-ops` | Haiku | branch, commit, push, merge |
 | `issue-ops` | Haiku | create, close, check-off criteria |
 | `project-ops` | Haiku | setup, add issue, move status |
+| `test-runner` | Haiku | run tests, parse results, report |
+| `verification` | Haiku → Opus | simple fixes (Haiku), complex debugging (Opus) |
+
+**Smart escalation**: Verification starts with Haiku for simple fixes, escalates to Opus only when needed for complex debugging.
 
 Main skills (Sonnet/Opus) delegate to these helpers automatically.
 
@@ -398,12 +430,13 @@ skills/
 │
 ├── using-pasiv/SKILL.md        # Skill awareness (injected at session start)
 ├── tdd/SKILL.md                # TDD methodology (Chemist)
-├── verification/SKILL.md       # Verification gate (Chemist)
-├── systematic-debugging/SKILL.md # Debug methodology (Chemist)
+├── verification/SKILL.md       # Verification gate (Chemist, Haiku→Opus)
+├── systematic-debugging/SKILL.md # Debug methodology (Chemist, Opus)
 │
-├── git-ops/SKILL.md            # Helper (Point Man)
-├── issue-ops/SKILL.md          # Helper (Point Man)
-└── project-ops/SKILL.md        # Helper (Point Man)
+├── git-ops/SKILL.md            # Helper (Point Man, Haiku)
+├── issue-ops/SKILL.md          # Helper (Point Man, Haiku)
+├── project-ops/SKILL.md        # Helper (Point Man, Haiku)
+└── test-runner/SKILL.md        # Helper (Point Man, Haiku)
 
 docs/
 ├── designs/                    # Design documents from /brainstorm
