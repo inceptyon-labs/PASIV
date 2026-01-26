@@ -817,8 +817,14 @@ Epic #10: User Authentication System
     └── #18 Add OAuth callback       → OC  (size:M) [security]
 
 Total: 5 Tasks across 2 Features
-Methodology: TDD (test-first) for all Tasks
-Verification gate before each Task merge
+
+Workflow per Task:
+- TDD (test-first) implementation
+- Code review at shown tier (S/O/SC/OC/SOC)
+- Verification gate (Haiku→Opus escalation)
+- Merge to main
+
+Baseline test run will happen once before starting.
 ```
 
 **For Feature:**
@@ -829,9 +835,30 @@ Feature #11: Email/Password Login (3 Tasks)
   2. #15 Create auth endpoint     → OC  (size:M) [security]
   3. #16 Create login form        → SC  (size:M, area:frontend)
 
-Methodology: TDD (test-first) for all Tasks
-Verification gate before each Task merge
+Workflow per Task:
+- TDD (test-first) implementation
+- Code review at shown tier
+- Verification gate (Haiku→Opus escalation)
+- Merge to main
+
+Baseline test run will happen once before starting.
 ```
+
+### Baseline Test Run (Before Autonomous Run)
+
+**REQUIRED**: Run tests once before starting the autonomous run.
+
+**Use Skill tool:** `test-runner` (Haiku will run tests and report back)
+
+**If tests pass (✓):** Continue to approval.
+
+**If tests fail (✗):** Ask user how to proceed (same as single Task flow).
+
+**If no tests found (⚠):** Note in presentation, continue to approval.
+
+**This baseline check happens ONCE for the entire Epic/Feature, not per Task.**
+
+---
 
 ### Ask for Approval
 
@@ -857,22 +884,91 @@ Verification gate before each Task merge
 ### Autonomous Task Processing
 
 For each Task (in priority order):
-1. Display: "Starting Task #N: $TITLE (Review: $TIER)"
-2. Run Steps 1-8 using REVIEW_TIERS[N]
-3. On success:
-   - Task closes automatically
-   - Check if parent Feature's Tasks are all done → close Feature
-   - Check if parent Epic's Features are all done → close Epic
-   - Continue to next Task
-4. On error: STOP, report error, ask how to proceed:
-   ```
-   ERROR in Task #N: [description]
 
-   Options:
-   - Debug together - Help me investigate
-   - Skip this Task - Continue to next
-   - Stop - I'll handle manually
-   ```
+#### Display Start
+Display: "Starting Task #N: $TITLE (Review: $TIER)"
+
+#### Run COMPLETE Implementation Flow
+
+**CRITICAL**: Each Task must go through the FULL implementation flow with TDD, review, and verification.
+
+**Step 0**: Get issue details for this Task
+**Use Skill tool:** `issue-ops` with args: `get $TASK_NUM`
+
+**Step 0.75**: Baseline test run - **SKIP** (already ran at parent level before approval)
+- Baseline tests run ONCE before autonomous run starts
+- Do NOT run again for each Task
+
+**Step 1**: Confirm working on Task #N
+
+**Step 1.5**: Move Task to In Progress
+**Use Skill tool:** `project-ops` with args: `move-to-in-progress ...`
+
+**Step 1.75**: Load sibling context (if applicable)
+**Use Skill tool:** `issue-ops` with args: `get-sibling-context $OWNER $REPO $PARENT_NUM`
+
+**Step 1.9**: Load design system (if `area:frontend` or `area:mobile`)
+
+**Step 2**: Create implementation plan
+- DO NOT ask for approval again (already approved in parent flow)
+- Use the pre-selected REVIEW_TIER from REVIEW_TIERS[N]
+- Display plan briefly for transparency
+
+**Step 2.5**: Create native tasks for implementation steps
+
+**Step 3**: Implement with TDD (REQUIRED)
+- RED → GREEN → REFACTOR → COMMIT cycle
+- Must follow TDD methodology
+- **Use Skill tool:** `git-ops` with args: `create-branch $TASK_NUM`
+
+**Step 3.25**: Format & Lint
+
+**Step 3.5**: Run tests
+- If tests fail, use systematic debugging
+
+**Step 4**: Code review (REQUIRED)
+- Use the pre-selected tier from REVIEW_TIERS[N]
+- S/O/SC/OC/SOC based on what was approved
+- Follow cascading review process
+
+**Step 5**: Check off acceptance criteria
+**Use Skill tool:** `issue-ops` with args: `check-off-criteria $TASK_NUM`
+
+**Step 6**: Verification gate (REQUIRED)
+**Use Skill tool:** `verification`
+- Haiku runs all checks
+- Auto-fixes simple issues
+- Escalates to Opus if needed
+- Loops until all pass
+
+**Step 6.5**: Add completion summary
+**Use Skill tool:** `issue-ops` with args: `add-completion-summary ...`
+
+**Step 7**: Merge to main
+**Use Skill tool:** `git-ops` with args: `merge-to-main`
+
+**Step 8**: Close Task and move to Done
+**Use Skill tool:** `issue-ops` with args: `close $TASK_NUM ...`
+**Use Skill tool:** `project-ops` with args: `move-to-done ...`
+
+#### Check Parent Status
+
+After Task completes:
+- Check if parent Feature's Tasks are all done → close Feature
+- Check if parent Epic's Features are all done → close Epic
+- Continue to next Task
+
+#### On Error
+
+If any step fails, STOP and ask:
+```
+ERROR in Task #N: [description]
+
+Options:
+- Debug together - Help me investigate
+- Skip this Task - Continue to next
+- Stop - I'll handle manually
+```
 
 ### After All Tasks Complete
 
