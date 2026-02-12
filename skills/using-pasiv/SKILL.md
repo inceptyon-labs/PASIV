@@ -57,6 +57,11 @@ Using `EnterPlanMode` during a PASIV skill derails the workflow. The skill instr
 | `/soc-review` | SOC (Sonnet → Opus → Codex) - security-critical |
 | `/codex-review` | Standalone Codex review |
 
+### Security
+| Skill | When to Use |
+|-------|-------------|
+| `/repo-scan` | Scan a repo for vulnerabilities, obfuscated code, malware, malicious network calls, secrets |
+
 ## Workflow Patterns
 
 **New idea, unclear scope:**
@@ -110,6 +115,8 @@ Is this about creating issues? → /issue, /parent, or /backlog
 Is this about implementing an issue? → /kick
     ↓
 Is this a standalone review? → /s-review, /o-review, /sc-review, /oc-review, /soc-review
+    ↓
+Is this about vetting/scanning a repo? → /scan
     ↓
 None apply? → Proceed normally
 ```

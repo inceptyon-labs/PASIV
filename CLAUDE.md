@@ -26,6 +26,8 @@
 | `/oc-review` | - | OC (Opus → Codex) - complex, quality |
 | `/soc-review` | - | SOC (Sonnet → Opus → Codex) - security-critical |
 | `/codex-review` | - | Standalone Codex review |
+| `/repo-scan` | Report | Security scan repo for vulnerabilities, malware, secrets |
+| `/repo-scan path/to/repo` | Report | Scan a specific directory |
 
 ## Workflow Patterns
 
@@ -38,6 +40,7 @@
 | Clear requirements | `/backlog spec.md` | → issues → `/kick` |
 | Single task | `/issue` | → `/kick 42` |
 | Existing issue | `/kick 42` | (inline planning) |
+| Forked/cloned repo | `/repo-scan` | → security report |
 
 ## Examples
 
@@ -82,6 +85,20 @@
 5. Run selected review pipeline
 6. Verification gate (fresh evidence)
 7. Merge to main & close issue
+
+**Security scan a forked repo:**
+```
+/scan ~/Development/some-cloned-repo
+```
+1. Detect ecosystems and languages
+2. Audit dependencies for known CVEs
+3. Check for suspicious install scripts
+4. Detect obfuscated/encoded code
+5. Analyze network calls to unknown servers
+6. Scan for malware patterns (miners, shells, exfil)
+7. Find hardcoded secrets and credentials
+8. Flag file system anomalies
+9. Generate report with verdict (PASS/CAUTION/FAIL)
 
 **Parent issue (autonomous):**
 ```
@@ -265,6 +282,8 @@ skills/
 ├── soc-review/SKILL.md         # /soc-review (Sonnet → Opus → Codex)
 ├── codex-review/SKILL.md       # /codex-review (standalone)
 │
+├── repo-scan/SKILL.md          # /repo-scan (security scan)
+│
 ├── using-pasiv/SKILL.md        # Skill awareness (injected at session start)
 ├── tdd/SKILL.md                # TDD methodology (internal)
 ├── verification/SKILL.md       # Verification gate (internal, Haiku→Opus)
@@ -284,5 +303,6 @@ skills/
 
 docs/
 ├── designs/                    # Design documents from /brainstorm
-└── plans/                      # Implementation plans
+├── plans/                      # Implementation plans
+└── scans/                      # Security scan reports from /scan
 ```
