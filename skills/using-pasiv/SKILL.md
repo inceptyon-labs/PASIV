@@ -6,35 +6,31 @@ user-invocable: false
 
 # Using PASIV Skills
 
-This is injected at session start. It is NOT a user-invocable skill.
+Internal skill reference. NOT user-invocable. Per-project PASIV rules are added to the project's CLAUDE.md by `/pasiv init`.
 
 ## Core Principle
 
-**Before taking action on any development task, check if a PASIV skill applies.**
+Before taking action on any development task, check if a PASIV skill applies. If a skill applies, use it.
 
-If a skill applies to your task, you must use it. This is not optional.
+## Do NOT Use EnterPlanMode
 
-## CRITICAL: Do NOT Use EnterPlanMode
+PASIV skills have their own planning built in. Do not use the `EnterPlanMode` tool when executing PASIV skills.
 
-**PASIV skills have their own planning built in. Do NOT use the `EnterPlanMode` tool when executing PASIV skills.**
-
-- `/kick` has Step 2 (Create Plan + Select Review Depth) - this IS the planning phase
+- `/kick` has Step 2 (Create Plan + Select Review Depth) — this IS the planning phase
 - `/brainstorm` IS a planning/design skill
 - `/backlog` creates structured work from plans
 
-Using `EnterPlanMode` during a PASIV skill derails the workflow. The skill instructions ARE the plan.
-
-**When to use EnterPlanMode:** Only for ad-hoc work that doesn't fit any PASIV skill (rare).
+When to use EnterPlanMode: only for ad-hoc work that does not fit any PASIV skill (rare).
 
 ## Available Skills
 
 ### Ideation & Planning
 | Skill | When to Use |
 |-------|-------------|
-| `/brainstorm` | User has an idea but unclear requirements. Refine through Socratic dialogue. |
-| `/brainstorm doc.md` | User has a half-baked plan/spec. Stress-test and refine it. |
+| `/brainstorm` | Unclear requirements. Refine through Socratic dialogue. |
+| `/brainstorm doc.md` | Half-baked plan/spec. Stress-test and refine it. |
 
-### Issue Creation
+### Task Management
 | Skill | When to Use |
 |-------|-------------|
 | `/issue` | Create a single Task |
@@ -47,61 +43,34 @@ Using `EnterPlanMode` during a PASIV skill derails the workflow. The skill instr
 | `/kick 42` | Implement a specific issue (plan → TDD → review → merge) |
 | `/kick next` | Work on highest priority open issue |
 
-### Code Review (standalone)
+### Code Review
 | Skill | When to Use |
 |-------|-------------|
-| `/s-review` | S (Sonnet) - trivial changes |
-| `/o-review` | O (Opus) - simple features |
-| `/sc-review` | SC (Sonnet → Codex) - moderate, budget |
-| `/oc-review` | OC (Opus → Codex) - complex, quality |
-| `/soc-review` | SOC (Sonnet → Opus → Codex) - security-critical |
+| `/s-review` | S (Sonnet) — trivial changes |
+| `/o-review` | O (Opus) — simple features |
+| `/sc-review` | SC (Sonnet → Codex) — moderate, budget |
+| `/oc-review` | OC (Opus → Codex) — complex, quality |
+| `/soc-review` | SOC (Sonnet → Opus → Codex) — security-critical |
 | `/codex-review` | Standalone Codex review |
+
+### Context Management
+| Skill | When to Use |
+|-------|-------------|
+| `/handoff` | End of session, before switching tasks, or when prompted by PreCompact |
 
 ### Security
 | Skill | When to Use |
 |-------|-------------|
-| `/repo-scan` | Scan a repo for vulnerabilities, obfuscated code, malware, malicious network calls, secrets |
+| `/repo-scan` | Scan a repo for vulnerabilities, obfuscated code, malware, secrets |
 
-## Workflow Patterns
+### Setup
+| Skill | When to Use |
+|-------|-------------|
+| `/pasiv init` | Configure task backend (GitHub, Beans, or local markdown) |
 
-**New idea, unclear scope:**
-```
-/brainstorm → design.md → /backlog design.md → /kick next
-```
+## Task Backend
 
-**Clear requirements:**
-```
-/backlog spec.md → /kick next
-```
-
-**Single task:**
-```
-/issue add feature X → /kick 42
-```
-
-**Existing half-baked plan:**
-```
-/brainstorm existing-plan.md → refined design → /backlog → /kick
-```
-
-## Methodology Skills (Internal)
-
-These are used by `/kick` internally, not invoked directly:
-
-- `tdd` - Test-Driven Development (RED → GREEN → REFACTOR)
-- `verification` - Pre-merge verification gate
-- `systematic-debugging` - Root cause analysis when tests fail
-
-## Red Flags - You're Bypassing the System
-
-Stop and reconsider if you find yourself:
-
-- **Using `EnterPlanMode` during a PASIV skill** - the skill IS the plan
-- Writing code without checking for applicable skills
-- Treating a request as "too simple" for skills
-- Skipping brainstorming when requirements are unclear
-- Creating issues without using `/issue`, `/parent`, or `/backlog`
-- Implementing without `/kick`
+PASIV supports pluggable task backends configured via `.pasiv.yml` in target project root. Default: github (backward compatible). Run `/pasiv init` to configure.
 
 ## Decision Flow
 
@@ -114,9 +83,11 @@ Is this about creating issues? → /issue, /parent, or /backlog
     ↓
 Is this about implementing an issue? → /kick
     ↓
-Is this a standalone review? → /s-review, /o-review, /sc-review, /oc-review, /soc-review
+Is this a standalone review? → /s-review .. /soc-review
     ↓
-Is this about vetting/scanning a repo? → /scan
+Is this about scanning a repo? → /repo-scan
+    ↓
+End of session or context filling up? → /handoff
     ↓
 None apply? → Proceed normally
 ```

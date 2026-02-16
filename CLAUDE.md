@@ -4,269 +4,62 @@
 
 | Level | Type | Scope | Example |
 |-------|------|-------|---------|
-| **Epic** | Strategic | Multiple features, spans weeks/months | "User Authentication System" |
-| **Feature** | Tactical | Single capability, spans days/week | "OAuth Login" |
-| **Task** | Execution | Single work item, hours | "Create OAuth callback endpoint" |
+| Epic | Strategic | Multiple features, spans weeks/months | "User Authentication System" |
+| Feature | Tactical | Single capability, spans days/week | "OAuth Login" |
+| Task | Execution | Single work item, hours | "Create OAuth callback endpoint" |
 
-## Slash Commands
+## Commands
 
-| Command | Creates | What it does |
-|---------|---------|-------------|
-| `/brainstorm` | Design doc | Socratic dialogue to refine vague ideas |
-| `/brainstorm spec.md` | Design doc | Stress-test and refine existing document |
-| `/issue add dark mode toggle` | Task | Create a single work item |
-| `/parent user notifications` | Feature → Tasks | Create a feature with task sub-issues |
-| `/backlog` | Epic → Feature → Task | Create full hierarchy from spec.md |
-| `/backlog design.md` | Epic → Feature → Task | Create full hierarchy from custom spec |
-| `/kick 42` | - | Plan → Implement → Review → Merge |
-| `/kick next` | - | Work on highest priority issue |
-| `/s-review` | - | S (Sonnet) - trivial changes |
-| `/o-review` | - | O (Opus) - simple features |
-| `/sc-review` | - | SC (Sonnet → Codex) - moderate, budget |
-| `/oc-review` | - | OC (Opus → Codex) - complex, quality |
-| `/soc-review` | - | SOC (Sonnet → Opus → Codex) - security-critical |
-| `/codex-review` | - | Standalone Codex review |
-| `/repo-scan` | Report | Security scan repo for vulnerabilities, malware, secrets |
-| `/repo-scan path/to/repo` | Report | Scan a specific directory |
+| Command | What it does |
+|---------|-------------|
+| `/brainstorm` | Refine ideas into design docs via Socratic dialogue |
+| `/brainstorm spec.md` | Stress-test and refine an existing document |
+| `/issue add ...` | Create a single Task |
+| `/parent ...` | Create a Feature with Task sub-issues |
+| `/backlog` | Create Epic → Feature → Task hierarchy from spec |
+| `/kick 42` | Plan → TDD → Review → Verify → Merge |
+| `/kick next` | Work on highest priority open issue |
+| `/handoff` | Write structured session handoff for context preservation |
+| `/pasiv init` | Interactive setup wizard for task backend and config |
+| `/s-review` .. `/soc-review` | Code review at tiers S, O, SC, OC, or SOC |
+| `/codex-review` | Standalone Codex review |
+| `/repo-scan` | Security scan a repo for vulnerabilities and secrets |
 
-## Workflow Patterns
-
-**Choose your entry point based on what you have:**
+## Workflow
 
 | You have... | Start with | Flow |
 |-------------|------------|------|
 | Vague idea | `/brainstorm` | → design.md → `/backlog` → `/kick` |
-| Half-baked plan | `/brainstorm spec.md` | → refined design → `/backlog` → `/kick` |
 | Clear requirements | `/backlog spec.md` | → issues → `/kick` |
 | Single task | `/issue` | → `/kick 42` |
-| Existing issue | `/kick 42` | (inline planning) |
-| Forked/cloned repo | `/repo-scan` | → security report |
+| Existing issue | `/kick 42` | → full implementation flow |
+| End of session | `/handoff` | → context preserved for next session |
+| New project | `/pasiv init` | → .pasiv.yml created |
 
-## Examples
+## Task Backend
 
-**Refine a vague idea:**
-```
-/brainstorm
-```
-1. Socratic dialogue (one question at a time)
-2. Explore 2-3 approaches with trade-offs
-3. Present design in digestible chunks
-4. Save to `docs/designs/YYYY-MM-DD-feature.md`
-5. Offer to create issues with `/backlog`
+Run `/pasiv init` to configure, or create `.pasiv.yml` manually. Default: github.
 
-**Stress-test existing document:**
-```
-/brainstorm half-baked-plan.md
-```
+- **github** — GitHub Issues + Project boards. Best for team collaboration.
+- **beans** — Flat-file `.beans/` directory. Agent-native, version-controlled. Requires `beans` CLI.
+- **local** — Markdown files in `docs/tasks/`. Zero external dependencies.
 
-**Create a Task:**
-```
-/issue add CSV export to reports page
-```
+## Methodology
 
-**Create a Feature with Tasks:**
-```
-/parent user notification system with email and push
-```
+TDD enforced in `/kick`: RED → GREEN → REFACTOR → COMMIT. Opus writes tests (the spec), Sonnet writes code (constrained by the test). No production code without a failing test first.
 
-**Create Epics from a spec:**
-```
-/backlog spec.md
-```
+Verification gate runs before every merge. Tests, build, lint, and type-check must pass with fresh evidence. No "should work" claims.
 
-**Full implementation flow:**
-```
-/kick 42
-```
-1. Read issue #42
-2. Create implementation plan
-3. Select review tier (S/O/SC/OC/SOC)
-4. Implement using TDD (test-first)
-5. Run selected review pipeline
-6. Verification gate (fresh evidence)
-7. Merge to main & close issue
+Review tiers scale with change size and security sensitivity. Five tiers from S (Sonnet, trivial) to SOC (Sonnet → Opus → Codex, security-critical). Each pass in multi-pass reviews sees cumulative changes.
 
-**Security scan a forked repo:**
-```
-/scan ~/Development/some-cloned-repo
-```
-1. Detect ecosystems and languages
-2. Audit dependencies for known CVEs
-3. Check for suspicious install scripts
-4. Detect obfuscated/encoded code
-5. Analyze network calls to unknown servers
-6. Scan for malware patterns (miners, shells, exfil)
-7. Find hardcoded secrets and credentials
-8. Flag file system anomalies
-9. Generate report with verdict (PASS/CAUTION/FAIL)
-
-**Parent issue (autonomous):**
-```
-/kick 41  # parent with sub-issues
-```
-1. Show all sub-issues with recommended review tiers
-2. Approve once, walk away
-3. Autonomous implementation of all sub-issues
-4. Stops only on error
-
-## Review Tiers
-
-| Tier | Name | Models | Cost | When to Use |
-|------|------|--------|------|-------------|
-| 1 | S | Sonnet | $ | Typos, config, trivial fixes |
-| 2 | O | Opus | $$ | Simple features, clear scope |
-| 3 | SC | Sonnet → Codex | $$ | Moderate changes, budget-conscious |
-| 4 | OC | Opus → Codex | $$$ | Complex features, quality focus |
-| 5 | SOC | Sonnet → Opus → Codex | $$$$ | Security-critical, large refactors |
-
-All multi-pass reviews are **cascading** - each pass reviews cumulative changes including previous fixes.
-
-### Recommendation Matrix
-
-| Size | Default | If Security Files Detected |
-|------|---------|----------------------------|
-| `size:XS` | S | O |
-| `size:S` | O | SC |
-| `size:M` | SC | OC |
-| `size:L` | OC | SOC |
-| `size:XL` | SOC | SOC |
-
-**Security files**: `auth`, `crypto`, `payment`, `token`, `secret`, `password`, `session`, `oauth`, `jwt`, `key`, `credential`
-
-## Development Methodology
-
-### Baseline Test Run (at start)
-
-Before starting work on an issue, `/kick` runs the full test suite to establish a clean baseline:
-
-1. **Haiku runs tests** in background and reports results
-2. **If tests pass**: Continue with implementation
-3. **If tests fail**: Ask user how to proceed:
-   - Fix tests first (recommended) - repair baseline before starting
-   - Proceed anyway - note that tests were already broken
-   - Cancel - handle manually
-
-This ensures you're not blamed for pre-existing test failures.
-
-### TDD Cycle (enforced in `/kick`)
-
-```
-RED → GREEN → REFACTOR → COMMIT → repeat
-```
-
-1. **RED**: Write failing test
-2. **Verify**: Test fails for the RIGHT reason (missing feature, not syntax error)
-3. **GREEN**: Write minimal code to pass
-4. **Verify**: Test passes, no regressions
-5. **REFACTOR**: Clean up if needed
-6. **COMMIT**: After each cycle
-
-**Iron Law**: No production code without a failing test first.
-
-### Verification Gate (before merge)
-
-**Automated, smart escalation** - Haiku handles simple issues, Opus handles complex:
-
-1. **Tests**: Haiku runs test-runner
-   - If pass: Continue to next check
-   - If fail: Haiku tries simple fixes (syntax, imports) - max 2 attempts
-   - Still failing: Escalate to Opus for systematic debugging
-   - Loop until all pass
-   - NEVER skip tests
-2. **Build**: Same strategy - simple fixes first, escalate if needed
-3. **Lint**: Haiku auto-fixes (usually works), escalate if complex
-4. **Type Check**: Simple type fixes first, escalate if complex
-
-**Cost optimization**: Most verifications pass or need only simple Haiku fixes. Opus only invoked for complex failures.
-
-**Only proceeds to merge when ALL checks pass.**
-
-No "should work" or "was passing earlier" - verification gate ensures fresh evidence.
-
-### Systematic Debugging (when tests fail)
-
-1. **Investigate** - Read full error, identify root cause
-2. **Hypothesize** - Form specific theory ("X fails because Y")
-3. **Test** - Make ONE minimal change
-4. **Verify** - Run tests again
-
-**Three Strikes Rule**: After 3 failed fix attempts, stop and reassess architecture.
-
-### Design System Integration (UI Work)
-
-PASIV integrates with [interface-design](https://github.com/Dammyjay93/interface-design) for consistent UI implementation.
-
-**How it works:**
-- When `/kick` processes an issue with `area:frontend` or `area:mobile` label, it automatically loads `.interface-design/system.md`
-- The design system defines tokens (spacing, colors, typography) and patterns (buttons, cards, forms)
-- Implementation must reference established tokens and follow documented patterns
-
-**Setup (per project):**
-```bash
-# Initialize design system in your project
-/interface-design:init
-```
-
-**During UI work:**
-1. State design direction before component decisions
-2. Use established tokens (e.g., "spacing-4 (16px)", "radius-md")
-3. Follow documented patterns for similar components
-4. After implementation, offer to save new reusable patterns
-
-**Verification:**
-```bash
-# Audit code against design system
-/interface-design:audit src/components
-```
-
-If no `.interface-design/system.md` exists when working on frontend issues, PASIV will suggest running `/interface-design:init`.
-
-## Labels
-
-| Category | Labels |
-|----------|--------|
-| Priority | `priority:high`, `priority:medium`, `priority:low` |
-| Size | `size:XS` (<1h), `size:S` (1-4h), `size:M` (4-8h), `size:L` (8-16h), `size:XL` (16+h) |
-| Area | `area:frontend`, `area:backend`, `area:infra`, `area:db` |
-
-**Note:** Issue types (Epic, Feature, Task) are set via GitHub's native `--type` flag, not labels.
-
-## GitHub Projects Integration
-
-Issues are automatically added to a GitHub Project board.
-
-**Auto-created project**: Named after your repository (created on first `/issue`, `/parent`, or `/backlog`)
-
-**Auto-prioritization**: `/backlog` outputs suggested implementation order based on:
-1. Layer dependencies: `area:db` → `area:infra` → `area:backend` → `area:frontend`
-2. Parent/sub-issue relationships: Parents before children
-3. Explicit dependencies: `Depends on #N` in issue body
-
-**Required token scope**:
-```bash
-gh auth refresh -s project
-```
-
-## Model Optimization
-
-Simple operations run on **Haiku** in forked contexts to save tokens:
-
-| Skill | Model | Operations |
-|-------|-------|------------|
-| `git-ops` | Haiku | branch, commit, push, merge |
-| `issue-ops` | Haiku | create, close, check-off |
-| `project-ops` | Haiku | setup, add issue, move status |
-| `test-runner` | Haiku | run tests, parse results, report |
-| `verification` | Haiku → Opus | simple fixes (Haiku), complex debugging (Opus) |
-
-**Smart escalation**: Verification starts with Haiku for simple fixes, escalates to Opus only when needed for complex debugging.
+Present your implementation plan before coding. After 3 failed fix attempts, stop and reassess architecture.
 
 ## Plugin Structure
 
 ```
 hooks/
-├── hooks.json                  # SessionStart hook config
-└── session-start.sh            # Injects skill awareness
+├── hooks.json                  # PreCompact hook
+└── pre-compact.sh              # Reminds to write handoff
 
 skills/
 ├── brainstorm/SKILL.md         # /brainstorm (ideation)
@@ -274,35 +67,49 @@ skills/
 ├── parent/SKILL.md             # /parent
 ├── kick/SKILL.md               # /kick (full flow)
 ├── backlog/SKILL.md            # /backlog
+├── handoff/SKILL.md            # /handoff (session context)
+├── pasiv-init/SKILL.md         # /pasiv init (setup wizard)
 │
-├── s-review/SKILL.md           # /s-review (Sonnet)
-├── o-review/SKILL.md           # /o-review (Opus)
-├── sc-review/SKILL.md          # /sc-review (Sonnet → Codex)
-├── oc-review/SKILL.md          # /oc-review (Opus → Codex)
-├── soc-review/SKILL.md         # /soc-review (Sonnet → Opus → Codex)
-├── codex-review/SKILL.md       # /codex-review (standalone)
+├── s-review/SKILL.md           # Review tiers
+├── o-review/SKILL.md
+├── sc-review/SKILL.md
+├── oc-review/SKILL.md
+├── soc-review/SKILL.md
+├── codex-review/SKILL.md
+├── repo-scan/SKILL.md          # /repo-scan (security)
 │
-├── repo-scan/SKILL.md          # /repo-scan (security scan)
-│
-├── using-pasiv/SKILL.md        # Skill awareness (injected at session start)
+├── using-pasiv/SKILL.md        # Skill awareness (session start)
 ├── tdd/SKILL.md                # TDD methodology (internal)
-├── verification/SKILL.md       # Verification gate (internal, Haiku→Opus)
-├── systematic-debugging/SKILL.md # Debug methodology (internal, Opus)
+├── verification/SKILL.md       # Verification gate (internal)
+├── systematic-debugging/SKILL.md
 │
 ├── git-ops/SKILL.md            # Helper (Haiku)
-├── issue-ops/SKILL.md          # Helper (Haiku)
-├── project-ops/SKILL.md        # Helper (Haiku)
-└── test-runner/SKILL.md        # Helper (Haiku)
-
-.github/
-├── scripts/
-│   ├── install.sh
-│   └── create-labels.sh
-└── workflows/
-    └── version-bump.yml
+├── issue-ops/SKILL.md          # GitHub backend (Haiku)
+├── task-ops/SKILL.md           # Backend router (Haiku)
+├── beans-ops/SKILL.md          # Beans backend (Haiku)
+├── local-ops/SKILL.md          # Local backend (Haiku)
+├── handoff-ops/SKILL.md        # Handoff files (Haiku)
+├── project-ops/SKILL.md        # GitHub projects (Haiku)
+└── test-runner/SKILL.md        # Test execution (Haiku)
 
 docs/
 ├── designs/                    # Design documents from /brainstorm
+├── handoffs/                   # Session handoffs from /handoff
 ├── plans/                      # Implementation plans
-└── scans/                      # Security scan reports from /scan
+├── scans/                      # Security scan reports
+└── reference/                  # Detailed docs (loaded on demand)
 ```
+
+## Reference
+
+Detailed docs loaded on demand by skills — see `docs/reference/`:
+
+| File | Content |
+|------|---------|
+| `review-tiers.md` | Tier table, recommendation matrix, security file patterns |
+| `methodology.md` | TDD cycle, verification gate, systematic debugging |
+| `design-system.md` | interface-design integration for UI work |
+| `labels.md` | Label definitions and colors |
+| `github-projects.md` | Project board setup and auto-prioritization |
+| `model-optimization.md` | Which models run which skills |
+| `examples.md` | Detailed command examples and workflows |

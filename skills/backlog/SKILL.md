@@ -1,11 +1,12 @@
 ---
 name: backlog
-description: Parse a spec or document and create GitHub issues from it. Use when user says "create issues from", "parse spec", "create backlog", "create issues for implementing", or wants to generate multiple issues from a specification, design doc, or requirements file.
+description: Parse a spec or document and create issues from it. Use when user says "create issues from", "parse spec", "create backlog", "create issues for implementing", or wants to generate multiple issues from a specification, design doc, or requirements file.
 model: opus
 allowed-tools:
   - Bash
   - Read
   - Glob
+  - Skill
 ---
 
 # Create Backlog from Spec
@@ -45,41 +46,31 @@ Create missing labels before use:
 | `area:infra` | `6B7280` | DevOps/CI/CD |
 | `area:db` | `3B82F6` | Database schema/queries |
 
-## Step 0: Setup Project & Labels
+## Step 0: Detect Backend & Setup
 
-**Ensure labels exist:**
+**Detect task backend:**
 ```bash
-# Get existing labels
+[ -f .pasiv.yml ] && cat .pasiv.yml || echo "missing"
+```
+
+Store TASK_BACKEND (default: "github").
+
+**If TASK_BACKEND is "github":**
+
+Ensure labels exist:
+```bash
 EXISTING=$(gh label list --json name -q '.[].name')
 
-# Create any missing labels from the table above
-# Example:
 if ! echo "$EXISTING" | grep -q "^pasiv$"; then
   gh label create "pasiv" --color "1a1a2e" --description "Created by PASIV automation" --force
 fi
 ```
 
-**Setup project:**
+Setup project:
+- **Use Skill tool:** `project-ops` with args: `setup`
+- Returns: PROJECT_NUM, PROJECT_ID, OWNER, REPO_NAME
 
-```bash
-REPO_NAME=$(gh repo view --json name -q '.name')
-OWNER=$(gh repo view --json owner -q '.owner.login')
-```
-
-Check for existing projects:
-```bash
-gh project list --owner "$OWNER" --format json
-```
-
-**Logic:**
-- If a project named "$REPO_NAME" exists → use it
-- If no projects exist → create one named "$REPO_NAME"
-- If other projects exist (different names) → **ask user**: use existing (list them) or create new "$REPO_NAME"?
-
-Create project if needed:
-```bash
-gh project create --owner "$OWNER" --title "$REPO_NAME" --format json | jq -r '.number'
-```
+**If TASK_BACKEND is "beans" or "local":** No project setup needed.
 
 ## Step 1: Read Spec
 
@@ -105,10 +96,12 @@ Each issue needs:
 ## Step 3: Create Epics (type: Epic)
 
 For each major section/milestone:
-```bash
-EPIC_URL=$(gh issue create \
-  --title "Epic: Title" \
-  --body "Description
+
+**Use Skill tool:** `task-ops` with args: `create "Epic: Title" "Body" "pasiv,priority:PRIORITY" "Epic"`
+
+Body format:
+```
+Description
 
 ## Vision
 High-level goal of this epic
@@ -120,22 +113,23 @@ High-level goal of this epic
 
 ## Success Criteria
 - [ ] Criterion 1
-- [ ] Criterion 2" \
-  --label "pasiv,priority:PRIORITY" \
-  --type "Epic")
-
-gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$EPIC_URL"
+- [ ] Criterion 2
 ```
 
-Extract Epic issue number from URL.
+If TASK_BACKEND is "github":
+- **Use Skill tool:** `project-ops` with args: `add-issue $PROJECT_NUM $OWNER $EPIC_URL`
+
+Store EPIC_IDENTIFIER (issue number, bean ID, or local ID).
 
 ## Step 4: Create Features (type: Feature)
 
 For each capability within an Epic:
-```bash
-FEATURE_URL=$(gh issue create \
-  --title "Feature: Title" \
-  --body "Description
+
+**Use Skill tool:** `task-ops` with args: `create "Feature: Title" "Body" "pasiv,priority:PRIORITY,area:AREA" "Feature" $EPIC_IDENTIFIER`
+
+Body format:
+```
+Description
 
 ## Goals
 - Goal 1
@@ -143,36 +137,34 @@ FEATURE_URL=$(gh issue create \
 
 ## Scope
 **In Scope:** ...
-**Out of Scope:** ..." \
-  --label "pasiv,priority:PRIORITY,area:AREA" \
-  --type "Feature" \
-  --parent $EPIC_NUMBER)
-
-gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$FEATURE_URL"
+**Out of Scope:** ...
 ```
 
-Extract Feature issue number from URL.
+If TASK_BACKEND is "github":
+- **Use Skill tool:** `project-ops` with args: `add-issue $PROJECT_NUM $OWNER $FEATURE_URL`
+
+Store FEATURE_IDENTIFIER.
 
 ## Step 5: Create Tasks (type: Task)
 
 For each work item within a Feature:
-```bash
-TASK_URL=$(gh issue create \
-  --title "Task title" \
-  --body "Description
+
+**Use Skill tool:** `task-ops` with args: `create "Task title" "Body" "pasiv,size:SIZE,priority:PRIORITY,area:AREA" "Task" $FEATURE_IDENTIFIER`
+
+Body format:
+```
+Description
 
 ## Acceptance Criteria
 - [ ] AC 1
 - [ ] AC 2
 
 ---
-**Size:** S/M" \
-  --label "pasiv,size:SIZE,priority:PRIORITY,area:AREA" \
-  --type "Task" \
-  --parent $FEATURE_NUMBER)
-
-gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$TASK_URL"
+**Size:** S/M
 ```
+
+If TASK_BACKEND is "github":
+- **Use Skill tool:** `project-ops` with args: `add-issue $PROJECT_NUM $OWNER $TASK_URL`
 
 ## Step 6: Suggested Implementation Order
 
