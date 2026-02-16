@@ -76,6 +76,37 @@ esac
 
 echo "✓ Created .pasiv.yml ($BACKEND backend)"
 
+# --- Write beans hooks to .claude/settings.json (beans backend only) ---
+if [ "$BACKEND" = "beans" ]; then
+  mkdir -p .claude
+  SETTINGS=".claude/settings.json"
+
+  if [ -f "$SETTINGS" ]; then
+    # Merge beans hooks into existing settings
+    if command -v jq &>/dev/null; then
+      BEANS_HOOKS='{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"beans prime"}]}],"PreCompact":[{"hooks":[{"type":"command","command":"beans prime"}]}]}}'
+      jq --argjson bh "$BEANS_HOOKS" '.hooks = ($bh.hooks * (.hooks // {}))' "$SETTINGS" > "${SETTINGS}.tmp" && mv "${SETTINGS}.tmp" "$SETTINGS"
+    else
+      echo "WARNING: jq not found. Add beans hooks to $SETTINGS manually:"
+      echo '  "hooks": { "SessionStart": [{ "hooks": [{ "type": "command", "command": "beans prime" }] }], "PreCompact": [{ "hooks": [{ "type": "command", "command": "beans prime" }] }] }'
+    fi
+  else
+    cat > "$SETTINGS" << 'BEANHOOKS'
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "beans prime" }] }
+    ],
+    "PreCompact": [
+      { "hooks": [{ "type": "command", "command": "beans prime" }] }
+    ]
+  }
+}
+BEANHOOKS
+  fi
+  echo "✓ Added beans prime hooks to .claude/settings.json"
+fi
+
 # --- Append PASIV section to CLAUDE.md ---
 if grep -q "## PASIV" CLAUDE.md 2>/dev/null; then
   echo "✓ CLAUDE.md already has PASIV section (skipped)"
