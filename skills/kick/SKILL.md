@@ -30,10 +30,11 @@ Full flow for: $ARGUMENTS (issue number or "next")
 **Reviews always happen at the Task level** - that's where code is written and reviewed.
 
 **Helper skills (run with Haiku in forked context for efficiency):**
-- `issue-ops` - Issue operations (get, create, close, check-off)
-- `project-ops` - Project operations (setup, move status)
+- `task-ops` - Task operations router (routes to issue-ops, beans-ops, or local-ops based on `.pasiv.yml`)
+- `project-ops` - Project operations (setup, move status) — github backend only
 - `git-ops` - Git operations (branch, commit, push, merge)
 - `test-runner` - Test suite execution and reporting
+- `handoff-ops` - Session handoff file management
 
 **Methodology skills (referenced inline):**
 - `tdd` - Test-Driven Development cycle
@@ -42,23 +43,51 @@ Full flow for: $ARGUMENTS (issue number or "next")
 
 ---
 
-## Step 0: Get Issue Details
+## Step 0: Detect Task Backend + Get Issue Details
 
-**Use Skill tool:** `issue-ops` with args: `get $ISSUE_NUM`
+### Detect Backend
 
-If argument is "next", first find highest priority open issue:
+Read `.pasiv.yml` if it exists:
+```bash
+[ -f .pasiv.yml ] && cat .pasiv.yml || echo "missing"
+```
+
+- Store TASK_BACKEND = "github" | "beans" | "local" (default: "github")
+- If TASK_BACKEND is "github": IDENTIFIER = issue number (e.g., 42)
+- If TASK_BACKEND is "beans": IDENTIFIER = bean ID (e.g., "beans-kp3h")
+- If TASK_BACKEND is "local": IDENTIFIER = local ID (e.g., "task-001")
+
+### Get Issue Details
+
+**Use Skill tool:** `task-ops` with args: `get $IDENTIFIER`
+
+If argument is "next" and TASK_BACKEND is "github", first find highest priority open issue:
 ```bash
 ISSUE_NUM=$(gh issue list --label "priority:high" --state open --limit 1 --json number -q '.[0].number')
 [ -z "$ISSUE_NUM" ] && ISSUE_NUM=$(gh issue list --state open --limit 1 --json number -q '.[0].number')
 ```
 
-Store: ISSUE_NUM, ISSUE_TITLE, ISSUE_URL, ISSUE_BODY, ISSUE_LABELS
+Store: IDENTIFIER, ISSUE_TITLE, ISSUE_URL, ISSUE_BODY, ISSUE_LABELS
+
+---
+
+## Step 0.1: Load Session Handoff (if exists)
+
+**Use Skill tool:** `handoff-ops` with args: `get-latest`
+
+If a handoff exists:
+- Read and incorporate context (decisions, files changed, open questions)
+- Follow "Files to Load Next Session" manifest
+- Skip re-reading files listed in "What NOT to Re-Read"
+- Archive the handoff after loading: **Use Skill tool:** `handoff-ops` with args: `archive {filename}`
+
+If no handoff exists, skip this step.
 
 ---
 
 ## Step 0.5: Check for Sub-Issues
 
-**Use Skill tool:** `issue-ops` with args: `get-sub-issues $OWNER $REPO $ISSUE_NUM`
+**Use Skill tool:** `task-ops` with args: `get-sub-issues $IDENTIFIER $OWNER $REPO`
 
 **If no sub-issues:** Continue with normal flow (Step 0.75).
 
@@ -127,25 +156,25 @@ Display: "Working on Issue #$ISSUE_NUM: $ISSUE_TITLE"
 
 ## Step 1.5: Move to In Progress
 
-**Use Skill tool:** `project-ops` with args: `setup` → get PROJECT_NUM, PROJECT_ID
-
-**Use Skill tool:** `project-ops` with args: `move-to-in-progress $PROJECT_ID $PROJECT_NUM $OWNER $ISSUE_URL`
+If TASK_BACKEND is "github":
+- **Use Skill tool:** `project-ops` with args: `setup` → get PROJECT_NUM, PROJECT_ID
+- **Use Skill tool:** `project-ops` with args: `move-to-in-progress $PROJECT_ID $PROJECT_NUM $OWNER $ISSUE_URL`
 
 ### Cascade to Parent (if sub-issue)
 
-**Use Skill tool:** `issue-ops` with args: `get-parent $OWNER $REPO $ISSUE_NUM`
+**Use Skill tool:** `task-ops` with args: `get-parent $IDENTIFIER $OWNER $REPO`
 
 If parent exists:
-- Store PARENT_NUM for later use
-- Move parent to In Progress
+- Store PARENT_IDENTIFIER for later use
+- If TASK_BACKEND is "github": Move parent to In Progress via project-ops
 
 ---
 
 ## Step 1.75: Load Sibling Context (if has parent)
 
-If this Task has a parent (PARENT_NUM exists), load context from completed sibling Tasks:
+If this Task has a parent (PARENT_IDENTIFIER exists), load context from completed sibling Tasks:
 
-**Use Skill tool:** `issue-ops` with args: `get-sibling-context $OWNER $REPO $PARENT_NUM`
+**Use Skill tool:** `task-ops` with args: `get-sibling-context $PARENT_IDENTIFIER $OWNER $REPO`
 
 This returns completion summaries from closed sibling Tasks containing:
 - Files they changed
@@ -334,9 +363,11 @@ TaskUpdate:
   status: in_progress
 ```
 
-### For each piece of functionality, follow TDD:
+### For each piece of functionality, follow TDD (split-model):
 
-#### RED Phase
+#### RED Phase (Opus writes tests)
+Opus writes the test — it defines the spec, edge cases, and expected behavior.
+
 1. Write ONE minimal failing test
 2. Run tests - must FAIL:
 ```bash
@@ -344,17 +375,17 @@ npm test || pytest || go test ./... || cargo test || bun test
 ```
 3. Verify: Test fails because feature doesn't exist (not syntax/import error)
 
-#### GREEN Phase
-1. Write the SIMPLEST code to make test pass
-2. Run tests - must PASS:
-```bash
-npm test || pytest || go test ./... || cargo test || bun test
-```
-3. Verify: New test passes, no other tests broken
+**HARD GATE**: After RED is verified, you MUST use the Skill tool to invoke `tdd` for GREEN. Writing implementation code directly in `/kick` is a TDD violation. The model boundary is the enforcement mechanism — Opus defines the spec, Sonnet implements against it.
 
-#### REFACTOR Phase
-1. Clean up if needed (remove duplication, improve names)
-2. Run tests after each change - must stay GREEN
+#### GREEN Phase (Sonnet writes code)
+**Use Skill tool:** `tdd` with args: `green`
+
+Sonnet reads the failing test, writes the simplest code to pass, and runs tests to verify.
+
+#### REFACTOR Phase (Sonnet)
+**Use Skill tool:** `tdd` with args: `refactor`
+
+Sonnet cleans up if needed. Tests guard against regressions.
 
 #### COMMIT
 After each RED-GREEN-REFACTOR cycle:
@@ -373,6 +404,7 @@ Run `TaskList` to show progress.
 
 If you find yourself:
 - Writing code before tests → Delete code, write test first
+- Writing implementation code directly instead of invoking `tdd green` → Delete code, use the Skill tool
 - Test passes immediately → Test doesn't test what you think, rewrite
 - Adding features beyond the test → Remove extras, stay minimal
 
@@ -613,7 +645,7 @@ TaskUpdate:
   status: completed
 ```
 
-**Use Skill tool:** `issue-ops` with args: `check-off-criteria $ISSUE_NUM`
+**Use Skill tool:** `task-ops` with args: `check-off-criteria $IDENTIFIER`
 
 ---
 
@@ -667,9 +699,9 @@ Run `TaskList` to show all tasks completed.
 
 ## Step 6.5: Add Completion Summary (if has parent)
 
-If this Task has a parent (PARENT_NUM exists), add a completion summary for sibling context:
+If this Task has a parent (PARENT_IDENTIFIER exists), add a completion summary for sibling context:
 
-**Use Skill tool:** `issue-ops` with args: `add-completion-summary $ISSUE_NUM "$FILES" "$DECISIONS" "$NOTES"`
+**Use Skill tool:** `task-ops` with args: `add-completion-summary $IDENTIFIER "$FILES" "$DECISIONS" "$NOTES"`
 
 Where:
 - **FILES**: List of files created/modified (from git diff)
@@ -698,26 +730,37 @@ This helps subsequent Tasks in the same Feature understand what was done.
 
 ---
 
+## Step 6.75: Session Handoff (if needed)
+
+If processing a parent issue and more Tasks remain:
+- Auto-write a lightweight handoff summarizing progress so far
+- **Use Skill tool:** `handoff` with current state
+
+This ensures context survives if the session ends mid-parent-flow.
+
+---
+
 ## Step 7: Merge
 
 **Use Skill tool:** `git-ops` with args: `merge-to-main`
 
-**Use Skill tool:** `issue-ops` with args: `close $ISSUE_NUM "Completed in $(git rev-parse --short HEAD)"`
+**Use Skill tool:** `task-ops` with args: `close $IDENTIFIER "Completed in $(git rev-parse --short HEAD)"`
 
 ---
 
 ## Step 8: Move to Done
 
-**Use Skill tool:** `project-ops` with args: `move-to-done $PROJECT_ID $PROJECT_NUM $OWNER $ISSUE_URL`
+If TASK_BACKEND is "github":
+- **Use Skill tool:** `project-ops` with args: `move-to-done $PROJECT_ID $PROJECT_NUM $OWNER $ISSUE_URL`
 
 ### Cascade to Parent (if all sub-issues done)
 
 If this issue has a parent:
-1. **Use Skill tool:** `issue-ops` with args: `get-sub-issues $OWNER $REPO $PARENT_NUM`
+1. **Use Skill tool:** `task-ops` with args: `get-sub-issues $PARENT_IDENTIFIER $OWNER $REPO`
 2. If all sub-issues closed:
-   - **Use Skill tool:** `issue-ops` with args: `check-off-criteria $PARENT_NUM`
-   - **Use Skill tool:** `project-ops` with args: `move-to-done ... $PARENT_URL`
-   - **Use Skill tool:** `issue-ops` with args: `close $PARENT_NUM "All sub-issues completed"`
+   - **Use Skill tool:** `task-ops` with args: `check-off-criteria $PARENT_IDENTIFIER`
+   - If TASK_BACKEND is "github": **Use Skill tool:** `project-ops` with args: `move-to-done ... $PARENT_URL`
+   - **Use Skill tool:** `task-ops` with args: `close $PARENT_IDENTIFIER "All sub-issues completed"`
 
 ---
 
@@ -893,19 +936,19 @@ Display: "Starting Task #N: $TITLE (Review: $TIER)"
 **CRITICAL**: Each Task must go through the FULL implementation flow with TDD, review, and verification.
 
 **Step 0**: Get issue details for this Task
-**Use Skill tool:** `issue-ops` with args: `get $TASK_NUM`
+**Use Skill tool:** `task-ops` with args: `get $TASK_IDENTIFIER`
 
 **Step 0.75**: Baseline test run - **SKIP** (already ran at parent level before approval)
 - Baseline tests run ONCE before autonomous run starts
 - Do NOT run again for each Task
 
-**Step 1**: Confirm working on Task #N
+**Step 1**: Confirm working on Task
 
 **Step 1.5**: Move Task to In Progress
-**Use Skill tool:** `project-ops` with args: `move-to-in-progress ...`
+If TASK_BACKEND is "github": **Use Skill tool:** `project-ops` with args: `move-to-in-progress ...`
 
 **Step 1.75**: Load sibling context (if applicable)
-**Use Skill tool:** `issue-ops` with args: `get-sibling-context $OWNER $REPO $PARENT_NUM`
+**Use Skill tool:** `task-ops` with args: `get-sibling-context $PARENT_IDENTIFIER $OWNER $REPO`
 
 **Step 1.9**: Load design system (if `area:frontend` or `area:mobile`)
 
@@ -932,7 +975,7 @@ Display: "Starting Task #N: $TITLE (Review: $TIER)"
 - Follow cascading review process
 
 **Step 5**: Check off acceptance criteria
-**Use Skill tool:** `issue-ops` with args: `check-off-criteria $TASK_NUM`
+**Use Skill tool:** `task-ops` with args: `check-off-criteria $TASK_IDENTIFIER`
 
 **Step 6**: Verification gate (REQUIRED)
 **Use Skill tool:** `verification`
@@ -942,14 +985,17 @@ Display: "Starting Task #N: $TITLE (Review: $TIER)"
 - Loops until all pass
 
 **Step 6.5**: Add completion summary
-**Use Skill tool:** `issue-ops` with args: `add-completion-summary ...`
+**Use Skill tool:** `task-ops` with args: `add-completion-summary $TASK_IDENTIFIER ...`
+
+**Step 6.75**: Session handoff (if more Tasks remain)
+**Use Skill tool:** `handoff` with current state
 
 **Step 7**: Merge to main
 **Use Skill tool:** `git-ops` with args: `merge-to-main`
 
 **Step 8**: Close Task and move to Done
-**Use Skill tool:** `issue-ops` with args: `close $TASK_NUM ...`
-**Use Skill tool:** `project-ops` with args: `move-to-done ...`
+**Use Skill tool:** `task-ops` with args: `close $TASK_IDENTIFIER ...`
+If TASK_BACKEND is "github": **Use Skill tool:** `project-ops` with args: `move-to-done ...`
 
 #### Check Parent Status
 

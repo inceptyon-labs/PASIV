@@ -25,31 +25,37 @@ Create a GitHub issue from a short description: $ARGUMENTS
 **This skill creates: Task** (use `/parent` for Features, `/backlog` for Epics)
 
 **Helper skills (run with Haiku in forked context for efficiency):**
-- `issue-ops` - Issue creation
-- `project-ops` - Project setup and adding issues
+- `task-ops` - Task operations router (routes to correct backend)
+- `project-ops` - Project setup and adding issues (github backend only)
 
 ## Steps
 
-1. **Verify scope is Task-level**:
+1. **Detect task backend**:
+
+```bash
+[ -f .pasiv.yml ] && cat .pasiv.yml || echo "missing"
+```
+
+Store TASK_BACKEND (default: "github").
+
+2. **Verify scope is Task-level**:
    - S (1-4h): Single file/component change → **Task**
    - M (4-8h): Few files, moderate complexity → **Task**
    - L (8+h): Multiple components → Suggest `/parent` for a **Feature** instead
 
-2. **Determine labels**:
+3. **Determine labels**:
    - Area: frontend, backend, infra, db
    - Priority: high, medium, low (default: medium)
 
-3. **Setup project**:
+4. **Setup project (github backend only)**:
 
-**Use Skill tool:** `project-ops` with args: `setup`
+If TASK_BACKEND is "github":
+- **Use Skill tool:** `project-ops` with args: `setup`
+- Returns: PROJECT_NUM, PROJECT_ID, OWNER, REPO_NAME
 
-Returns: PROJECT_NUM, PROJECT_ID, OWNER, REPO_NAME
+5. **Create the Task**:
 
-If project doesn't exist, it will be created.
-
-4. **Create the Task**:
-
-**Use Skill tool:** `issue-ops` with args: `create "Title" "Body" "labels" "Task"`
+**Use Skill tool:** `task-ops` with args: `create "Title" "Body" "labels" "Task"`
 
 Body format:
 ```
@@ -67,13 +73,14 @@ Labels: `pasiv,size:SIZE,priority:PRIORITY,area:AREA`
 
 **Note:** Always include `pasiv` label to distinguish from user-opened issues.
 
-5. **Add to project**:
+6. **Add to project (github backend only)**:
 
-**Use Skill tool:** `project-ops` with args: `add-issue $PROJECT_NUM $OWNER $ISSUE_URL`
+If TASK_BACKEND is "github":
+- **Use Skill tool:** `project-ops` with args: `add-issue $PROJECT_NUM $OWNER $ISSUE_URL`
 
-6. If scope is L, ask if user wants a Feature (parent issue with sub-tasks) instead.
+7. If scope is L, ask if user wants a Feature (parent issue with sub-tasks) instead.
 
-7. Return the issue URL.
+8. Return the issue/task URL or ID.
 
 ---
 
