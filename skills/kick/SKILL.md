@@ -59,15 +59,14 @@ Read `.pasiv.yml` if it exists:
 
 ### Get Issue Details
 
-**Use Skill tool:** `task-ops` with args: `get $IDENTIFIER`
+If argument is "next":
+- **Use Skill tool:** `task-ops` with args: `get-next`
+- Store the returned IDENTIFIER (issue number, bean ID, or local ID)
 
-If argument is "next" and TASK_BACKEND is "github", first find highest priority open issue:
-```bash
-ISSUE_NUM=$(gh issue list --label "priority:high" --state open --limit 1 --json number -q '.[0].number')
-[ -z "$ISSUE_NUM" ] && ISSUE_NUM=$(gh issue list --state open --limit 1 --json number -q '.[0].number')
-```
+Then for all cases (explicit ID or resolved from "next"):
+- **Use Skill tool:** `task-ops` with args: `get $IDENTIFIER`
 
-Store: IDENTIFIER, ISSUE_TITLE, ISSUE_URL, ISSUE_BODY, ISSUE_LABELS
+Store: IDENTIFIER, ISSUE_TITLE, ISSUE_BODY, ISSUE_LABELS
 
 ---
 

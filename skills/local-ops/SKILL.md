@@ -145,6 +145,14 @@ Arguments: local ID, files, decisions, notes
 ```
 3. Write updated file
 
+### get-next
+Get the highest priority actionable task.
+
+1. Glob all task files: `docs/tasks/task-*--*.md`
+2. Read frontmatter of each, filter to `status: open`
+3. Sort by priority: high → medium → low
+4. Return the first match: id and title
+
 ### get-sibling-context
 
 Arguments: local ID
