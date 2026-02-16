@@ -113,4 +113,3 @@ Detailed docs loaded on demand by skills — see `docs/reference/`:
 | `github-projects.md` | Project board setup and auto-prioritization |
 | `model-optimization.md` | Which models run which skills |
 | `examples.md` | Detailed command examples and workflows |
-| `claude-md-template.md` | Template appended to project CLAUDE.md by `/pasiv init` |
