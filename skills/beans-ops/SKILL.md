@@ -13,6 +13,8 @@ user-invocable: false
 
 Perform beans operation: $ARGUMENTS
 
+**Note**: `beans prime` runs at SessionStart and PreCompact via project hooks, so the agent already has full Beans CLI context. This skill handles PASIV-specific operations only.
+
 ## Configuration
 
 Read `.pasiv.yml` for beans settings:
