@@ -22,8 +22,9 @@ Every extraction needs a team. PASIV connects them:
 | **Extractor** | Leads the operation, pulls value from the target | `/kick` - orchestrates the full flow |
 | **Architect** | Designs the dream levels | `/backlog` - structures specs into issues |
 | **Forger** | Transforms and adapts | `/issue`, `/parent` - shapes ideas into trackable work |
-| **Point Man** | Handles the details | `git-ops`, `issue-ops`, `project-ops` - the helpers |
+| **Point Man** | Handles the details | `task-ops`, `git-ops`, `project-ops` - the helpers |
 | **Chemist** | Enables deep dreaming | TDD, verification, systematic debugging - the methodology |
+| **Fischer** | Carries context between dreams | `/handoff` - structured session memory |
 
 ---
 
@@ -56,6 +57,9 @@ Prefer a UI? Use [**TARS**](https://github.com/inceptyon-labs/TARS) - a visual p
 ## Quick Start
 
 ```bash
+# Initialize PASIV in your project (interactive setup)
+/pasiv init
+
 # Refine a vague idea into a design
 /brainstorm
 
@@ -67,7 +71,38 @@ Prefer a UI? Use [**TARS**](https://github.com/inceptyon-labs/TARS) - a visual p
 
 # Start working on an issue (full extraction)
 /kick 42
+
+# Work on the highest priority task
+/kick next
+
+# Save session context before ending
+/handoff
 ```
+
+## Setup
+
+> *"You need the simplest version of the idea."*
+
+Run `/pasiv init` to configure PASIV for your project. The interactive wizard:
+
+1. **Chooses your task backend** — GitHub Issues, Beans, or local markdown
+2. **Configures project board** (GitHub) or hooks (Beans)
+3. **Creates project directories** — `docs/handoffs/`, `docs/designs/`, `docs/plans/`, `docs/scans/`
+4. **Writes `.pasiv.yml`** — your backend configuration
+5. **Appends PASIV rules to `CLAUDE.md`** — session start behavior, rules, directory map
+6. **Optionally initializes design system** — for frontend projects
+
+### Task Backends
+
+PASIV supports pluggable task backends. Choose the one that fits your workflow:
+
+| Backend | Best For | Storage | Dependencies |
+|---------|----------|---------|--------------|
+| **GitHub Issues** | Team collaboration, CI integration | GitHub API | `gh` CLI |
+| **Beans** | Solo devs, agent-native, version-controlled | `.beans/` flat files | `beans` CLI |
+| **Local Markdown** | Zero dependencies, simple projects | `docs/tasks/` files | None |
+
+No `.pasiv.yml` defaults to GitHub Issues (backward compatible).
 
 ## Issue Type Hierarchy
 
@@ -77,18 +112,20 @@ Prefer a UI? Use [**TARS**](https://github.com/inceptyon-labs/TARS) - a visual p
 | **Feature** | Tactical | Single capability, days/week | "OAuth Login" |
 | **Task** | Execution | Single work item, hours | "Create OAuth callback endpoint" |
 
-Uses GitHub's native issue types (`--type Epic/Feature/Task`).
-
 ## Commands
 
 | Command | Creates | Description |
 |---------|---------|-------------|
+| `/pasiv init` | Config | Interactive setup wizard |
 | `/brainstorm` | Design doc | Socratic dialogue to refine ideas |
 | `/brainstorm doc.md` | Design doc | Stress-test existing document |
 | `/issue` | Task | Create single work item |
 | `/parent` | Feature → Tasks | Create feature with task sub-issues |
 | `/backlog` | Epic → Feature → Task | Parse spec into full hierarchy |
-| `/kick` | - | Full implementation flow |
+| `/kick 42` | - | Full implementation flow for a specific task |
+| `/kick next` | - | Work on highest priority ready task |
+| `/handoff` | Handoff doc | Save session context for next session |
+| `/repo-scan` | Report | Security scan for vulnerabilities, malware, secrets |
 | `/s-review` | - | S (Sonnet) - trivial changes |
 | `/o-review` | - | O (Opus) - simple features |
 | `/sc-review` | - | SC (Sonnet → Codex) - moderate, budget |
@@ -109,6 +146,9 @@ Choose your entry point based on what you have:
 | Clear requirements | `/backlog spec.md` | → issues → `/kick` |
 | Single task | `/issue` | → `/kick 42` |
 | Existing issue | `/kick 42` | (inline planning) |
+| Forked/cloned repo | `/repo-scan` | → security report |
+| New project | `/pasiv init` | → configured and ready |
+| End of session | `/handoff` | → context preserved |
 
 ## Flow Diagram
 
@@ -129,7 +169,7 @@ flowchart LR
     end
 
     subgraph Execution
-        G --> J["#47;start"]
+        G --> J["#47;kick"]
         J --> K[Plan & Approve]
         K --> L[TDD Implement]
         L --> M[Review]
@@ -142,10 +182,7 @@ flowchart LR
     style J fill:#e8f5e9
 ```
 
-**Model delegation:**
-- Simple ops (git, issue, project, test-runner) → **Haiku** (cheap, forked context)
-- Verification → **Haiku→Opus** (simple fixes then smart escalation)
-- Reviews → **Sonnet/Opus/Codex** (where quality matters)
+---
 
 ## The `/brainstorm` Flow
 
@@ -184,21 +221,27 @@ Socratic design refinement - turn vague ideas into validated designs before writ
 > *"You mustn't be afraid to dream a little bigger, darling."*
 
 ```
-/kick 42
+/kick 42            # By issue number (GitHub) or bean ID (Beans)
+/kick lensing-gc5o  # Beans bean ID
+/kick task-001      # Local task ID
+/kick next          # Highest priority ready task
 ```
 
-1. **Fetch issue details** (reliable lookup by number)
-2. **Check for sub-issues** (if parent, use autonomous flow)
-3. **Baseline test run** (Haiku runs tests before starting - ensures clean baseline)
-4. Move to **In Progress**
-5. **Load design system** (if `area:frontend` or `area:mobile` - see [Design System Integration](#design-system-integration))
-6. Create plan → **select review depth** → wait for approval
-7. **TDD implementation** (RED → GREEN → REFACTOR → COMMIT)
-8. Run tests (systematic debugging if failures)
-9. **Code review** (S/O/SC/OC/SOC based on selection)
-10. **Verification gate** (Haiku fixes simple issues, escalates complex to Opus)
-11. Check off acceptance criteria
-12. Merge to main, move to **Done**, close issue
+1. **Detect backend** (read `.pasiv.yml`)
+2. **Load session handoff** (if one exists in `docs/handoffs/`)
+3. **Fetch task details** via `task-ops`
+4. **Check for sub-issues** (if parent, use autonomous flow)
+5. **Baseline test run** (Haiku runs tests — ensures clean baseline)
+6. Move to **In Progress**
+7. **Load design system** (if `area:frontend` or `area:mobile`)
+8. Create plan → **select review depth** → wait for approval
+9. **TDD implementation** (Opus writes tests, Sonnet writes code)
+10. Run tests (systematic debugging if failures)
+11. **Code review** (S/O/SC/OC/SOC based on selection)
+12. **Verification gate** (Haiku fixes simple issues, escalates complex to Opus)
+13. Check off acceptance criteria
+14. **Write handoff** (if parent issue with remaining tasks)
+15. Merge to main, move to **Done**, close task
 
 ### Review Tier Selection
 
@@ -212,22 +255,23 @@ During plan approval, select review tier with smart recommendations based on siz
 | **OC** | Opus → Codex | `size:L`, complex |
 | **SOC** | Sonnet → Opus → Codex | `size:XL`, security-critical |
 
-### TDD Methodology
+### Split-Model TDD
 
 > *"The dreamer can always remember the genesis of the idea."*
 
-All implementation follows test-driven development:
+PASIV enforces split-model TDD — the stronger model writes the spec, the cheaper model writes the code:
 
 ```
-RED → GREEN → REFACTOR → COMMIT → repeat
+RED (Opus) → GREEN (Sonnet) → REFACTOR (Sonnet) → COMMIT → repeat
 ```
 
-1. **RED**: Write failing test
-2. **GREEN**: Write minimal code to pass
-3. **REFACTOR**: Clean up
-4. **COMMIT**: After each cycle
+| Phase | Model | Why |
+|-------|-------|-----|
+| **RED** (write test) | Opus | Tests ARE the specification. Stronger model writes better specs. |
+| **GREEN** (write code) | Sonnet | Code is constrained by the test. Cheaper model follows the spec. |
+| **REFACTOR** | Sonnet | Clean up while tests stay green. |
 
-**Iron Law**: No production code without a failing test first.
+This is enforced by skill frontmatter: `kick` runs on Opus (writes tests), `tdd` runs on Sonnet (writes code). Opus must invoke the `tdd` skill for GREEN/REFACTOR — writing production code directly is a TDD violation.
 
 ### Baseline Test Run
 
@@ -243,8 +287,6 @@ This ensures you're not blamed for pre-existing test failures.
 
 ### Verification Gate
 
-> *"What is the most resilient parasite? An idea."*
-
 Before merge, fresh evidence is required with **smart escalation**:
 
 **Haiku handles:**
@@ -256,9 +298,8 @@ Before merge, fresh evidence is required with **smart escalation**:
 - Simple fixes don't work after 2 attempts
 - Logic errors detected
 - Complex debugging needed
-- Architectural issues found
 
-**The gate loops until all checks pass** - no manual intervention, never skips tests.
+**The gate loops until all checks pass** — no "should work" claims.
 
 | Check | How It Works |
 |-------|--------------|
@@ -267,13 +308,11 @@ Before merge, fresh evidence is required with **smart escalation**:
 | Lint | Haiku auto-fixes (usually works) |
 | TypeCheck | Simple types first, escalate if complex |
 
-**Cost optimization**: Most verifications pass or need only simple Haiku fixes. Opus only invoked for complex failures.
-
 ### Epic & Feature Support (Autonomous)
 
 > *"We need to go deeper."*
 
-**Reviews always happen at the Task level** - Epics and Features are containers.
+**Reviews always happen at the Task level** — Epics and Features are containers.
 
 | `/kick` on | Behavior |
 |-------------|----------|
@@ -284,25 +323,26 @@ Before merge, fresh evidence is required with **smart escalation**:
 When you `/kick` an **Epic**:
 
 ```
-Epic #10: User Authentication System
+Epic: User Authentication System
 
-├── Feature #11: Email/Password Login
-│   ├── #14 Create user table        → S   (size:XS, area:db)
-│   ├── #15 Create auth endpoint     → OC  (size:M) [security]
-│   └── #16 Create login form        → SC  (size:M, area:frontend)
+├── Feature: Email/Password Login
+│   ├── Create user table        → S   (size:XS, area:db)
+│   ├── Create auth endpoint     → OC  (size:M) [security]
+│   └── Create login form        → SC  (size:M, area:frontend)
 │
-└── Feature #12: OAuth Login
-    ├── #17 Add OAuth config         → SC  (size:S) [security]
-    └── #18 Add OAuth callback       → OC  (size:M) [security]
+└── Feature: OAuth Login
+    ├── Add OAuth config         → SC  (size:S) [security]
+    └── Add OAuth callback       → OC  (size:M) [security]
 
 Total: 5 Tasks across 2 Features
 Approve and start autonomous run? [Yes/Customize/Cancel]
 ```
 
-- **Approve once, walk away** - implements all Tasks autonomously
-- **Stops only on error** - asks how to proceed
+- **Approve once, walk away** — implements all Tasks autonomously
+- **Stops only on error** — asks how to proceed
 - **Auto-closes Features** when all their Tasks complete
 - **Auto-closes Epic** when all Features complete
+- **Writes handoffs** between tasks to preserve context
 
 **Task priority order:**
 - `area:db` → `area:infra` → `area:backend` → `area:frontend`
@@ -312,12 +352,69 @@ Approve and start autonomous run? [Yes/Customize/Cancel]
 
 When tests fail, root cause analysis is enforced:
 
-1. **Investigate** - Read full error, find root cause
-2. **Hypothesize** - Form specific theory
-3. **Test** - Make ONE minimal change
-4. **Verify** - Run tests again
+1. **Investigate** — Read full error, find root cause
+2. **Hypothesize** — Form specific theory
+3. **Test** — Make ONE minimal change
+4. **Verify** — Run tests again
 
 **Three Strikes Rule**: After 3 failed fix attempts, stop and reassess.
+
+---
+
+## Session Handoffs
+
+> *"An idea is like a virus. Resilient. Highly contagious. And even the smallest seed of an idea can grow."*
+
+PASIV preserves session context through structured handoff files, inspired by the [Claude Context OS](https://github.com/Arkya-AI/claude-context-os) pattern.
+
+```
+/handoff                    # Write handoff before ending session
+```
+
+### When Handoffs Happen
+
+| Trigger | What Happens |
+|---------|--------------|
+| You run `/handoff` | Write session state to `docs/handoffs/` |
+| Context compaction | PreCompact hook reminds you to write handoff |
+| Parent issue mid-flow | `/kick` auto-writes handoff between tasks |
+| Next session start | `/kick` loads latest handoff, archives it |
+
+### What's Captured
+
+- What was done (completed work)
+- Exact numbers and metrics
+- Decisions made (with rationale and alternatives considered)
+- Open questions (UNCLEAR, ASSUMED, MISSING)
+- Files changed and why
+- What NOT to re-read
+- Next steps and files to load
+
+Handoffs live at `docs/handoffs/handoff-YYYY-MM-DD-{topic}.md` and are archived to `docs/handoffs/archive/` after loading.
+
+---
+
+## Security Scanning
+
+> *"You're asking me for inception."*
+
+```
+/repo-scan                  # Scan current repo
+/repo-scan ~/path/to/repo   # Scan a specific directory
+```
+
+Multi-ecosystem security scan that checks for:
+- Dependency vulnerabilities (CVEs)
+- Suspicious install scripts
+- Obfuscated or encoded code
+- Network calls to unknown servers
+- Malware patterns (miners, shells, exfiltration)
+- Hardcoded secrets and credentials
+- File system anomalies
+
+Generates a report in `docs/scans/` with a verdict: **PASS**, **CAUTION**, or **FAIL**.
+
+---
 
 ## Review Tiers
 
@@ -329,7 +426,7 @@ When tests fail, root cause analysis is enforced:
 | 4 | OC | Opus → Codex | $$$ | Complex features, quality focus |
 | 5 | SOC | Sonnet → Opus → Codex | $$$$ | Security-critical, large refactors |
 
-All multi-pass reviews are **cascading** - each pass reviews cumulative changes including previous fixes.
+All multi-pass reviews are **cascading** — each pass reviews cumulative changes including previous fixes.
 
 ### Recommendation Matrix
 
@@ -343,9 +440,109 @@ All multi-pass reviews are **cascading** - each pass reviews cumulative changes 
 
 **Security files**: `auth`, `crypto`, `payment`, `token`, `secret`, `password`, `session`, `oauth`, `jwt`, `key`, `credential`
 
+---
+
+## Design System Integration
+
+PASIV integrates with [interface-design](https://github.com/Dammyjay93/interface-design) for consistent UI implementation.
+
+**How it works:**
+- When `/kick` processes an issue with `area:frontend` or `area:mobile` label, it automatically loads `.interface-design/system.md`
+- The design system defines tokens (spacing, colors, typography) and patterns (buttons, cards, forms)
+- Implementation must reference established tokens and follow documented patterns
+- `/pasiv init` asks if your project has a frontend and offers to run `/interface-design:init`
+
+**Setup (per project):**
+```bash
+# Initialize design system in your project
+/interface-design:init
+```
+
+**Verification:**
+```bash
+# Audit code against design system
+/interface-design:audit src/components
+```
+
+---
+
+## Per-Project Configuration
+
+`/pasiv init` writes two things to your project:
+
+### `.pasiv.yml`
+
+Task backend configuration:
+
+```yaml
+# GitHub (default)
+task_backend: github
+github:
+  project_board: true
+
+# Beans
+task_backend: beans
+beans:
+  path: .beans
+  prefix: beans-
+
+# Local
+task_backend: local
+local:
+  path: docs/tasks
+```
+
+### `CLAUDE.md` (PASIV section)
+
+Operational behavior appended to your project's `CLAUDE.md`:
+
+- **Session Start** — Load latest handoff, state understanding before starting
+- **Rules** — Use PASIV skills, write state to disk, TDD enforced, verification gate
+- **Where Things Live** — Directory map for handoffs, designs, plans, scans
+
+This keeps PASIV context per-project. Projects without the PASIV section in `CLAUDE.md` are unaffected.
+
+---
+
+## Model Optimization
+
+> *"I bought the airline."*
+
+Simple operations run on **Haiku** (cheap) in forked contexts to save tokens:
+
+| Skill | Model | Operations |
+|-------|-------|------------|
+| `git-ops` | Haiku | branch, commit, push, merge |
+| `task-ops` | Haiku | route to backend (issue-ops, beans-ops, local-ops) |
+| `issue-ops` | Haiku | GitHub issue CRUD |
+| `beans-ops` | Haiku | Beans flat-file CRUD |
+| `local-ops` | Haiku | Local markdown CRUD |
+| `project-ops` | Haiku | GitHub Project board operations |
+| `test-runner` | Haiku | run tests, parse results, report |
+| `handoff-ops` | Haiku | read/archive handoff files |
+| `verification` | Haiku → Opus | simple fixes (Haiku), complex debugging (Opus) |
+| `kick` | Opus | orchestration, test writing (RED phase) |
+| `tdd` | Sonnet | production code writing (GREEN/REFACTOR) |
+
+**Split-model TDD**: Opus writes tests (the spec), Sonnet writes code (constrained by the test).
+
+**Smart escalation**: Verification starts with Haiku for simple fixes, escalates to Opus only when needed.
+
+---
+
+## Labels
+
+| Category | Labels |
+|----------|--------|
+| Priority | `priority:high`, `priority:medium`, `priority:low` |
+| Size | `size:XS` (<1h), `size:S` (1-4h), `size:M` (4-8h), `size:L` (8-16h), `size:XL` (16+h) |
+| Area | `area:frontend`, `area:backend`, `area:infra`, `area:db` |
+
+**Note:** Issue types (Epic, Feature, Task) use GitHub's native `--type` flag (GitHub backend) or the `type` field (Beans/local backends).
+
 ## GitHub Projects Integration
 
-Issues are **automatically added** to a GitHub Project board.
+Issues are **automatically added** to a GitHub Project board (when using the GitHub backend).
 
 - **Auto-creates project** named after your repo (on first `/issue`, `/parent`, or `/backlog`)
 - **Prompts if other projects exist** (choose existing or create new)
@@ -358,118 +555,15 @@ Issues are **automatically added** to a GitHub Project board.
 gh auth refresh -s project
 ```
 
-### Implementation Order
-
-`/backlog` prioritizes issues by:
-1. Layer: `area:db` → `area:infra` → `area:backend` → `area:frontend`
-2. Parent/sub-issue relationships
-3. Explicit `Depends on #N` references
-
-## Labels
-
-| Category | Labels |
-|----------|--------|
-| Priority | `priority:high`, `priority:medium`, `priority:low` |
-| Size | `size:XS` (<1h), `size:S` (1-4h), `size:M` (4-8h), `size:L` (8-16h), `size:XL` (16+h) |
-| Area | `area:frontend`, `area:backend`, `area:infra`, `area:db` |
-
-**Note:** Issue types (Epic, Feature, Task) use GitHub's native `--type` flag, not labels. Configure types in your organization's Settings → Planning → Issue types.
-
 ## Requirements
 
-- **GitHub CLI** (`gh`) - https://cli.github.com
-- **Codex CLI** - for Pass 3 reviews
-- **jq** - for JSON parsing
-
-## Setup for Your Repo
-
-```bash
-# Ensure token has project scope
-gh auth refresh -s project
-
-# Create labels (optional)
-bash ~/.claude/plugins/PASIV/.github/scripts/create-labels.sh
-```
-
-## Model Optimization
-
-Simple operations run on **Haiku** (cheap) in forked contexts to save tokens:
-
-| Skill | Model | Operations |
-|-------|-------|------------|
-| `git-ops` | Haiku | branch, commit, push, merge |
-| `issue-ops` | Haiku | create, close, check-off criteria |
-| `project-ops` | Haiku | setup, add issue, move status |
-| `test-runner` | Haiku | run tests, parse results, report |
-| `verification` | Haiku → Opus | simple fixes (Haiku), complex debugging (Opus) |
-
-**Smart escalation**: Verification starts with Haiku for simple fixes, escalates to Opus only when needed for complex debugging.
-
-Main skills (Sonnet/Opus) delegate to these helpers automatically.
-
-## Plugin Structure
-
-```
-hooks/
-├── hooks.json                  # SessionStart hook config
-└── session-start.sh            # Injects skill awareness at session start
-
-skills/
-├── brainstorm/SKILL.md         # /brainstorm (Dreamer)
-├── issue/SKILL.md              # /issue (Forger)
-├── parent/SKILL.md             # /parent (Forger)
-├── kick/SKILL.md               # /kick (Extractor)
-├── backlog/SKILL.md            # /backlog (Architect)
-│
-├── s-review/SKILL.md           # /s-review (Sonnet)
-├── o-review/SKILL.md           # /o-review (Opus)
-├── sc-review/SKILL.md          # /sc-review (Sonnet → Codex)
-├── oc-review/SKILL.md          # /oc-review (Opus → Codex)
-├── soc-review/SKILL.md         # /soc-review (Sonnet → Opus → Codex)
-├── codex-review/SKILL.md       # /codex-review (standalone)
-│
-├── using-pasiv/SKILL.md        # Skill awareness (injected at session start)
-├── tdd/SKILL.md                # TDD methodology (Chemist)
-├── verification/SKILL.md       # Verification gate (Chemist, Haiku→Opus)
-├── systematic-debugging/SKILL.md # Debug methodology (Chemist, Opus)
-│
-├── git-ops/SKILL.md            # Helper (Point Man, Haiku)
-├── issue-ops/SKILL.md          # Helper (Point Man, Haiku)
-├── project-ops/SKILL.md        # Helper (Point Man, Haiku)
-└── test-runner/SKILL.md        # Helper (Point Man, Haiku)
-
-docs/
-├── designs/                    # Design documents from /brainstorm
-└── plans/                      # Implementation plans
-
-.github/
-├── scripts/
-│   ├── install.sh
-│   └── create-labels.sh
-└── workflows/
-    └── version-bump.yml        # Auto-bump version on push
-```
-
-## Session-Start Hook (Context Efficiency)
-
-PASIV uses a session-start hook to make Claude aware of available skills without bloating context.
-
-**How it works:**
-
-| When | What Loads | Size |
-|------|------------|------|
-| Session start | `using-pasiv/SKILL.md` (skill index/guide) | ~100 lines |
-| You run `/kick` | `start/SKILL.md` (full instructions) | On-demand |
-| You run `/codex-review` | `codex-review/SKILL.md` (full instructions) | On-demand |
-
-The session-start hook (`hooks/session-start.sh`) injects only the lightweight skill awareness guide. This tells Claude:
-- What skills exist (`/brainstorm`, `/kick`, `/issue`, etc.)
-- When to use each one
-- Workflow patterns and decision flow
-
-**The actual skill content is loaded lazily** - only when you invoke a skill does its full instructions enter context.
-
-This means you get skill-aware behavior from the first message without paying the context cost of loading every skill upfront.
+| Backend | Requirements |
+|---------|-------------|
+| **All** | Claude Code with plugin support |
+| **GitHub** | `gh` CLI, `jq` |
+| **Beans** | `beans` CLI (`npm install -g @beans-lang/cli`), `jq` |
+| **Local** | None |
+| **Codex reviews** | Codex CLI |
 
 ## Updating
 
@@ -478,36 +572,68 @@ rm -rf ~/.claude/plugins/cache
 claude plugin update PASIV
 ```
 
-## Design System Integration
+## Plugin Structure
 
-PASIV integrates with [interface-design](https://github.com/Dammyjay93/interface-design) for consistent UI implementation.
-
-**How it works:**
-- When `/kick` processes an issue with `area:frontend` or `area:mobile` label, it automatically loads `.interface-design/system.md`
-- The design system defines tokens (spacing, colors, typography) and patterns (buttons, cards, forms)
-- Implementation must reference established tokens and follow documented patterns
-
-**Setup (per project):**
-```bash
-# Initialize design system in your project
-/interface-design:init
 ```
+hooks/
+├── hooks.json                  # PreCompact hook config
+└── pre-compact.sh              # Reminds to write handoff before compaction
 
-**During UI work:**
-1. State design direction before component decisions
-2. Use established tokens (e.g., "spacing-4 (16px)", "radius-md")
-3. Follow documented patterns for similar components
-4. After implementation, offer to save new reusable patterns
+scripts/
+└── init.sh                     # Project initializer (called by /pasiv init)
 
-**Verification:**
-```bash
-# Audit code against design system
-/interface-design:audit src/components
+skills/
+├── pasiv-init/SKILL.md         # /pasiv init (setup wizard)
+├── brainstorm/SKILL.md         # /brainstorm (Dreamer)
+├── issue/SKILL.md              # /issue (Forger)
+├── parent/SKILL.md             # /parent (Forger)
+├── kick/SKILL.md               # /kick (Extractor)
+├── backlog/SKILL.md            # /backlog (Architect)
+│
+├── handoff/SKILL.md            # /handoff (Fischer)
+├── handoff-ops/SKILL.md        # Handoff file management (Haiku)
+│
+├── s-review/SKILL.md           # /s-review (Sonnet)
+├── o-review/SKILL.md           # /o-review (Opus)
+├── sc-review/SKILL.md          # /sc-review (Sonnet → Codex)
+├── oc-review/SKILL.md          # /oc-review (Opus → Codex)
+├── soc-review/SKILL.md         # /soc-review (Sonnet → Opus → Codex)
+├── codex-review/SKILL.md       # /codex-review (standalone)
+│
+├── repo-scan/SKILL.md          # /repo-scan (security scanning)
+│
+├── using-pasiv/SKILL.md        # Skill awareness guide
+├── tdd/SKILL.md                # TDD methodology (Sonnet - GREEN/REFACTOR)
+├── verification/SKILL.md       # Verification gate (Haiku → Opus)
+├── systematic-debugging/SKILL.md # Debug methodology (Opus)
+│
+├── task-ops/SKILL.md           # Backend router (Haiku)
+├── issue-ops/SKILL.md          # GitHub backend (Haiku)
+├── beans-ops/SKILL.md          # Beans backend (Haiku)
+├── local-ops/SKILL.md          # Local markdown backend (Haiku)
+├── git-ops/SKILL.md            # Git operations (Haiku)
+├── project-ops/SKILL.md        # GitHub Project operations (Haiku)
+└── test-runner/SKILL.md        # Test execution (Haiku)
+
+docs/
+├── reference/                  # On-demand reference docs (loaded by skills)
+│   ├── review-tiers.md
+│   ├── methodology.md
+│   ├── design-system.md
+│   ├── labels.md
+│   ├── github-projects.md
+│   ├── model-optimization.md
+│   └── examples.md
+├── designs/                    # Design documents from /brainstorm
+├── plans/                      # Implementation plans
+└── scans/                      # Security scan reports
 ```
 
 ## Acknowledgments
 
-- Development methodology (TDD cycle, verification gates, systematic debugging) and brainstorming flow inspired by [obra/superpowers](https://github.com/obra/superpowers)
+- Development methodology (TDD cycle, verification gates, systematic debugging) and brainstorming flow inspired by [superpowers](https://github.com/obra/superpowers)
+- Session handoff pattern and per-project CLAUDE.md structure inspired by [Claude Context OS](https://github.com/Arkya-AI/claude-context-os)
+- Beans flat-file task backend powered by [beans](https://github.com/hmans/beans) by [@hmans](https://github.com/hmans)
 - Design system integration powered by [interface-design](https://github.com/Dammyjay93/interface-design) by [@Dammyjay93](https://github.com/Dammyjay93)
 - Name and lore inspired by Christopher Nolan's *Inception* (2010)
 
