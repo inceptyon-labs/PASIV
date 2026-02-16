@@ -125,12 +125,14 @@ local:
 
 ### 5. Add PASIV Rules to Project CLAUDE.md
 
-Skip this step if `CLAUDE.md` already contains `## PASIV`:
+Check if CLAUDE.md already has a PASIV section:
 ```bash
 grep -q "## PASIV" CLAUDE.md 2>/dev/null && echo "has-pasiv" || echo "no-pasiv"
 ```
 
-If no PASIV section, run this single command. Replace `CHOSEN_BACKEND` with the backend from Step 2:
+If "has-pasiv", skip to Step 6.
+
+If "no-pasiv", run the EXACT bash command below using the Bash tool. Copy-paste it verbatim. Do NOT use the Write tool. Do NOT compose your own version of the content. The heredoc contains the complete PASIV section that must be written exactly as-is:
 
 ```bash
 cat >> CLAUDE.md << 'PASIV_EOF'
