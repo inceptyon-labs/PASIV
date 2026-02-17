@@ -364,38 +364,38 @@ TaskUpdate:
   status: in_progress
 ```
 
-### For each piece of functionality, follow TDD (split-model):
+### TDD: Opus writes tests, Sonnet implements (ONE skill call per step)
 
-#### RED Phase (Opus writes tests)
-Opus writes the test — it defines the spec, edge cases, and expected behavior.
+#### Phase 1: RED — Opus writes ALL tests for this step
 
-1. Write ONE minimal failing test
-2. Run tests - must FAIL:
+Write failing tests for each acceptance criterion in this step:
+
+1. Write test(s) covering the expected behavior, edge cases, and boundaries
+2. Run tests — they must FAIL:
 ```bash
 npm test || pytest || go test ./... || cargo test || bun test
 ```
-3. Verify: Test fails because feature doesn't exist (not syntax/import error)
+3. Verify: Tests fail because features don't exist (not syntax/import errors)
 
 **HARD GATE**: After RED is verified, you MUST use the Skill tool to invoke `tdd`. Writing implementation code directly in `/kick` is a TDD violation. The model boundary is the enforcement mechanism — Opus defines the spec, Sonnet implements against it.
 
-#### GREEN + REFACTOR Phase (Sonnet writes code)
-**Use Skill tool:** `tdd` (Sonnet handles both GREEN and REFACTOR in one call)
+#### Phase 2: GREEN + REFACTOR + COMMIT — Sonnet implements all (ONE call)
 
-Sonnet reads the failing test, writes the simplest code to pass, runs tests, then cleans up if needed.
+**Use Skill tool:** `tdd`
 
-#### COMMIT — IMMEDIATELY after `tdd` returns
-**Use Skill tool:** `git-ops` with args: `commit "feat: [what was added] (#$ISSUE_NUM)"`
+Sonnet discovers all failing tests, then for EACH one: writes minimal implementation → runs tests → refactors → commits via `git-ops`. Returns when all tests pass.
 
-**CONTINUE**: After committing, loop back to RED for the next piece of functionality. Do NOT stop or return control to the user.
+This is ONE skill call. Sonnet handles the entire implementation loop internally.
 
-**End of step (after all cycles for this step):**
+#### After `tdd` returns:
+
 ```
 TaskUpdate:
   taskId: [current-step-id]
   status: completed
 ```
 
-Run `TaskList` to show progress.
+Run `TaskList` to show progress. CONTINUE to next implementation step, or Step 3.25 if all steps done.
 
 ### TDD Violations - STOP
 
@@ -404,11 +404,6 @@ If you find yourself:
 - Writing implementation code directly instead of invoking `tdd` → Delete code, use the Skill tool
 - Test passes immediately → Test doesn't test what you think, rewrite
 - Adding features beyond the test → Remove extras, stay minimal
-- Stopping after `tdd` returns → You MUST continue to COMMIT, then next cycle
-
-**Reference**: `@tdd` skill for full methodology
-
-**Repeat TDD cycle** for each acceptance criterion until all are covered. When all criteria are done, CONTINUE to Step 3.25.
 
 ---
 
