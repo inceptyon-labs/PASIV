@@ -19,6 +19,8 @@ allowed-tools:
 
 Full flow for: $ARGUMENTS (issue number or "next")
 
+**CRITICAL WORKFLOW RULE**: This is a multi-step workflow. After EVERY Skill call returns, you MUST continue to the next step. Do NOT stop, do NOT return control to the user, do NOT ask for input unless the step explicitly says to use AskUserQuestion. The workflow runs to completion (Step 8: Done) unless an error occurs that requires user input.
+
 ## Issue Type Hierarchy
 
 | Level | Type | Scope | `/kick` Behavior |
@@ -374,21 +376,17 @@ npm test || pytest || go test ./... || cargo test || bun test
 ```
 3. Verify: Test fails because feature doesn't exist (not syntax/import error)
 
-**HARD GATE**: After RED is verified, you MUST use the Skill tool to invoke `tdd` for GREEN. Writing implementation code directly in `/kick` is a TDD violation. The model boundary is the enforcement mechanism — Opus defines the spec, Sonnet implements against it.
+**HARD GATE**: After RED is verified, you MUST use the Skill tool to invoke `tdd`. Writing implementation code directly in `/kick` is a TDD violation. The model boundary is the enforcement mechanism — Opus defines the spec, Sonnet implements against it.
 
-#### GREEN Phase (Sonnet writes code)
-**Use Skill tool:** `tdd` with args: `green`
+#### GREEN + REFACTOR Phase (Sonnet writes code)
+**Use Skill tool:** `tdd` (Sonnet handles both GREEN and REFACTOR in one call)
 
-Sonnet reads the failing test, writes the simplest code to pass, and runs tests to verify.
+Sonnet reads the failing test, writes the simplest code to pass, runs tests, then cleans up if needed.
 
-#### REFACTOR Phase (Sonnet)
-**Use Skill tool:** `tdd` with args: `refactor`
-
-Sonnet cleans up if needed. Tests guard against regressions.
-
-#### COMMIT
-After each RED-GREEN-REFACTOR cycle:
+#### COMMIT — IMMEDIATELY after `tdd` returns
 **Use Skill tool:** `git-ops` with args: `commit "feat: [what was added] (#$ISSUE_NUM)"`
+
+**CONTINUE**: After committing, loop back to RED for the next piece of functionality. Do NOT stop or return control to the user.
 
 **End of step (after all cycles for this step):**
 ```
@@ -403,13 +401,14 @@ Run `TaskList` to show progress.
 
 If you find yourself:
 - Writing code before tests → Delete code, write test first
-- Writing implementation code directly instead of invoking `tdd green` → Delete code, use the Skill tool
+- Writing implementation code directly instead of invoking `tdd` → Delete code, use the Skill tool
 - Test passes immediately → Test doesn't test what you think, rewrite
 - Adding features beyond the test → Remove extras, stay minimal
+- Stopping after `tdd` returns → You MUST continue to COMMIT, then next cycle
 
 **Reference**: `@tdd` skill for full methodology
 
-**Repeat TDD cycle** for each acceptance criterion until all are covered.
+**Repeat TDD cycle** for each acceptance criterion until all are covered. When all criteria are done, CONTINUE to Step 3.25.
 
 ---
 
@@ -471,7 +470,7 @@ After successful fix:
 
 **Reference**: `@systematic-debugging` skill for full methodology
 
-**Do not proceed to review until tests pass.**
+**Do not proceed to review until tests pass.** When tests pass, CONTINUE to Step 4.
 
 ---
 
