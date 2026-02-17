@@ -15,25 +15,25 @@ This ensures you are not blamed for pre-existing test failures.
 
 ## TDD Cycle (Split-Model)
 
-Enforced in `/kick`: RED → GREEN → REFACTOR → COMMIT → repeat.
+Enforced in `/kick`: Opus writes tests, Sonnet implements. One skill boundary per step.
 
-| Phase | Model | Why |
-|-------|-------|-----|
-| RED (write test) | Opus | Tests are the spec — edge cases, API design, boundary conditions |
-| GREEN (write code) | Sonnet | Constrained by test, "simplest thing that works" |
-| REFACTOR | Sonnet | Tests guard against regressions |
+| Phase | Model | What Happens |
+|-------|-------|-------------|
+| RED | Opus (kick) | Writes ALL failing tests for the implementation step |
+| GREEN + REFACTOR + COMMIT | Sonnet (tdd) | Implements each test, refactors, commits — loops internally |
 
-1. **RED (Opus)**: Write one failing test
-2. **Verify**: Test fails for the right reason (missing feature, not syntax error)
-3. **GREEN + REFACTOR (Sonnet via `tdd`)**: Write minimal code to pass, clean up — single skill call
-4. **COMMIT (Opus)**: Immediately after `tdd` returns, commit and continue to next cycle
+1. **RED (Opus)**: Write all failing tests for this step's acceptance criteria
+2. **Verify**: Tests fail for the right reason (missing feature, not syntax error)
+3. **Invoke `tdd` ONCE (Sonnet)**: Sonnet loops through each failing test — GREEN → REFACTOR → COMMIT per test
+4. **Continue (Opus)**: After `tdd` returns, proceed to next step
 
-No production code without a failing test first. The better model writes the test because the test IS the spec — a bad test is invisible while bad code gets caught immediately.
+No production code without a failing test first. The better model writes tests because the test IS the spec — a bad test is invisible while bad code gets caught immediately.
 
 ### TDD Violations
 
 If you find yourself:
 - Writing code before tests → delete code, write test first
+- Writing implementation code directly instead of invoking `tdd` → delete code, use the Skill tool
 - Test passes immediately → test does not test what you think, rewrite
 - Adding features beyond the test → remove extras, stay minimal
 
