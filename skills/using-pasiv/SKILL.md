@@ -1,6 +1,6 @@
 ---
 name: using-pasiv
-description: Skill awareness guide injected at session start. NOT user-invocable.
+description: Skill awareness and decision flow reference. NOT user-invocable.
 user-invocable: false
 ---
 

@@ -1,7 +1,7 @@
 #!/bin/bash
-# Remind Claude to write handoff before compaction
-cat <<EOF
+# PASIV PreCompact hook — remind to write handoff before context compression
+cat <<'EOF'
 {
-  "systemMessage": "[PASIV PreCompact] Context is about to be compressed. If you have uncommitted session state (decisions, progress, open questions), write a handoff now using: Skill(skill=\"handoff\")"
+  "systemMessage": "[PASIV] STOP. Context is about to be compressed. You MUST write a session handoff NOW before continuing. Run: /handoff — This preserves decisions, progress, and open questions for the next session. Do NOT skip this step."
 }
 EOF
