@@ -72,17 +72,26 @@ Store: IDENTIFIER, ISSUE_TITLE, ISSUE_BODY, ISSUE_LABELS
 
 ---
 
-## Step 0.1: Load Session Handoff (if exists)
+## Step 0.1: Load Session Handoff
 
-**Use Skill tool:** `handoff-ops` with args: `get-latest`
+**REQUIRED**: Check for an active handoff before proceeding.
 
-If a handoff exists:
-- Read and incorporate context (decisions, files changed, open questions)
-- Follow "Files to Load Next Session" manifest
-- Skip re-reading files listed in "What NOT to Re-Read"
-- Archive the handoff after loading: **Use Skill tool:** `handoff-ops` with args: `archive {filename}`
+```bash
+ls -1t docs/handoffs/handoff-*.md 2>/dev/null | head -1
+```
 
-If no handoff exists, skip this step.
+If a handoff file exists:
+1. Read the file
+2. Incorporate context: decisions made, files changed, open questions
+3. Follow "Files to Load Next Session" manifest
+4. Skip re-reading files listed in "What NOT to Re-Read"
+5. Archive it:
+   ```bash
+   mv "docs/handoffs/$FILENAME" "docs/handoffs/archive/$FILENAME"
+   ```
+6. State what you loaded: "Loaded handoff from {date}: {summary}"
+
+If no handoff file exists, state: "No active handoff found." and continue.
 
 ---
 
@@ -723,13 +732,39 @@ This helps subsequent Tasks in the same Feature understand what was done.
 
 ---
 
-## Step 6.75: Session Handoff (if needed)
+## Step 6.75: Write Session Handoff
 
-If processing a parent issue and more Tasks remain:
-- Auto-write a lightweight handoff summarizing progress so far
-- **Use Skill tool:** `handoff` with current state
+**REQUIRED for parent issues with remaining Tasks.** Write a handoff to disk so context survives if the session ends.
 
-This ensures context survives if the session ends mid-parent-flow.
+```bash
+mkdir -p docs/handoffs
+DATE=$(date +%Y-%m-%d)
+SLUG=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/-$//')
+```
+
+Write to `docs/handoffs/handoff-$DATE-$SLUG.md`:
+
+```markdown
+# Session Handoff: $ISSUE_TITLE
+Date: $(date)
+Issue: $IDENTIFIER - $ISSUE_TITLE
+
+## What Was Done
+- Completed Task: $TASK_IDENTIFIER - $TASK_TITLE
+- [list other completed tasks in this session]
+
+## Files Changed
+[list files from git log for this session's commits]
+
+## Next Steps (ordered)
+1. Next Task: [next task ID and title]
+2. [remaining tasks]
+
+## Files to Load Next Session
+- [key files created/modified]
+```
+
+Skip only if this is a single Task (no parent) or if this is the last Task.
 
 ---
 
@@ -980,8 +1015,8 @@ If TASK_BACKEND is "github": **Use Skill tool:** `project-ops` with args: `move-
 **Step 6.5**: Add completion summary
 **Use Skill tool:** `task-ops` with args: `add-completion-summary $TASK_IDENTIFIER ...`
 
-**Step 6.75**: Session handoff (if more Tasks remain)
-**Use Skill tool:** `handoff` with current state
+**Step 6.75**: Write session handoff (REQUIRED if more Tasks remain)
+Write handoff file to `docs/handoffs/` with completed work, decisions, and next steps. Do NOT use a Skill call — write the file directly with the Write tool.
 
 **Step 7**: Merge to main
 **Use Skill tool:** `git-ops` with args: `merge-to-main`
