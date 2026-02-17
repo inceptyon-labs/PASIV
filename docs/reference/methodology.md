@@ -25,10 +25,8 @@ Enforced in `/kick`: RED → GREEN → REFACTOR → COMMIT → repeat.
 
 1. **RED (Opus)**: Write one failing test
 2. **Verify**: Test fails for the right reason (missing feature, not syntax error)
-3. **GREEN (Sonnet via `tdd green`)**: Write minimal code to pass
-4. **Verify**: Test passes, no regressions
-5. **REFACTOR (Sonnet via `tdd refactor`)**: Clean up if needed
-6. **COMMIT (Opus)**: After each cycle
+3. **GREEN + REFACTOR (Sonnet via `tdd`)**: Write minimal code to pass, clean up — single skill call
+4. **COMMIT (Opus)**: Immediately after `tdd` returns, commit and continue to next cycle
 
 No production code without a failing test first. The better model writes the test because the test IS the spec — a bad test is invisible while bad code gets caught immediately.
 

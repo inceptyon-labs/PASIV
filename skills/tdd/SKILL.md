@@ -26,73 +26,58 @@ Opus writes the test in `/kick` Step 3, then invokes this skill for GREEN and RE
 
 ---
 
-## Operations
-
-### green
+## Operation
 
 **PREREQUISITE**: A failing test exists. Opus (the caller) has already written and verified it fails for the right reason.
 
-#### Step 1: Read the Failing Test
+This skill runs GREEN then REFACTOR in a single invocation and returns control to the caller.
 
-Read the test file to understand what behavior is expected. The test IS the spec.
+### GREEN: Write MINIMAL Implementation
 
-#### Step 2: Write MINIMAL Implementation
+1. Read the failing test file to understand what behavior is expected. The test IS the spec.
 
-Write the SIMPLEST code that makes the test pass:
-- No extra features
-- No "while I'm here" improvements
-- No defensive code "just in case"
-- ONLY what the failing test requires
+2. Write the SIMPLEST code that makes the test pass:
+   - No extra features
+   - No "while I'm here" improvements
+   - No defensive code "just in case"
+   - ONLY what the failing test requires
 
+3. Run tests:
+   ```bash
+   npm test || pytest || go test ./... || cargo test || bun test
+   ```
+
+4. Verify:
+   - New test passes → continue to REFACTOR
+   - New test still fails → fix implementation, re-run, stay in GREEN
+   - Other tests broke → fix regression, re-run, stay in GREEN
+
+All tests must pass before moving to REFACTOR.
+
+### REFACTOR: Clean Up
+
+1. Assess the code written during GREEN:
+   - Duplication to remove
+   - Names to improve
+   - Helpers to extract (only if truly needed)
+
+2. If nothing needs cleanup, skip to return.
+
+3. Make ONE change at a time. After EACH change:
+   ```bash
+   npm test || pytest || go test ./... || cargo test || bun test
+   ```
+   Tests must stay green throughout. If tests fail, revert the refactor.
+
+### Return
+
+Return a brief summary:
 ```
-# Use Edit or Write to create/modify implementation file
-```
-
-#### Step 3: Run Tests
-
-```bash
-npm test || pytest || go test ./... || cargo test || bun test
-```
-
-#### Step 4: Verify GREEN
-
-Check:
-- [ ] New test passes → return success
-- [ ] New test still fails → fix implementation, re-run, stay in GREEN
-- [ ] Other tests broke → fix regression, re-run, stay in GREEN
-- [ ] No skipped tests
-
-All tests must pass before returning.
-
----
-
-### refactor
-
-**PREREQUISITE**: All tests are passing (GREEN verified).
-
-#### Step 1: Assess
-
-Look at the code written during GREEN. Identify:
-- Duplication to remove
-- Names to improve
-- Helpers to extract (only if truly needed)
-
-If nothing needs cleanup, return immediately.
-
-#### Step 2: Refactor
-
-Make ONE change at a time.
-
-**After EACH change**:
-```bash
-npm test || pytest || go test ./... || cargo test || bun test
+GREEN ✓ — [what was implemented]
+REFACTOR ✓ — [what was cleaned up, or "No refactoring needed"]
 ```
 
-Tests must stay green throughout. If tests fail, revert the refactor.
-
-#### Step 3: Return
-
-Return summary of what was cleaned up (or "No refactoring needed").
+The caller (kick) will handle the COMMIT step and continue the workflow.
 
 ---
 
@@ -111,25 +96,21 @@ If you detect a violation: STOP. Delete the implementation code. Report back to 
 ## Turn-by-Turn Checklist (full cycle, across models)
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ TURN 1 (Opus): Write test (Edit/Write to test file)    │
-│         → "Test written, running it now..."             │
-├─────────────────────────────────────────────────────────┤
-│ TURN 2 (Opus): Run test (Bash)                         │
-│         → FAIL (show the failure message)               │
-│         → "Test fails because X doesn't exist. RED ✓"   │
-├─────────────────────────────────────────────────────────┤
-│ TURN 3 (Sonnet via tdd green): Write implementation    │
-│         → Run tests → PASS                              │
-│         → "All tests pass. GREEN ✓"                     │
-├─────────────────────────────────────────────────────────┤
-│ TURN 4 (Sonnet via tdd refactor): Clean up if needed   │
-│         → Run tests → still PASS                        │
-│         → "REFACTOR ✓"                                  │
-├─────────────────────────────────────────────────────────┤
-│ TURN 5 (Opus): Commit (Skill: git-ops)                 │
-│         → Committed                                     │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ TURN 1 (Opus/kick): Write test (Edit/Write)             │
+│         → "Test written, running it now..."              │
+├──────────────────────────────────────────────────────────┤
+│ TURN 2 (Opus/kick): Run test (Bash)                     │
+│         → FAIL → "Test fails because X. RED ✓"           │
+├──────────────────────────────────────────────────────────┤
+│ TURN 3 (Sonnet/tdd): GREEN + REFACTOR in one call       │
+│         → Write implementation → run tests → PASS        │
+│         → Clean up if needed → run tests → still PASS    │
+│         → Return "GREEN ✓ / REFACTOR ✓"                  │
+├──────────────────────────────────────────────────────────┤
+│ TURN 4 (Opus/kick): Commit (Skill: git-ops)             │
+│         → MUST continue to next cycle or next step       │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -139,7 +120,7 @@ If you detect a violation: STOP. Delete the implementation code. Report back to 
 Same split applies:
 1. **Opus**: Write a test that fails, demonstrating the bug
 2. **Opus**: Verify RED — test fails for the bug reason
-3. **Sonnet (tdd green)**: Minimal code to make test pass
-4. **Opus**: Verify GREEN, commit: `fix: [bug description] (#$ISSUE_NUM)`
+3. **Sonnet (tdd)**: GREEN + REFACTOR in one call — minimal fix
+4. **Opus**: Commit: `fix: [bug description] (#$ISSUE_NUM)`, then continue workflow
 
 The failing test PROVES the bug exists. The passing test PROVES it's fixed.
