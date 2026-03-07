@@ -20,6 +20,7 @@ Usage:
 """
 
 import argparse
+import io
 import os
 import sys
 
@@ -234,7 +235,7 @@ def generate_image(
         if part.text is not None:
             print(f"Model response: {part.text}")
         elif part.inline_data is not None:
-            image = part.as_image()
+            image = Image.open(io.BytesIO(part.inline_data.data))
 
             if transparent:
                 print(f"Removing {chroma} chroma key background...")
