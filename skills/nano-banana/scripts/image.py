@@ -30,7 +30,8 @@ from PIL import Image
 from scipy.ndimage import binary_dilation, binary_erosion
 
 MODEL_IDS = {
-    "flash": "gemini-2.5-flash-image",
+    "banana": "gemini-2.5-flash-image",
+    "banana2": "gemini-3.1-flash-image-preview",
     "pro": "gemini-3-pro-image-preview",
 }
 
@@ -201,15 +202,20 @@ def generate_image(
 
     model_id = MODEL_IDS[model]
 
-    if model == "pro":
+    if model in ("pro", "banana2"):
         aspect_ratios = {"square": "1:1", "landscape": "16:9", "portrait": "9:16"}
-        config = types.GenerateContentConfig(
-            response_modalities=["TEXT", "IMAGE"],
-            image_config=types.ImageConfig(
+        config_kwargs = {
+            "response_modalities": ["TEXT", "IMAGE"],
+            "image_config": types.ImageConfig(
+                aspect_ratio=aspect_ratios.get(aspect, "1:1"),
+            ),
+        }
+        if model == "pro":
+            config_kwargs["image_config"] = types.ImageConfig(
                 aspect_ratio=aspect_ratios.get(aspect, "1:1"),
                 image_size=size,
-            ),
-        )
+            )
+        config = types.GenerateContentConfig(**config_kwargs)
         response = client.models.generate_content(
             model=model_id, contents=contents, config=config
         )
@@ -271,9 +277,9 @@ def main():
     )
     parser.add_argument(
         "--model",
-        choices=["flash", "pro"],
-        default="flash",
-        help="Model: flash (fast, 1024px) or pro (high-quality, up to 4K) (default: flash)",
+        choices=["banana", "banana2", "pro"],
+        default="banana",
+        help="Model: banana (fast, Gemini 2.5 Flash), banana2 (efficient, Gemini 3.1 Flash), pro (high-quality, up to 4K) (default: banana)",
     )
     parser.add_argument(
         "--size",

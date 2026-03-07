@@ -1,6 +1,6 @@
 ---
-name: generate
-description: Image generation with optional transparent backgrounds. Use this skill when the user asks to "generate an image", "create an image", "make an image", "generate images", or requests icons/logos/graphics with transparency. Generates images using Google's Gemini models. Invoke for ANY image generation request. When the image needs transparency (icons, logos, overlays, alpha channel, transparent background, background removal), use the --transparent flag.
+name: nano-banana
+description: Nano Banana image generation skill. Also known as "nano banana", "nano-banana", "nano banana pro", "nano-banana-pro", "banana". Use this skill when the user asks to "generate an image", "create an image", "make an image", "generate images", "nano banana", "use nano banana", or requests icons/logos/graphics with transparency. Generates images using Google's Gemini models (Nano Banana = Gemini 2.5 Flash, Nano Banana 2 = Gemini 3.1 Flash, Nano Banana Pro = Gemini 3 Pro). Invoke for ANY image generation request. When the image needs transparency (icons, logos, overlays, alpha channel, transparent background, background removal), use the --transparent flag.
 ---
 
 # Image Generation with Transparency Support
@@ -13,10 +13,17 @@ Set the `GEMINI_API_KEY` environment variable with your Google AI API key.
 
 ## Available Models
 
-| Model | ID | Best For | Max Resolution |
-|-------|-----|----------|----------------|
-| **Flash** | `gemini-2.5-flash-image` | Speed, high-volume tasks | 1024px |
-| **Pro** | `gemini-3-pro-image-preview` | Professional quality, complex scenes | Up to 4K |
+| Model | Flag | ID | Best For | Max Resolution |
+|-------|------|----|----------|----------------|
+| **Nano Banana** | `--model banana` | `gemini-2.5-flash-image` | Speed, high-volume, low-latency tasks | 1024px |
+| **Nano Banana 2** | `--model banana2` | `gemini-3.1-flash-image-preview` | High-efficiency, balanced quality/speed | 1024px |
+| **Nano Banana Pro** | `--model pro` | `gemini-3-pro-image-preview` | Professional assets, complex instructions, high-fidelity text rendering (uses Thinking) | Up to 4K |
+
+### Model Selection Guide
+
+- **banana** (default): Fastest. Use for quick iterations, bulk generation, backgrounds, textures.
+- **banana2**: Better quality than banana at similar speed. Use for polished icons, UI assets, illustrations.
+- **pro**: Highest quality. Use for final production assets, hero images, logos with text, complex scenes. Supports `--size 2K/4K`.
 
 ## Image Generation Workflow
 
@@ -38,8 +45,8 @@ Where `${SKILL_DIR}` is the directory containing this SKILL.md file.
 - `--output` (required): Output file path (PNG format)
 - `--aspect` (optional): Aspect ratio - "square", "landscape", "portrait" (default: square)
 - `--reference` (optional, repeatable): Path to reference image(s) for style guidance
-- `--model` (optional): "flash" (fast) or "pro" (high-quality) (default: flash)
-- `--size` (optional): Resolution for pro model - "1K", "2K", "4K" (default: 1K, ignored for flash)
+- `--model` (optional): "banana" (fast), "banana2" (efficient), or "pro" (high-quality) (default: banana)
+- `--size` (optional): Resolution for pro model - "1K", "2K", "4K" (default: 1K, only applies to pro)
 
 ### Transparency Options
 
@@ -117,14 +124,22 @@ Note: `--rembg` requires the rembg package installed separately (`pip install re
 
 ## Using Different Models
 
-**Flash model (default)** - Fast generation:
+**Nano Banana (default)** - Fastest, bulk work:
 ```bash
 uv run "${SKILL_DIR}/scripts/image.py" \
   --prompt "A minimalist logo design" \
   --output "/path/to/logo.png"
 ```
 
-**Pro model** - Higher quality for final assets:
+**Nano Banana 2** - Better quality, still fast:
+```bash
+uv run "${SKILL_DIR}/scripts/image.py" \
+  --prompt "Polished app icon with subtle gradients" \
+  --output "/path/to/icon.png" \
+  --model banana2
+```
+
+**Nano Banana Pro** - Highest quality for final assets:
 ```bash
 uv run "${SKILL_DIR}/scripts/image.py" \
   --prompt "A detailed hero illustration for a tech landing page" \
