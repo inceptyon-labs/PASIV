@@ -71,8 +71,8 @@ def build_chroma_prompt(prompt: str, chroma: str) -> str:
         f"{prompt} "
         f"Place the subject on a solid, flat, uniform chromakey {chroma} background. "
         f"Use EXACTLY hex color {color['hex']} (RGB {color['rgb']}) for the background. "
-        f"The subject must have a clean white outline/border (2-3 pixels wide) separating it from the background. "
-        f"NO {chroma.upper()} ON THE SUBJECT. SHARP EDGES. Center the subject. "
+        f"NO outline, border, or glow around the subject. "
+        f"NO {chroma.upper()} ON THE SUBJECT. SHARP EDGES directly against the background. Center the subject. "
         f"The background must be completely uniform {chroma} with zero gradients or shadows."
     )
 
