@@ -246,6 +246,12 @@ def generate_image(
                 image = remove_background_rembg(image)
                 print("Background removed, saving as RGBA PNG.")
 
+            if transparent or use_rembg:
+                bbox = image.getchannel("A").getbbox()
+                if bbox:
+                    image = image.crop(bbox)
+                    print(f"Autocropped to {image.size[0]}x{image.size[1]}.")
+
             image.save(output_path)
             print(f"Image saved to: {output_path}")
             return
