@@ -238,6 +238,7 @@ These are commonly overlooked and cause rejection:
 | Deep links / universal links | Are associated domains configured correctly? |
 | Push notification setup | If entitlement exists, is APNS certificate configured? |
 | Background modes | Are all declared background modes actually used and justified? |
+| Account deletion | If app has sign-in/account creation, is there an in-app account deletion flow? (5.1.1(v) — BLOCKER) |
 
 ### 1.7 Guideline Risk Detection
 
@@ -256,6 +257,7 @@ Scan the codebase and metadata for patterns that trigger rejection:
 | Incomplete or stub features | 2.1 — App Completeness |
 | Duplicate/copycat UI patterns | 4.3 — Spam |
 | Misleading UI (fake system dialogs) | 4.3 — Spam |
+| Sign-in exists without account deletion option | 5.1.1(v) — Account Deletion Required |
 
 ### Decision Gate
 

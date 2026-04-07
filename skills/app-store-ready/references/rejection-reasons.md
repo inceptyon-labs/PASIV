@@ -56,6 +56,16 @@ by how frequently they appear in developer reports and forums — not an officia
 - Sharing data with third parties without disclosure
 - Missing NSUsageDescription strings
 
+### 4b. Guideline 5.1.1(v) — Account Deletion Required
+**What**: App supports account creation but does not offer account deletion.
+**Signs**:
+- Sign-in / sign-up flow exists but no "Delete Account" option in settings
+- Account deletion only available via email, phone, or external website (without direct link)
+- "Deactivate" or "disable" offered instead of permanent deletion
+- Deletion option exists but doesn't actually remove user data
+- No confirmation step showing the user what data will be deleted
+**Resolution**: Add in-app account deletion that permanently removes the account and all associated data. Include a confirmation dialog. Apple may ask for a screen recording of the full flow.
+
 ### 5. Guideline 3.1.1 — In-App Purchase
 **What**: Digital goods sold outside Apple's IAP system.
 **Signs**:
@@ -221,6 +231,7 @@ Before every submission:
 - [ ] Review metadata for prohibited terms
 - [ ] Verify privacy labels match actual behavior
 - [ ] Test Sign in with Apple flow (if applicable)
+- [ ] Test account deletion flow end-to-end (if app supports account creation)
 - [ ] Test on oldest supported iOS version
 - [ ] Remove all debug/test code and logging
 - [ ] Verify push notifications work

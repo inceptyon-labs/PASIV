@@ -257,6 +257,15 @@ These are commonly overlooked and cause rejection or upload failure:
 - Must have a way to block users
 - Must comply with CSAM requirements
 
+### If you support account creation (Guideline 5.1.1(v))
+- **Account deletion is REQUIRED** — apps that support account creation must also offer account deletion
+- Deletion must be **in-app** — not just via email/phone (unless highly-regulated industry)
+- Only temporarily deactivating or disabling an account is **insufficient** — must be permanent deletion
+- If users must visit a website to finish deletion, include a **direct link** to that page
+- May include a confirmation step to prevent accidental deletion
+- Must delete all user data associated with the account (local + server-side + cloud)
+- Apple may request a **screen recording** demonstrating the full account deletion flow
+
 ### If you collect personal data
 - Must have a privacy policy accessible from the app
 - Must comply with applicable privacy laws (GDPR, CCPA, etc.)
