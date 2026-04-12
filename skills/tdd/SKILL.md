@@ -90,7 +90,7 @@ All tests must pass.
 
 ### Step 4: Return
 
-Return a summary of all cycles:
+Return a summary of all cycles. **CRITICAL**: End your return with the exact continuation marker shown below — the caller depends on this to resume its workflow.
 
 ```
 TDD Implementation Complete
@@ -101,6 +101,8 @@ Cycles:
 3. [test name] — GREEN ✓ (no refactor needed) COMMIT ✓
 
 All tests passing. [N] commits made.
+
+>>> CONTINUE KICK WORKFLOW — proceed to next implementation step or Step 3.25 (Format & Lint) if all steps done <<<
 ```
 
 ---
