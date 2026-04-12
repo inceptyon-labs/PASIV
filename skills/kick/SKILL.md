@@ -398,13 +398,21 @@ This is ONE skill call. Sonnet handles the entire implementation loop internally
 
 #### After `tdd` returns:
 
+**⚠ DO NOT STOP HERE. This is the most common workflow stall point. You MUST continue immediately. ⚠**
+
 ```
 TaskUpdate:
   taskId: [current-step-id]
   status: completed
 ```
 
-Run `TaskList` to show progress. CONTINUE to next implementation step, or Step 3.25 if all steps done.
+Run `TaskList` to show progress.
+
+**NEXT ACTION (mandatory, no user input needed):**
+- If more implementation steps remain → loop back to the next step's RED phase
+- If all implementation steps are done → proceed to **Step 3.25: Format & Lint**
+
+**You are NOT done. Steps 3.25 → 3.5 → 4 → 5 → 6 → 7 → 8 still remain.**
 
 ### TDD Violations - STOP
 
