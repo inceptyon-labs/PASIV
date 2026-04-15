@@ -47,7 +47,7 @@ Full flow for: $ARGUMENTS (issue number or "next")
 
 ## Step 0: Detect Task Backend + Get Issue Details
 
-### Detect Backend
+### Detect Backend + Workflow Config
 
 Read `.pasiv.yml` if it exists:
 ```bash
@@ -58,6 +58,15 @@ Read `.pasiv.yml` if it exists:
 - If TASK_BACKEND is "github": IDENTIFIER = issue number (e.g., 42)
 - If TASK_BACKEND is "beans": IDENTIFIER = bean ID (e.g., "beans-kp3h")
 - If TASK_BACKEND is "local": IDENTIFIER = local ID (e.g., "task-001")
+
+### Parse Workflow Config
+
+Read the `workflow:` section from `.pasiv.yml`. Store these flags (all default to `true` if missing):
+
+- **WORKFLOW_PLAN_APPROVAL** = `workflow.plan_approval` (default: true)
+- **WORKFLOW_TDD** = `workflow.tdd` (default: true)
+- **WORKFLOW_REVIEW** = `workflow.review` (default: true)
+- **WORKFLOW_VERIFICATION** = `workflow.verification` (default: true)
 
 ### Get Issue Details
 
@@ -275,6 +284,8 @@ ELSE (no security files):
 
 ### Ask for Approval + Review Tier
 
+#### If WORKFLOW_PLAN_APPROVAL is true:
+
 **Use AskUserQuestion tool** with TWO questions:
 
 **Question 1**: "Approve this implementation plan?"
@@ -294,6 +305,18 @@ ELSE (no security files):
 **If Approve**: Continue to Step 2.5 (Create Tasks)
 **If Revise**: Ask what to change, update plan, ask again
 **If Cancel**: Stop and explain why
+
+#### If WORKFLOW_PLAN_APPROVAL is false:
+
+Auto-approve the plan. Use the recommended review tier from the recommendation logic above. Display:
+```
+Plan auto-approved (workflow.plan_approval: false)
+Review tier: [RECOMMENDED_TIER] (auto-selected)
+```
+
+If WORKFLOW_REVIEW is also false, set REVIEW_TIER = "SKIP".
+
+Continue to Step 2.5.
 
 ---
 
@@ -360,7 +383,7 @@ Run `TaskList` to show the complete structure before starting implementation.
 
 ---
 
-## Step 3: Implement (TDD)
+## Step 3: Implement
 
 **Use Skill tool:** `git-ops` with args: `create-branch $ISSUE_NUM`
 
@@ -373,7 +396,9 @@ TaskUpdate:
   status: in_progress
 ```
 
-### TDD: Opus writes tests, Sonnet implements (ONE skill call per step)
+---
+
+### If WORKFLOW_TDD is true: TDD Implementation
 
 #### Phase 1: RED — Opus writes ALL tests for this step
 
@@ -396,7 +421,33 @@ Sonnet discovers all failing tests, then for EACH one: writes minimal implementa
 
 This is ONE skill call. Sonnet handles the entire implementation loop internally.
 
-#### After `tdd` returns:
+#### TDD Violations - STOP
+
+If you find yourself:
+- Writing code before tests → Delete code, write test first
+- Writing implementation code directly instead of invoking `tdd` → Delete code, use the Skill tool
+- Test passes immediately → Test doesn't test what you think, rewrite
+- Adding features beyond the test → Remove extras, stay minimal
+
+---
+
+### If WORKFLOW_TDD is false: Direct Implementation
+
+Implement the code directly for this step:
+
+1. Write the implementation code based on the plan
+2. Write tests after implementation (if test infrastructure exists)
+3. Run tests to verify:
+```bash
+npm test || pytest || go test ./... || cargo test || bun test
+```
+4. Commit via **Skill tool:** `git-ops` with args: `commit "feat: [description]"`
+
+No RED/GREEN/REFACTOR cycle. No Sonnet boundary enforcement. Opus implements directly.
+
+---
+
+#### After implementation (both paths):
 
 **⚠ DO NOT STOP HERE. This is the most common workflow stall point. You MUST continue immediately. ⚠**
 
@@ -409,18 +460,10 @@ TaskUpdate:
 Run `TaskList` to show progress.
 
 **NEXT ACTION (mandatory, no user input needed):**
-- If more implementation steps remain → loop back to the next step's RED phase
+- If more implementation steps remain → loop back to the next step
 - If all implementation steps are done → proceed to **Step 3.25: Format & Lint**
 
 **You are NOT done. Steps 3.25 → 3.5 → 4 → 5 → 6 → 7 → 8 still remain.**
-
-### TDD Violations - STOP
-
-If you find yourself:
-- Writing code before tests → Delete code, write test first
-- Writing implementation code directly instead of invoking `tdd` → Delete code, use the Skill tool
-- Test passes immediately → Test doesn't test what you think, rewrite
-- Adding features beyond the test → Remove extras, stay minimal
 
 ---
 
@@ -487,6 +530,19 @@ After successful fix:
 ---
 
 ## Step 4: Code Review (based on REVIEW_TIER)
+
+### If WORKFLOW_REVIEW is false (or REVIEW_TIER = "SKIP"):
+
+Skip code review entirely. Display:
+```
+Code review skipped (workflow.review: false)
+```
+
+Mark review task as completed and proceed to Step 5.
+
+---
+
+### If WORKFLOW_REVIEW is true:
 
 **Start of review:**
 ```
@@ -660,6 +716,19 @@ TaskUpdate:
 ---
 
 ## Step 6: Verification Gate
+
+### If WORKFLOW_VERIFICATION is false:
+
+Skip verification gate. Display:
+```
+Verification gate skipped (workflow.verification: false)
+```
+
+Mark verification task as completed and proceed to Step 6.5.
+
+---
+
+### If WORKFLOW_VERIFICATION is true:
 
 **Start verification:**
 ```
@@ -941,6 +1010,8 @@ Baseline test run will happen once before starting.
 
 ### Ask for Approval
 
+#### If WORKFLOW_PLAN_APPROVAL is true:
+
 **Use AskUserQuestion tool:**
 
 **Question**: "Approve implementation plan with these review tiers?"
@@ -959,6 +1030,17 @@ Baseline test run will happen once before starting.
 - Then proceed with autonomous run
 
 **If "Cancel":** Stop and explain why
+
+#### If WORKFLOW_PLAN_APPROVAL is false:
+
+Auto-approve with recommended review tiers. Display:
+```
+Plan auto-approved (workflow.plan_approval: false)
+```
+
+If WORKFLOW_REVIEW is also false, set all tiers to "SKIP".
+
+Store REVIEW_TIERS map and proceed to autonomous processing.
 
 ### Autonomous Task Processing
 
@@ -995,30 +1077,26 @@ If TASK_BACKEND is "github": **Use Skill tool:** `project-ops` with args: `move-
 
 **Step 2.5**: Create native tasks for implementation steps
 
-**Step 3**: Implement with TDD (REQUIRED)
-- RED → GREEN → REFACTOR → COMMIT cycle
-- Must follow TDD methodology
+**Step 3**: Implement
 - **Use Skill tool:** `git-ops` with args: `create-branch $TASK_NUM`
+- If WORKFLOW_TDD is true: RED → GREEN → REFACTOR → COMMIT cycle via `tdd` skill
+- If WORKFLOW_TDD is false: Implement directly, write tests after, commit
 
 **Step 3.25**: Format & Lint
 
 **Step 3.5**: Run tests
 - If tests fail, use systematic debugging
 
-**Step 4**: Code review (REQUIRED)
-- Use the pre-selected tier from REVIEW_TIERS[N]
-- S/O/SC/OC/SOC based on what was approved
-- Follow cascading review process
+**Step 4**: Code review
+- If WORKFLOW_REVIEW is false: Skip review
+- If WORKFLOW_REVIEW is true: Use the pre-selected tier from REVIEW_TIERS[N], follow cascading review process
 
 **Step 5**: Check off acceptance criteria
 **Use Skill tool:** `task-ops` with args: `check-off-criteria $TASK_IDENTIFIER`
 
-**Step 6**: Verification gate (REQUIRED)
-**Use Skill tool:** `verification`
-- Haiku runs all checks
-- Auto-fixes simple issues
-- Escalates to Opus if needed
-- Loops until all pass
+**Step 6**: Verification gate
+- If WORKFLOW_VERIFICATION is false: Skip verification
+- If WORKFLOW_VERIFICATION is true: **Use Skill tool:** `verification` (Haiku runs all checks, auto-fixes, escalates if needed)
 
 **Step 6.5**: Add completion summary
 **Use Skill tool:** `task-ops` with args: `add-completion-summary $TASK_IDENTIFIER ...`
