@@ -45,7 +45,41 @@ If GitHub was selected:
 - Yes (Recommended) — Auto-create project, track status
 - No — Issues only, no project board
 
-### 4. Run Init Script
+### 4. Workflow Options
+
+**Use AskUserQuestion tool:**
+
+**Question**: "Require plan approval before implementation?"
+- Yes (Recommended) — Pause for your approval before coding starts
+- No — Auto-approve plans, start coding immediately
+
+Store as PLAN_APPROVAL (true/false).
+
+**Use AskUserQuestion tool:**
+
+**Question**: "Use TDD (test-driven development)?"
+- Yes (Recommended) — Opus writes tests, Sonnet implements (RED → GREEN → REFACTOR)
+- No — Implement directly without the TDD cycle
+
+Store as TDD (true/false).
+
+**Use AskUserQuestion tool:**
+
+**Question**: "Run code review after implementation?"
+- Yes (Recommended) — Review with configurable tier (S/O/SC/OC/SOC)
+- No — Skip code review entirely
+
+Store as REVIEW (true/false).
+
+**Use AskUserQuestion tool:**
+
+**Question**: "Run verification gate before merge?"
+- Yes (Recommended) — Tests, build, lint, type-check must pass
+- No — Merge without verification
+
+Store as VERIFICATION (true/false).
+
+### 5. Run Init Script
 
 Find and run the PASIV init script. This creates directories, writes `.pasiv.yml`, and appends the full PASIV section to `CLAUDE.md`.
 
@@ -54,14 +88,18 @@ INIT_SCRIPT=$(find ~/.claude -name "init.sh" -path "*/pasiv/scripts/*" 2>/dev/nu
 echo "$INIT_SCRIPT"
 ```
 
-Then run it with the chosen backend and project board flag:
+Build the flags string from all choices:
 
-- If GitHub with project board: `bash "$INIT_SCRIPT" github --project-board`
-- If GitHub without project board: `bash "$INIT_SCRIPT" github --no-project-board`
-- If Beans: `bash "$INIT_SCRIPT" beans`
-- If Local: `bash "$INIT_SCRIPT" local`
+- Backend: `github`, `beans`, or `local`
+- If GitHub: add `--project-board` or `--no-project-board`
+- If PLAN_APPROVAL is false: add `--no-plan-approval`
+- If TDD is false: add `--no-tdd`
+- If REVIEW is false: add `--no-review`
+- If VERIFICATION is false: add `--no-verification`
 
-### 5. Design System Setup (if frontend)
+Example: `bash "$INIT_SCRIPT" beans --no-plan-approval --no-tdd`
+
+### 6. Design System Setup (if frontend)
 
 **Use AskUserQuestion tool:**
 
@@ -74,6 +112,6 @@ If Yes:
 - If missing: **Use Skill tool:** `interface-design:init`
 - If exists: display "Design system already configured."
 
-### 6. Done
+### 7. Done
 
 Display the output from the init script. Suggest adding `.pasiv.yml` to version control (it contains no secrets).
