@@ -63,7 +63,10 @@ Also scan `.env.example` and any committed config for values that look like real
 **Repo origin hint:**
 ```bash
 git config --get user.name && git config --get user.email && gh api user --jq .login 2>/dev/null
+gh api user/orgs --jq '.[].login' 2>/dev/null
 ```
+
+Capture both the personal login AND every org the user belongs to — you'll present these as pick-list options in Question 6 so the user doesn't have to hand-type an org slug.
 
 Store everything detected as a **repo-manifest** you'll reference through the rest of the skill.
 
@@ -108,8 +111,16 @@ Draft a one-line description (≤350 chars, GitHub's limit) from the scan. Prese
 - Generate with nano-banana
 - Skip
 
-**Question 6 — Repo owner + name:**
-Default from `gh api user` + directory name. Confirm or override.
+**Question 6 — Repo owner:**
+Build `AskUserQuestion` options from the origin-hint scan — one option per owner the user could realistically push to:
+- The user's personal login (from `gh api user`)
+- Each org from `gh api user/orgs` as its own option
+
+Present them as a pick-list rather than a free-text field. Hand-typing org slugs is the #1 cause of `CreateRepository` permission errors (e.g. `inception-labs` vs the user's actual org `inceptyon-labs`) — the error comes back as a GraphQL permissions denial that looks unrelated to the typo, so it's painful to debug.
+
+If the user has zero orgs, skip the question and default silently to the personal login. If they have exactly one org AND it matches a common signal in the repo (README mentions it, existing remotes, package.json author field, etc.), surface that org as the Recommended option; otherwise list personal first.
+
+The repo name defaults to the directory basename — confirm or override as a separate (simpler) question.
 
 **Question 7 — CI starter?**
 Only ask if no `.github/workflows/` exists AND the project has a detectable test command:
