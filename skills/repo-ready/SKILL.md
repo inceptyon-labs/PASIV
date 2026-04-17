@@ -127,6 +127,12 @@ Only ask if no `.github/workflows/` exists AND the project has a detectable test
 - Yes — generate a basic CI workflow (test + build on PR)
 - No
 
+**Question 8 — GitGuardian cloud scanning?** (optional; gitleaks hook + CI are installed automatically either way)
+- Yes — print GitGuardian enrollment instructions in Phase 6
+- No — skip (gitleaks alone is enough for solo/small projects)
+
+GitGuardian is a paid SaaS with a generous free tier (public repos + ≤25 devs). It adds continuous history scanning, Slack/email alerts, and a UI for triaging incidents. Overkill for solo; worth it for teams.
+
 ---
 
 ## Phase 4: Generate Artifacts
@@ -155,6 +161,15 @@ If no README exists, generate from the repo-manifest with all standard sections.
 ### 4c. CONTRIBUTING.md (if accepting contributions)
 
 Standard sections: Code of Conduct link, Development setup, Running tests, Commit style, PR process, Issue reporting.
+
+In the "Development setup" section, include a one-time hook activation step so contributors pick up the gitleaks pre-commit hook installed in 4k:
+
+```bash
+# After cloning, activate versioned git hooks (runs gitleaks on every commit).
+git config core.hooksPath .githooks
+```
+
+If no CONTRIBUTING.md is being written (contributions = No), add the same block to the README's "Development" or "Contributing" section instead — the hook is still installed either way.
 
 ### 4d. CODE_OF_CONDUCT.md (if accepting contributions)
 
@@ -231,6 +246,98 @@ Check the existing `.gitignore` for common omissions given the detected stack (e
 
 **Use Skill tool:** `nano-banana` with args describing the project, `--transparent` flag. Save to `assets/logo.png` or `.github/logo.png`. Reference from README.
 
+### 4k. Secret-scanning hook (always install)
+
+Defense-in-depth. Phase 2's scan catches what's *already* committed; this hook prevents *future* leaks. Always install — no question needed. The CONTRIBUTING.md step (4c) tells contributors to activate it once per clone.
+
+**`.githooks/pre-commit`** (must be `chmod +x` after writing):
+
+```bash
+#!/usr/bin/env bash
+# Blocks commits containing secrets (API keys, tokens, etc).
+# Uses gitleaks against staged changes only.
+
+set -e
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  cat >&2 <<'EOF'
+pre-commit: gitleaks not found.
+Install it:
+  macOS:   brew install gitleaks
+  Linux:   https://github.com/gitleaks/gitleaks/releases
+To bypass (NOT recommended): git commit --no-verify
+EOF
+  exit 1
+fi
+
+gitleaks protect --staged --redact --verbose --config "$(git rev-parse --show-toplevel)/.gitleaks.toml" || {
+  cat >&2 <<'EOF'
+
+pre-commit: secrets detected in staged changes (see output above).
+- If false positive, add to .gitleaks.toml [allowlist].
+- If real, REMOVE the secret, rotate the credential, and restage.
+- To bypass (NOT recommended): git commit --no-verify
+EOF
+  exit 1
+}
+```
+
+**`.gitleaks.toml`** — extends default rules with sensible allowlists:
+
+```toml
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-safe paths and placeholder values"
+
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''(^|/)README\.md$''',
+  '''(^|/)docs/''',
+]
+
+regexes = [
+  '''YOUR_[A-Z_]+_KEY''',
+  '''YOUR_[A-Z_]+_API_KEY''',
+  '''AIza[A-Za-z0-9_-]{0,5}EXAMPLE''',
+]
+```
+
+**Do NOT run `git config core.hooksPath .githooks` on behalf of the user.** It's a per-clone setting stored in `.git/config`, not versioned. The CONTRIBUTING.md / README setup step handles this for contributors.
+
+### 4l. Secret-scanning CI (backstop)
+
+Install `.github/workflows/gitleaks.yml` whenever any `.github/workflows/` directory is being created. This catches contributors who bypassed the local hook (`--no-verify`) or never ran the `hooksPath` setup.
+
+**`.github/workflows/gitleaks.yml`**:
+
+```yaml
+name: gitleaks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  scan:
+    name: scan for secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so PRs scan every commit
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITLEAKS_LICENSE not required for personal accounts or public repos.
+          # For private org repos with >25 committers, add a free license key
+          # from https://gitleaks.io as a repo secret named GITLEAKS_LICENSE.
+```
+
+If the chosen repo owner (Question 6) is an org AND visibility (Question 2) is Private, surface the license caveat in Phase 5's final review so the user isn't surprised by a CI failure.
+
 ---
 
 ## Phase 5: Final Review
@@ -247,9 +354,13 @@ Wrote:
   .github/ISSUE_TEMPLATE/bug_report.md
   .github/PULL_REQUEST_TEMPLATE.md
   .github/workflows/ci.yml
+  .github/workflows/gitleaks.yml
+  .githooks/pre-commit (+x)
+  .gitleaks.toml
 Modified:
   README.md (added badges, logo, license section)
   .gitignore (added .env, .DS_Store)
+  CONTRIBUTING.md (added hooksPath activation step)
 Skipped:
   (none)
 ```
@@ -282,6 +393,19 @@ If topics were inferred from the stack (e.g., `react`, `fastify`, `postgres`, `d
 gh repo edit <owner>/<name> --add-topic <t1>,<t2>,<t3>
 ```
 
+**If Question 8 was answered Yes (GitGuardian)**, append:
+
+```
+GitGuardian enrollment (optional cloud scanning):
+  1. Sign up at https://dashboard.gitguardian.com/auth/signup
+  2. VCS Integrations → GitHub → connect your account (or org)
+  3. Enable monitoring on <owner>/<name> after the repo is created
+  4. (Optional) Install the GitGuardian GitHub App for PR-level inline comments
+
+Free tier covers public repos and private repos with ≤25 developers.
+Complements gitleaks — same detection philosophy, adds cloud history + alerts.
+```
+
 End with: "Review the artifacts, then run the commands above when you're ready."
 
 ---
@@ -293,6 +417,8 @@ End with: "Review the artifacts, then run the commands above when you're ready."
 - Push to remote
 - Commit changes (user decides when to commit)
 - Overwrite existing files without confirmation
+- Run `git config core.hooksPath .githooks` (per-clone setting — contributors do this themselves per the CONTRIBUTING.md setup step)
+- Enroll in or call GitGuardian's API (prints enrollment steps only)
 
 If the user asks to commit + push after review, they should do it themselves or invoke `/acp`.
 
