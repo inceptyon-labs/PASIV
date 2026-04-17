@@ -158,7 +158,40 @@ Standard sections: Code of Conduct link, Development setup, Running tests, Commi
 
 ### 4d. CODE_OF_CONDUCT.md (if accepting contributions)
 
-Use the Contributor Covenant 2.1 template with maintainer email from `git config user.email` (confirm).
+**Do NOT generate the full Contributor Covenant text verbatim.** The canonical Covenant 2.1 enumerates harassment categories (sexual language, slurs, threats of violence) that Anthropic's output-safety filter frequently flags mid-stream, causing the request to fail with `invalid_request_error: Output blocked by content filtering policy`. The skill then halts partway through writing artifacts — a bad UX that's confusing to debug.
+
+Instead, write a **short linking CODE_OF_CONDUCT.md** that:
+
+1. States the project adopts the Contributor Covenant 2.1 by reference
+2. Links to the canonical text at `https://www.contributor-covenant.org/version/2/1/code_of_conduct/`
+3. Includes the maintainer reporting email (from `git config user.email`, confirm if ambiguous)
+4. Summarizes the enforcement ladder in one line — do NOT reproduce the full behavioral examples
+
+This is the conventional approach for mature projects (React, Kubernetes, Rust) — they adopt by reference rather than vendoring the full text. It avoids the filter issue, stays current if the Covenant is revised, and reduces maintenance.
+
+Template:
+
+```markdown
+# Code of Conduct
+
+This project adopts the **[Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)** as its Code of Conduct.
+
+By participating in this project, you agree to abide by its terms.
+
+## Reporting
+
+Violations may be reported to the project maintainers at **{email}**. All reports will be reviewed and investigated promptly and fairly. Maintainers are obligated to respect the privacy and security of the reporter.
+
+## Enforcement
+
+Enforcement follows the Covenant's standard four-tier ladder (Correction → Warning → Temporary Ban → Permanent Ban). See the [full text]({covenant-url}) for details.
+
+## Attribution
+
+Adapted from the [Contributor Covenant](https://www.contributor-covenant.org), version 2.1.
+```
+
+If the user specifically requests the full vendored text, generate it with a warning that the request may fail and need a retry.
 
 ### 4e. SECURITY.md
 
@@ -272,3 +305,4 @@ If the user asks to commit + push after review, they should do it themselves or 
 - **Secrets are a hard stop.** If committed secrets are found, halt and report. No exceptions.
 - **Print, don't execute, shared-state commands.** `gh repo create` and `git push` are the user's call.
 - **Match the project's voice.** If the existing README is terse, stay terse. If it has ASCII diagrams and personality, match that energy.
+- **Link, don't vendor, filter-prone boilerplate.** The Contributor Covenant, long security disclosure templates, and anything that enumerates slurs/harassment categories verbatim can trip Anthropic's output-safety classifier mid-generation. Prefer short "adopted by reference" documents that link to the canonical source (see 4d). If the user insists on vendoring, warn them it may require a retry.
