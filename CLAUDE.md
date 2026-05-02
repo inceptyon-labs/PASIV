@@ -1,12 +1,12 @@
-# PASIV
+@AGENTS.md
 
-## Issue Type Hierarchy
+---
 
-| Level | Type | Scope | Example |
-|-------|------|-------|---------|
-| Epic | Strategic | Multiple features, spans weeks/months | "User Authentication System" |
-| Feature | Tactical | Single capability, spans days/week | "OAuth Login" |
-| Task | Execution | Single work item, hours | "Create OAuth callback endpoint" |
+# Claude-specific additions
+
+## Task Backend Setup
+
+Run `/pasiv init` to configure, or create `.pasiv.yml` manually. Default: github.
 
 ## Commands
 
@@ -35,14 +35,6 @@
 | Existing issue | `/kick 42` | → full implementation flow |
 | End of session | `/handoff` | → context preserved for next session |
 | New project | `/pasiv init` | → .pasiv.yml created |
-
-## Task Backend
-
-Run `/pasiv init` to configure, or create `.pasiv.yml` manually. Default: github.
-
-- **github** — GitHub Issues + Project boards. Best for team collaboration.
-- **beans** — Flat-file `.beans/` directory. Agent-native, version-controlled. Requires `beans` CLI.
-- **local** — Markdown files in `docs/tasks/`. Zero external dependencies.
 
 ## Methodology
 
