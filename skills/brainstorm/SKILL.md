@@ -1,6 +1,6 @@
 ---
 name: brainstorm
-description: Socratic design refinement before coding. Use when user has a vague idea, unclear requirements, or a half-baked plan that needs stress-testing. Outputs a validated design document.
+description: Socratic design refinement before coding. Use for vague ideas or half-baked plans needing stress-testing. Outputs a validated design doc.
 model: opus
 allowed-tools:
   - Read

@@ -1,6 +1,6 @@
 ---
 name: task-ops
-description: Task backend router. Reads .pasiv.yml and routes to github (issue-ops), beans (beans-ops), or local (local-ops) backend. Use instead of issue-ops for all task CRUD.
+description: Task backend router. Reads .pasiv.yml, routes to github / beans / local. Use instead of issue-ops for task CRUD.
 model: haiku
 context: fork
 allowed-tools:

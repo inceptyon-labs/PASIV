@@ -1,6 +1,6 @@
 ---
 name: repo-ready
-description: Prepare a project for its first push to GitHub. Generates repo description, README polish, LICENSE, CONTRIBUTING, SECURITY, CHANGELOG, .github templates, and scans for committed secrets. Use when user says "repo ready", "prep for github", "first push", "get this ready to publish", or is about to create a new repo.
+description: Prep a project for first GitHub push - README, LICENSE, CONTRIBUTING, SECURITY, CHANGELOG, .github templates, secret scan. Use for "repo ready", "prep for github", "first push".
 model: sonnet
 allowed-tools:
   - Bash

@@ -1,6 +1,6 @@
 ---
 name: pasiv-init
-description: Interactive PASIV setup. Creates .pasiv.yml with user preferences. Use when user says "pasiv init", "setup pasiv", or "configure pasiv".
+description: Interactive PASIV setup. Creates .pasiv.yml. Use for "pasiv init", "setup pasiv", "configure pasiv".
 model: sonnet
 allowed-tools:
   - Bash

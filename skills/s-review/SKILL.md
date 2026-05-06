@@ -1,6 +1,6 @@
 ---
 name: s-review
-description: Run S (Sonnet) single-pass review. Use when user says "s review", "quick review", "sonnet review", or wants fast feedback on trivial changes.
+description: S (Sonnet) single-pass review. Use for "s review", "quick review", "sonnet review", or fast feedback on trivial changes.
 model: sonnet
 context: fork
 user-invocable: true

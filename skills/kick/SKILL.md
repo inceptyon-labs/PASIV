@@ -1,6 +1,6 @@
 ---
 name: kick
-description: Full implementation flow - plan, implement, review, merge. Use when user says "kick issue", "kick #42", "work on issue", "implement issue", or wants to fully implement and merge a GitHub issue. Named after the "kick" in Inception that brings you from dream to reality.
+description: Full implementation flow - plan → TDD → review → merge a GitHub issue. Use for "kick 42", "kick next", "work on issue", "implement issue". Inception "kick".
 model: opus
 allowed-tools:
   - Bash

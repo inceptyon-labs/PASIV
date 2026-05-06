@@ -1,6 +1,6 @@
 ---
 name: soc-review
-description: Run SOC (Sonnet → Opus → Codex) cascading review pipeline. Use when user says "soc review", "full review", "3pass review", or wants comprehensive multi-model feedback.
+description: SOC (Sonnet → Opus → Codex) cascading review. Use for "soc review", "full review", "3pass review", or comprehensive multi-model feedback.
 context: fork
 user-invocable: true
 allowed-tools:

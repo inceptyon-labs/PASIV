@@ -1,14 +1,6 @@
 ---
 name: app-store-ready
-description: >
-  Comprehensive Apple App Store submission validator, ASO engine, and optimization consultant.
-  Use when user says "app store ready", "asr", "submission check", "app store validation",
-  "aso", "app store optimization", "ready for review", "submit to app store", "app store review",
-  "check my app", "pre-submission", or wants to validate assets, metadata, screenshots, keywords,
-  or compliance before submitting to App Store Connect. Also triggers for competitor analysis,
-  keyword research, screenshot optimization, or App Store rejection risk assessment.
-  Even if the user just mentions "submitting" or "App Store" in the context of preparing an app,
-  use this skill.
+description: Apple App Store submission validator and ASO/keyword optimizer. Use for "app store ready", "asr", "submission check", "aso", "ready for review", validating screenshots/metadata/keywords, or assessing rejection risk before submitting.
 model: opus
 user-invocable: true
 allowed-tools:
