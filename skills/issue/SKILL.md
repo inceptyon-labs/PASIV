@@ -1,6 +1,6 @@
 ---
 name: issue
-description: Create a GitHub issue with size estimate and labels. Use when user says "create issue", "add issue", "new issue", "create ticket", "add task", or wants to track a single piece of work.
+description: Create a GitHub issue with size estimate and labels. Use for "create issue", "new issue", "add ticket", "add task", or any single trackable work item.
 model: haiku
 allowed-tools:
   - Bash

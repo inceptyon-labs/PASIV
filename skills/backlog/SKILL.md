@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: Parse a spec or document and create issues from it. Use when user says "create issues from", "parse spec", "create backlog", "create issues for implementing", or wants to generate multiple issues from a specification, design doc, or requirements file.
+description: Parse a spec/design doc and create issues from it. Use for "create issues from", "parse spec", "create backlog", or generating multiple issues from a requirements file.
 model: opus
 allowed-tools:
   - Bash

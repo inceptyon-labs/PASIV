@@ -1,6 +1,6 @@
 ---
 name: tdd
-description: Test-Driven Development implementation. Sonnet implements all failing tests written by Opus, committing after each. Called ONCE per implementation step by /kick.
+description: TDD implementation. Sonnet writes code against failing tests authored by Opus, commits after each. Called once per impl step by /kick.
 model: sonnet
 allowed-tools:
   - Bash

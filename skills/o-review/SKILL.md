@@ -1,6 +1,6 @@
 ---
 name: o-review
-description: Run O (Opus) single-pass review. Use when user says "o review", "opus review", or wants thorough single-pass review for simple features.
+description: O (Opus) single-pass review. Use for "o review", "opus review", or thorough single-pass review of simple features.
 model: opus
 context: fork
 user-invocable: true

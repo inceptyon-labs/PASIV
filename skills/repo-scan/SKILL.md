@@ -1,6 +1,6 @@
 ---
 name: repo-scan
-description: Security scan a repo for vulnerabilities, obfuscated code, malicious calls, malware, and supply chain risks. Use when user says "repo scan", "repo-scan", "security scan", "audit repo", or wants to vet a forked/cloned repo.
+description: Security-vet a repo for vulnerabilities, obfuscated code, malware, supply-chain risk. Use for "repo scan", "security scan", "audit repo", or vetting a forked/cloned repo.
 model: opus
 user-invocable: true
 allowed-tools:

@@ -1,6 +1,6 @@
 ---
 name: parent
-description: Create a Feature (parent issue) with Task sub-issues. Use when user says "create parent issue", "break down feature", "create feature with subtasks", or wants to implement a multi-part feature with sub-issues.
+description: Create a Feature (parent issue) with Task sub-issues. Use for "create parent issue", "break down feature", or implementing a multi-part feature with subtasks.
 model: sonnet
 allowed-tools:
   - Bash

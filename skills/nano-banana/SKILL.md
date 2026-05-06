@@ -1,6 +1,6 @@
 ---
 name: nano-banana
-description: Nano Banana image generation skill. Also known as "nano banana", "nano-banana", "nano banana pro", "nano-banana-pro", "banana". Use this skill when the user asks to "generate an image", "create an image", "make an image", "generate images", "nano banana", "use nano banana", or requests icons/logos/graphics with transparency. Generates images using Google's Gemini models (Nano Banana = Gemini 2.5 Flash, Nano Banana 2 = Gemini 3.1 Flash, Nano Banana Pro = Gemini 3 Pro). Invoke for ANY image generation request. When the image needs transparency (icons, logos, overlays, alpha channel, transparent background, background removal), use the --transparent flag.
+description: Image generation via Google Gemini (Nano Banana / Banana 2 / Banana Pro). Use for "generate/create/make an image", "nano banana", icons, logos, graphics. Add `--transparent` for alpha-channel output (icons, overlays, bg removal).
 ---
 
 # Image Generation with Transparency Support
