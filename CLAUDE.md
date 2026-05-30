@@ -24,6 +24,7 @@ Run `/pasiv init` to configure, or create `.pasiv.yml` manually. Default: github
 | `/s-review` .. `/soc-review` | Code review at tiers S, O, SC, OC, or SOC |
 | `/codex-review` | Standalone Codex review |
 | `/repo-scan` | Security scan a repo for vulnerabilities and secrets |
+| `/de-vibe` | Strip AI tells - de-slop docs, gitignore AI configs, drop restate-comments, scrub commit trailers |
 
 ## Workflow
 
@@ -69,6 +70,7 @@ skills/
 ├── soc-review/SKILL.md
 ├── codex-review/SKILL.md
 ├── repo-scan/SKILL.md          # /repo-scan (security)
+├── de-vibe/SKILL.md            # /de-vibe (strip AI tells)
 │
 ├── using-pasiv/SKILL.md        # Skill awareness (session start)
 ├── tdd/SKILL.md                # TDD methodology (internal)
