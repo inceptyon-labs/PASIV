@@ -14,7 +14,7 @@ allowed-tools:
 
 # Finish
 
-Finalize a task whose verification gate has passed. Inputs from `/kick`: `$ISSUE_NUM`, `$IDENTIFIER`, `$ISSUE_TITLE`, `TASK_BACKEND`, `PARENT_IDENTIFIER` (if any), project vars (github backend).
+Finalize a task whose verification gate has passed. Inputs from `/kick`: `$IDENTIFIER`, `$ISSUE_TITLE`, `TASK_BACKEND`, `PARENT_IDENTIFIER` (if any), and github project vars (`PROJECT_ID`/`PROJECT_NUM`/`OWNER`/`ISSUE_URL`).
 
 ## Step 1: Completion summary (parent tasks only)
 
@@ -69,7 +69,7 @@ If this task has a parent:
 ```
 ## Done
 
-Issue #$ISSUE_NUM merged to main.
+Issue $IDENTIFIER merged to main.
 Review: [TIER] · Verification: ✓ · Commit: [short SHA]
 
 Next up: [next priority issue, or "No open issues"] — run /kick next
