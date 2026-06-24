@@ -50,7 +50,16 @@ review:
     deep:     [{ engine: claude, model: sonnet }, { engine: claude, model: opus }, { engine: codex }]
 ```
 
-> Phase 3 adds engine **adapters** so the same profile runs with Claude-as-reviewer under a Codex host. Today `engine: claude` = subagent dispatch; `engine: codex` = the codex MCP.
+## Engines — host-aware dispatch
+
+A pass names an `engine`; how that engine is invoked depends on the **host** PASIV is running under. Detect the host once: `$CLAUDECODE` set → **Claude Code**; `$CODEX_*` (e.g. `$CODEX_SANDBOX`) set → **Codex**; else fall back to whichever CLI is on `PATH`.
+
+| `engine` | under Claude Code | under Codex |
+|----------|-------------------|-------------|
+| `claude` | **Task subagent** at `model` — in-process, native | shell **`claude -p`** with brief+diff — external reviewer |
+| `codex` | **`mcp__my-codex-mcp__codex`** MCP (CLI fallback: `codex exec`) | **native** — Codex reviews directly (it is the running agent) |
+
+The brief and the severity rules are identical across transports — only delivery changes. So **one profile runs both directions**: under Codex, `engine: claude` makes Claude the reviewer; under Claude Code, `engine: codex` makes Codex the reviewer.
 
 ## Skip path
 
@@ -61,12 +70,10 @@ If the resolved profile is `none`/empty, or `WORKFLOW_REVIEW` is false → displ
 If from /kick, mark the review task `in_progress`. Reviews are **cascading** — fresh diff before each pass so it sees prior fixes:
 
 ```bash
-BASE_SHA=$(git rev-parse main)
-HEAD_SHA=$(git rev-parse HEAD)
-git diff main
+BASE_SHA=$(git rev-parse main); HEAD_SHA=$(git rev-parse HEAD); git diff main
 ```
 
-**`engine: claude` pass (`sonnet`/`opus`):** dispatch a reviewer subagent with the Task tool at that `model`, handing it the diff + this brief:
+Build the review **brief** once, then deliver it via the pass's engine adapter (Engines table):
 
 ```
 Independent code review of the diff below (BASE <BASE_SHA> → HEAD <HEAD_SHA>).
@@ -74,15 +81,14 @@ What it should do: <issue title / acceptance criteria>.
 Look for: correctness bugs, security (injection/auth/XSS/secrets), missing error handling,
 test gaps, and over-engineering (code that stdlib/native/an existing helper already covers).
 Classify each finding: blocker | important | nit. Return findings only — no preamble.
-
-<diff>
 ```
 
-**`engine: codex` pass:** call `mcp__my-codex-mcp__codex` with `code` = the fresh diff, `prompt` = "Independent review — catch what earlier passes missed: subtle bugs, security edge cases, test gaps. Classify blocker/important/nit.", `context` = "Pass N of <profile>; issues prior passes missed." (Codex MCP times out on large inputs — chunk a big diff.)
+- **claude transport** — subagent (Claude Code) or `claude -p "<brief>\n\n<diff>"` (Codex): pass the brief + diff.
+- **codex transport** — MCP `codex` (Claude Code) with `code`=diff / `prompt`=brief / `context`="pass N of <profile>"; or native review (Codex). Codex MCP/CLI times out on large inputs — chunk a big diff.
 
-**After each pass:** fix every **blocker** and **important** finding (TDD — write the failing test first if missing), then:
+**After each pass:** fix every **blocker** and **important** finding (TDD — failing test first if missing), then:
 
-**Use Skill tool:** `git-ops` with args: `commit "fix: address <pass> review findings"`
+**Use Skill tool:** `git-ops` with args: `commit "fix: address <engine> review findings"`
 
 Note nits, don't block on them. Push back (with evidence) if a finding is wrong. Proceed to the next pass.
 
