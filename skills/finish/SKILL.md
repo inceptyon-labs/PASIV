@@ -70,7 +70,7 @@ If this task has a parent:
 ## Done
 
 Issue $IDENTIFIER merged to main.
-Review: [TIER] · Verification: ✓ · Commit: [short SHA]
+Review: [REVIEW_PROFILE] · Verification: ✓ · Commit: [short SHA]
 
 Next up: [next priority issue, or "No open issues"] — run /kick next
 ```
