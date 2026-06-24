@@ -50,7 +50,7 @@ Create missing labels before use:
 [ -f .pasiv.yml ] && cat .pasiv.yml || echo "missing"
 ```
 
-Store TASK_BACKEND (default: "github").
+Store TASK_BACKEND (default: "local").
 
 2. **Ensure labels exist** (github backend):
 

@@ -102,7 +102,7 @@ PASIV supports pluggable task backends. Choose the one that fits your workflow:
 | **Beans** | Solo devs, agent-native, version-controlled | `.beans/` flat files | `beans` CLI |
 | **Local Markdown** | Zero dependencies, simple projects | `docs/tasks/` files | None |
 
-No `.pasiv.yml` defaults to GitHub Issues (backward compatible).
+No `.pasiv.yml` defaults to Local Markdown (zero-dependency). GitHub and Beans are opt-in via `/pasiv init` or `.pasiv.yml`.
 
 ## Issue Type Hierarchy
 
@@ -459,7 +459,7 @@ PASIV integrates with [interface-design](https://github.com/Dammyjay93/interface
 Task backend configuration:
 
 ```yaml
-# GitHub (default)
+# GitHub
 task_backend: github
 github:
   project_board: true
@@ -470,7 +470,7 @@ beans:
   path: .beans
   prefix: beans-
 
-# Local
+# Local (default)
 task_backend: local
 local:
   path: docs/tasks

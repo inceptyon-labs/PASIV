@@ -31,9 +31,9 @@ If `.pasiv.yml` exists:
 **Use AskUserQuestion tool:**
 
 **Question**: "Where do you want to track tasks?"
-- GitHub Issues (Recommended) — Team collaboration, CI integration, project boards
+- Local Markdown (Recommended) — Zero dependencies, files in `docs/tasks/`
 - Beans — Flat-file, version-controlled, agent-native (requires `beans` CLI)
-- Local Markdown — Zero dependencies, files in `docs/tasks/`
+- GitHub Issues — Team collaboration, CI integration, project boards
 
 ### 3. GitHub Project Board (if GitHub backend)
 

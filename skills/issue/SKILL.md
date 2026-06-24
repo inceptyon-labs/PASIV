@@ -36,7 +36,7 @@ Create a GitHub issue from a short description: $ARGUMENTS
 [ -f .pasiv.yml ] && cat .pasiv.yml || echo "missing"
 ```
 
-Store TASK_BACKEND (default: "github").
+Store TASK_BACKEND (default: "local").
 
 2. **Verify scope is Task-level**:
    - S (1-4h): Single file/component change → **Task**
