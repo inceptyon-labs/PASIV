@@ -91,3 +91,4 @@ Issue: #{number} - {title} (if applicable)
 - Be specific with file paths — relative to project root.
 - "Exact Numbers & Metrics" should be copy-pasted, not paraphrased.
 - "What NOT to Re-Read" saves the next session from re-processing large files already summarized.
+- Companion, not a substitute: handoff captures *this task's* state for resuming. If the session involved corrections, new preferences, or a reusable workflow, suggest `/reflect` to persist those *cross-session* learnings to memory — different target, deliberate trigger. Don't run it automatically.
