@@ -17,7 +17,7 @@ allowed-tools:
 
 # Plan
 
-Produce a plan a fresh implementer can execute with zero prior context, then create native tasks that carry it. Inputs from `/kick`: `$ISSUE_NUM`, issue details, the parsed `WORKFLOW_*` config, and any loaded handoff.
+Produce a plan a fresh implementer can execute with zero prior context, then create native tasks that carry it. Inputs from `/kick`: `$IDENTIFIER`, issue details, the parsed `WORKFLOW_*` config, and any loaded handoff.
 
 ## Step 1: Understand before planning
 

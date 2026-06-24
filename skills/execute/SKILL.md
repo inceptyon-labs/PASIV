@@ -23,11 +23,11 @@ Implement the plan's tasks. **You (Opus) are the coordinator** — you write the
 
 This is what keeps the whole session inside standard 200k context — no inline accumulation, no metered 1M. (See `docs/reference/model-optimization.md`.)
 
-Inputs from `/kick`: `$ISSUE_NUM`, the `WORKFLOW_*` config, and the native tasks created by `plan`.
+Inputs from `/kick`: `$IDENTIFIER`, the `WORKFLOW_*` config, and the native tasks created by `plan`.
 
 ## Step 0: Branch
 
-**Use Skill tool:** `git-ops` with args: `create-branch $ISSUE_NUM`
+**Use Skill tool:** `git-ops` with args: `create-branch $IDENTIFIER`
 
 ## Per implementation task
 

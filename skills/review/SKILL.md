@@ -18,7 +18,7 @@ allowed-tools:
 
 Run `REVIEW_TIER` over the branch diff. Each pass is dispatched with **crafted context + a SHA range**, never your session history — this keeps your coordinator context lean and makes the model boundary real (a "Sonnet pass" actually runs on Sonnet).
 
-Inputs from `/kick`: `REVIEW_TIER`, `WORKFLOW_REVIEW`, `$ISSUE_NUM`, the review task id.
+Inputs from `/kick`: `REVIEW_TIER`, `WORKFLOW_REVIEW`, `$IDENTIFIER`, the review task id.
 
 ## Skip path
 
