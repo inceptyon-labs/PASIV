@@ -125,6 +125,7 @@ No `.pasiv.yml` defaults to Local Markdown (zero-dependency). GitHub and Beans a
 | `/kick 42` | - | Full implementation flow for a specific task |
 | `/kick next` | - | Work on highest priority ready task |
 | `/handoff` | Handoff doc | Save session context for next session |
+| `/reflect` | Memory / feedback | Persist durable facts, corrections, and reusable workflows from the session |
 | `/repo-scan` | Report | Security scan for vulnerabilities, malware, secrets |
 | `/review [profile]` | - | Review the diff at a depth — `quick`/`standard`/`deep`/`codex` (or legacy `S`/`O`/`SC`/`OC`/`SOC`) |
 
@@ -587,6 +588,7 @@ skills/
 │
 ├── handoff/SKILL.md            # /handoff (Fischer)
 ├── handoff-ops/SKILL.md        # Handoff file management (Haiku)
+├── reflect/SKILL.md            # /reflect (persist learnings to memory/skills)
 │
 ├── repo-scan/SKILL.md          # /repo-scan (security scanning)
 │

@@ -20,6 +20,7 @@ Run `/pasiv init` to configure, or create `.pasiv.yml` manually. Default: local 
 | `/kick 42` | Plan → TDD → Review → Verify → Merge |
 | `/kick next` | Work on highest priority open issue |
 | `/handoff` | Write structured session handoff for context preservation |
+| `/reflect` | Persist durable facts, corrections, and reusable workflows from the session |
 | `/pasiv init` | Interactive setup wizard for task backend and config |
 | `/review [profile]` | Review the diff at a depth — quick/standard/deep/codex (or legacy S/O/SC/OC/SOC) |
 | `/repo-scan` | Security scan a repo for vulnerabilities and secrets |
@@ -59,6 +60,7 @@ skills/
 ├── parent/SKILL.md             # /parent
 ├── backlog/SKILL.md            # /backlog
 ├── handoff/SKILL.md            # /handoff (session context)
+├── reflect/SKILL.md            # /reflect (persist learnings)
 ├── pasiv-init/SKILL.md         # /pasiv init (setup wizard)
 │
 │   # /kick flow — thin router + on-demand step-skills
