@@ -31,6 +31,24 @@ Simple operations run on Haiku in forked contexts to save tokens.
 
 Smart escalation: verification starts with Haiku for simple fixes, escalates to Opus only when needed for complex debugging.
 
+## Model Tiers (optional routing)
+
+`plan` tags each implementation task with a `modelTier` in its `json:metadata`. By default the implementer runs on Sonnet. Add a `model_routing` section to `.pasiv.yml` to map tiers → models **per host**, and `execute` resolves the implementer model from the in-progress task's tier:
+
+```yaml
+model_routing:
+  mechanical: { claude: haiku,  codex: <mini model> }   # 1–2 files, complete spec
+  standard:   { claude: sonnet, codex: <full model> }   # multi-file, integration
+  frontier:   { claude: opus,   codex: <full model> }   # design judgment
+```
+
+- Host detected via `$CLAUDECODE` / `$CODEX_*` (same signal `review` uses).
+- **Absent → behavior unchanged** (Sonnet GREEN). Dormant by default.
+- Codex model IDs are whatever your Codex host exposes.
+- A BLOCKED implementer bumps one tier up and re-resolves — never silently down.
+
+This lets a well-specified mechanical task run on **Haiku** (cheaper than the flat Sonnet) and keeps a plan portable across hosts. Reviews are **not** tier-routed — the review profile already names each pass's model.
+
 ## 1M Context Gotcha (subscription cost)
 
 The 1M context window is a **session-level beta** (`claude-opus-4-8[1m]`), negotiated when the session connects — it cannot be passed per-message or stripped per-dispatch. A subagent dispatched from a 1M parent **inherits the 1M tier but not the `/extra-usage` entitlement** for its own model. So when `execute` (Opus) dispatches its Sonnet implementer subagent under a 1M session, that worker can fail with `Extra usage is required for 1M context` or meter outside your subscription. There is no per-subagent opt-out (filed and closed not-planned).
