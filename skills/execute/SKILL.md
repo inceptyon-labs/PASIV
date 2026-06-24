@@ -39,7 +39,7 @@ Loop over the plan's implementation tasks in dependency order.
 TaskUpdate: { taskId: <id>, status: in_progress }
 ```
 
-`TaskGet` the task and parse its `json:metadata` fence → `files`, `acceptanceCriteria`, `verifyCommand`.
+`TaskGet` the task and parse its `json:metadata` fence → `files`, `acceptanceCriteria`, `verifyCommand`, `modelTier`.
 
 **2. RED — you write the failing tests (Opus, in-context)**
 
@@ -47,9 +47,13 @@ For each acceptance criterion, write a test covering the behavior, edges, and bo
 
 If `WORKFLOW_TDD` is false: skip RED; the subagent implements to the AC and adds tests after.
 
-**3. GREEN — dispatch a fresh implementer subagent (Sonnet)**
+**3. GREEN — dispatch a fresh implementer subagent**
 
-**Use the Task tool** with `model: sonnet`, passing the prompt below filled in. Do NOT make the subagent read the plan file — hand it everything:
+Resolve the implementer model from the task's `modelTier`:
+- `.pasiv.yml` has a `model_routing` section → `model = model_routing[modelTier][host]`, where host is `claude` (`$CLAUDECODE` set) or `codex` (`$CODEX_*` set). E.g. `mechanical` → Haiku on Claude.
+- No `model_routing` (default) → **Sonnet**.
+
+**Use the Task tool** at the resolved `model`, passing the prompt below filled in. Do NOT make the subagent read the plan file — hand it everything:
 
 ```
 You are implementing one task. Make the failing tests pass with the least code that works.
@@ -75,7 +79,7 @@ Report back ONLY: a status line — DONE | DONE_WITH_CONCERNS | BLOCKED — then
 
 - **DONE** → mark the task completed.
 - **DONE_WITH_CONCERNS** → read the concerns. Correctness/scope concern → address before continuing; observation → note and continue.
-- **BLOCKED** → assess: missing context → re-dispatch with it; needs more reasoning → re-dispatch one tier up (Opus); task too large → split; plan wrong → escalate to the user. Never re-dispatch the same model with no change.
+- **BLOCKED** → assess: missing context → re-dispatch with it; needs more reasoning → bump `modelTier` one step (mechanical→standard→frontier), re-resolve the model, re-dispatch; task too large → split; plan wrong → escalate to the user. Never re-dispatch the same model with no change.
 
 Never write the production code yourself — that pollutes your context and defeats the isolation. Your job is RED + coordination.
 

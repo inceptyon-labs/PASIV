@@ -124,9 +124,14 @@ For each plan task, `TaskCreate` with the **full** Goal/Files/Acceptance Criteri
 
 ````
 ```json:metadata
-{"files": ["src/x.ts","tests/x.test.ts"], "verifyCommand": "npm test x", "acceptanceCriteria": ["criterion 1"]}
+{"files": ["src/x.ts","tests/x.test.ts"], "verifyCommand": "npm test x", "acceptanceCriteria": ["criterion 1"], "modelTier": "mechanical"}
 ```
 ````
+
+**Set `modelTier` per task** — drives the implementer model when `.pasiv.yml` has a `model_routing` section, ignored otherwise:
+- `mechanical` — 1–2 files, complete spec with the failing test, no design judgment (most well-specified tasks)
+- `standard` — multi-file coordination, integration, pattern-matching, debugging
+- `frontier` — design judgment, architecture, broad codebase understanding
 
 Then create a **Review** task (`Review: [REVIEW_PROFILE]`) and a **Verification Gate** task. Set dependencies: each step blocks the next; review blockedBy all steps; verification blockedBy review. Run `TaskList` to show the structure.
 

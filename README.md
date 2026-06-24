@@ -513,6 +513,8 @@ The flow runs on **Opus** as a lean coordinator that dispatches **Sonnet** subag
 
 **Split-model TDD**: the `execute` coordinator (Opus) writes RED tests; a fresh Sonnet implementer subagent does GREEN in an isolated context — so the whole session stays in standard 200k.
 
+**Optional tier routing**: `plan` tags tasks `mechanical`/`standard`/`frontier`; map them to per-host models in `.pasiv.yml` `model_routing` (e.g. mechanical → Haiku) and `execute` picks the cheapest-capable model per task. Dormant by default. See `docs/reference/model-optimization.md`.
+
 **Smart escalation**: Verification starts with Haiku for simple fixes, escalates to Opus only when needed.
 
 ---
