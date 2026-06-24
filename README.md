@@ -632,6 +632,9 @@ docs/
 ## Acknowledgments
 
 - Development methodology (TDD cycle, verification gates, systematic debugging) and brainstorming flow inspired by [superpowers](https://github.com/obra/superpowers)
+- Subagent-driven execution, native-task, and model-tier routing patterns inspired by the Claude Code fork [pcvelz/superpowers](https://github.com/pcvelz/superpowers)
+- The `grill-me` interview pattern (recommend-an-answer, codebase-first) and handoff refinements (reference-don't-duplicate, suggested-skills) inspired by [mattpocock/skills](https://github.com/mattpocock/skills) by [@mattpocock](https://github.com/mattpocock)
+- Over-engineering "ladder" (YAGNI, stdlib/native-first, no unrequested abstractions) for planning and implementation inspired by [ponytail](https://github.com/DietrichGebert/ponytail) by [@DietrichGebert](https://github.com/DietrichGebert)
 - Session handoff pattern and per-project CLAUDE.md structure inspired by [Claude Context OS](https://github.com/Arkya-AI/claude-context-os)
 - Beans flat-file task backend powered by [beans](https://github.com/hmans/beans) by [@hmans](https://github.com/hmans)
 - Design system integration powered by [interface-design](https://github.com/Dammyjay93/interface-design) by [@Dammyjay93](https://github.com/Dammyjay93)
