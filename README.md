@@ -126,12 +126,7 @@ No `.pasiv.yml` defaults to GitHub Issues (backward compatible).
 | `/kick next` | - | Work on highest priority ready task |
 | `/handoff` | Handoff doc | Save session context for next session |
 | `/repo-scan` | Report | Security scan for vulnerabilities, malware, secrets |
-| `/s-review` | - | S (Sonnet) - trivial changes |
-| `/o-review` | - | O (Opus) - simple features |
-| `/sc-review` | - | SC (Sonnet → Codex) - moderate, budget |
-| `/oc-review` | - | OC (Opus → Codex) - complex, quality |
-| `/soc-review` | - | SOC (Sonnet → Opus → Codex) - security-critical |
-| `/codex-review` | - | Standalone Codex review |
+| `/review [profile]` | - | Review the diff at a depth — `quick`/`standard`/`deep`/`codex` (or legacy `S`/`O`/`SC`/`OC`/`SOC`) |
 
 ## Workflow Patterns
 
@@ -235,25 +230,25 @@ Socratic design refinement - turn vague ideas into validated designs before writ
 6. Move to **In Progress**
 7. **Load design system** (if `area:frontend` or `area:mobile`)
 8. Create plan → **select review depth** → wait for approval
-9. **TDD implementation** (Opus writes tests, Sonnet writes code)
+9. **Implementation** (Opus writes RED tests in-context; a fresh Sonnet implementer subagent does GREEN — keeps the coordinator lean)
 10. Run tests (systematic debugging if failures)
-11. **Code review** (S/O/SC/OC/SOC based on selection)
+11. **Code review** (review profile, based on selection)
 12. **Verification gate** (Haiku fixes simple issues, escalates complex to Opus)
 13. Check off acceptance criteria
 14. **Write handoff** (if parent issue with remaining tasks)
 15. Merge to main, move to **Done**, close task
 
-### Review Tier Selection
+### Review Profile Selection
 
-During plan approval, select review tier with smart recommendations based on size and security:
+During plan approval, select a review profile with smart recommendations based on size and security:
 
-| Tier | Models | When Recommended |
-|------|--------|------------------|
-| **S** | Sonnet | `size:XS`, trivial |
-| **O** | Opus | `size:S`, simple features |
-| **SC** | Sonnet → Codex | `size:M`, moderate |
-| **OC** | Opus → Codex | `size:L`, complex |
-| **SOC** | Sonnet → Opus → Codex | `size:XL`, security-critical |
+| Profile | Passes | When Recommended |
+|---------|--------|------------------|
+| `quick` | Sonnet | `size:XS`, trivial |
+| `standard` | Opus → Codex | most changes (default) |
+| `deep` | Sonnet → Opus → Codex | `size:XL`, security-critical |
+
+Configurable in `.pasiv.yml`; legacy `S`/`O`/`SC`/`OC`/`SOC` work as aliases. See `docs/reference/review-profiles.md`.
 
 ### Split-Model TDD
 
@@ -271,7 +266,7 @@ RED (Opus) → GREEN (Sonnet) → REFACTOR (Sonnet) → COMMIT → repeat
 | **GREEN** (write code) | Sonnet | Code is constrained by the test. Cheaper model follows the spec. |
 | **REFACTOR** | Sonnet | Clean up while tests stay green. |
 
-This is enforced by skill frontmatter: `kick` runs on Opus (writes tests), `tdd` runs on Sonnet (writes code). Opus must invoke the `tdd` skill for GREEN/REFACTOR — writing production code directly is a TDD violation.
+This is enforced by context isolation: the `execute` coordinator (Opus) writes the RED tests in-context, then dispatches a fresh Sonnet implementer subagent for GREEN/REFACTOR/COMMIT. The noisy edit-test-iterate loop runs in the subagent's window, so the coordinator stays lean (standard 200k) and the Sonnet workers stay on subscription.
 
 ### Baseline Test Run
 
@@ -416,29 +411,18 @@ Generates a report in `docs/scans/` with a verdict: **PASS**, **CAUTION**, or **
 
 ---
 
-## Review Tiers
+## Review Profiles
 
-| Tier | Name | Models | Cost | When to Use |
-|------|------|--------|------|-------------|
-| 1 | S | Sonnet | $ | Typos, config, trivial fixes |
-| 2 | O | Opus | $$ | Simple features, clear scope |
-| 3 | SC | Sonnet → Codex | $$ | Moderate changes, budget-conscious |
-| 4 | OC | Opus → Codex | $$$ | Complex features, quality focus |
-| 5 | SOC | Sonnet → Opus → Codex | $$$$ | Security-critical, large refactors |
+Reviews run as **profiles** — an ordered chain of passes resolved by the `review` skill:
 
-All multi-pass reviews are **cascading** — each pass reviews cumulative changes including previous fixes.
+| Profile | Passes | When |
+|---------|--------|------|
+| `none` | — | skip |
+| `quick` | Sonnet | trivial |
+| `standard` | Opus → Codex | most changes (default) |
+| `deep` | Sonnet → Opus → Codex | security-critical / large |
 
-### Recommendation Matrix
-
-| Size | Default | If Security Files Detected |
-|------|---------|----------------------------|
-| `size:XS` | S | O |
-| `size:S` | O | SC |
-| `size:M` | SC | OC |
-| `size:L` | OC | SOC |
-| `size:XL` | SOC | SOC |
-
-**Security files**: `auth`, `crypto`, `payment`, `token`, `secret`, `password`, `session`, `oauth`, `jwt`, `key`, `credential`
+Passes are **cascading** (each sees prior fixes) and **host-aware** — a Claude subagent or the Codex MCP under Claude Code; `claude -p` (Claude-as-reviewer) or native under a Codex host. Configurable in `.pasiv.yml`; legacy `S`/`O`/`SC`/`OC`/`SOC` work as aliases. Standalone: `/review [profile]`. Full matrix, schema, and adapters: `docs/reference/review-profiles.md`.
 
 ---
 
@@ -508,10 +492,15 @@ This keeps PASIV context per-project. Projects without the PASIV section in `CLA
 
 > *"I bought the airline."*
 
-Simple operations run on **Haiku** (cheap) in forked contexts to save tokens:
+The flow runs on **Opus** as a lean coordinator that dispatches **Sonnet** subagents for the heavy work; helper operations run on **Haiku** in forked contexts:
 
 | Skill | Model | Operations |
 |-------|-------|------------|
+| `kick` | Opus | orchestrator/router — setup + sequence the flow |
+| `plan` | Opus | plan + native tasks (writing-plans rigor, ladder, gap check) |
+| `execute` | Opus (coord) | writes RED in-context; dispatches a Sonnet implementer subagent for GREEN |
+| `review` | Opus (coord) | per-pass reviewer-subagent / codex dispatch by profile |
+| `finish` | Opus | completion summary, handoff, merge, close |
 | `git-ops` | Haiku | branch, commit, push, merge |
 | `task-ops` | Haiku | route to backend (issue-ops, beans-ops, local-ops) |
 | `issue-ops` | Haiku | GitHub issue CRUD |
@@ -521,10 +510,8 @@ Simple operations run on **Haiku** (cheap) in forked contexts to save tokens:
 | `test-runner` | Haiku | run tests, parse results, report |
 | `handoff-ops` | Haiku | read/archive handoff files |
 | `verification` | Haiku → Opus | simple fixes (Haiku), complex debugging (Opus) |
-| `kick` | Opus | orchestration, test writing (RED phase) |
-| `tdd` | Sonnet | production code writing (GREEN/REFACTOR) |
 
-**Split-model TDD**: Opus writes tests (the spec), Sonnet writes code (constrained by the test).
+**Split-model TDD**: the `execute` coordinator (Opus) writes RED tests; a fresh Sonnet implementer subagent does GREEN in an isolated context — so the whole session stays in standard 200k.
 
 **Smart escalation**: Verification starts with Haiku for simple fixes, escalates to Opus only when needed.
 
@@ -587,23 +574,21 @@ skills/
 ├── brainstorm/SKILL.md         # /brainstorm (Dreamer)
 ├── issue/SKILL.md              # /issue (Forger)
 ├── parent/SKILL.md             # /parent (Forger)
-├── kick/SKILL.md               # /kick (Extractor)
 ├── backlog/SKILL.md            # /backlog (Architect)
+│
+│   # /kick flow — thin router + on-demand step-skills (Extractor)
+├── kick/SKILL.md               # orchestrator/router (Opus)
+├── plan/SKILL.md               # plan + native tasks (Opus)
+├── execute/SKILL.md            # RED in-context → Sonnet implementer subagent for GREEN (Opus coord)
+├── review/SKILL.md             # /review — profile-driven, host-aware (Opus coord)
+├── finish/SKILL.md             # merge / handoff / close (Opus)
 │
 ├── handoff/SKILL.md            # /handoff (Fischer)
 ├── handoff-ops/SKILL.md        # Handoff file management (Haiku)
 │
-├── s-review/SKILL.md           # /s-review (Sonnet)
-├── o-review/SKILL.md           # /o-review (Opus)
-├── sc-review/SKILL.md          # /sc-review (Sonnet → Codex)
-├── oc-review/SKILL.md          # /oc-review (Opus → Codex)
-├── soc-review/SKILL.md         # /soc-review (Sonnet → Opus → Codex)
-├── codex-review/SKILL.md       # /codex-review (standalone)
-│
 ├── repo-scan/SKILL.md          # /repo-scan (security scanning)
 │
 ├── using-pasiv/SKILL.md        # Skill awareness guide
-├── tdd/SKILL.md                # TDD methodology (Sonnet - GREEN/REFACTOR)
 ├── verification/SKILL.md       # Verification gate (Haiku → Opus)
 ├── systematic-debugging/SKILL.md # Debug methodology (Opus)
 │
@@ -617,7 +602,7 @@ skills/
 
 docs/
 ├── reference/                  # On-demand reference docs (loaded by skills)
-│   ├── review-tiers.md
+│   ├── review-profiles.md
 │   ├── methodology.md
 │   ├── design-system.md
 │   ├── labels.md

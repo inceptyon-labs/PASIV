@@ -21,8 +21,7 @@ Run `/pasiv init` to configure, or create `.pasiv.yml` manually. Default: github
 | `/kick next` | Work on highest priority open issue |
 | `/handoff` | Write structured session handoff for context preservation |
 | `/pasiv init` | Interactive setup wizard for task backend and config |
-| `/s-review` .. `/soc-review` | Code review at tiers S, O, SC, OC, or SOC |
-| `/codex-review` | Standalone Codex review |
+| `/review [profile]` | Review the diff at a depth — quick/standard/deep/codex (or legacy S/O/SC/OC/SOC) |
 | `/repo-scan` | Security scan a repo for vulnerabilities and secrets |
 | `/de-vibe` | Strip AI tells - de-slop docs, gitignore AI configs, drop restate-comments, scrub commit trailers |
 
@@ -39,11 +38,11 @@ Run `/pasiv init` to configure, or create `.pasiv.yml` manually. Default: github
 
 ## Methodology
 
-TDD enforced in `/kick`: RED → GREEN → REFACTOR → COMMIT. Opus writes tests (the spec), Sonnet writes code (constrained by the test). No production code without a failing test first.
+TDD enforced in `/kick`: RED → GREEN → REFACTOR → COMMIT. The `execute` coordinator (Opus) writes RED tests in-context; a fresh Sonnet implementer subagent does GREEN (constrained by the test) in an isolated context — keeping the session in standard 200k. No production code without a failing test first.
 
 Verification gate runs before every merge. Tests, build, lint, and type-check must pass with fresh evidence. No "should work" claims.
 
-Review tiers scale with change size and security sensitivity. Five tiers from S (Sonnet, trivial) to SOC (Sonnet → Opus → Codex, security-critical). Each pass in multi-pass reviews sees cumulative changes.
+Review runs as profiles (`quick`/`standard`/`deep`, configurable in `.pasiv.yml`) scaled to change size and security sensitivity; legacy S/O/SC/OC/SOC are aliases. Passes are cascading (each sees cumulative changes) and host-aware (Claude or Codex as the reviewer).
 
 Present your implementation plan before coding. After 3 failed fix attempts, stop and reassess architecture.
 
@@ -58,22 +57,21 @@ skills/
 ├── brainstorm/SKILL.md         # /brainstorm (ideation)
 ├── issue/SKILL.md              # /issue
 ├── parent/SKILL.md             # /parent
-├── kick/SKILL.md               # /kick (full flow)
 ├── backlog/SKILL.md            # /backlog
 ├── handoff/SKILL.md            # /handoff (session context)
 ├── pasiv-init/SKILL.md         # /pasiv init (setup wizard)
 │
-├── s-review/SKILL.md           # Review tiers
-├── o-review/SKILL.md
-├── sc-review/SKILL.md
-├── oc-review/SKILL.md
-├── soc-review/SKILL.md
-├── codex-review/SKILL.md
+│   # /kick flow — thin router + on-demand step-skills
+├── kick/SKILL.md               # orchestrator/router
+├── plan/SKILL.md               # plan + native tasks
+├── execute/SKILL.md            # RED in-context → Sonnet subagent GREEN
+├── review/SKILL.md             # /review — profile-driven, host-aware
+├── finish/SKILL.md             # merge / handoff / close
+│
 ├── repo-scan/SKILL.md          # /repo-scan (security)
 ├── de-vibe/SKILL.md            # /de-vibe (strip AI tells)
 │
 ├── using-pasiv/SKILL.md        # Skill awareness (session start)
-├── tdd/SKILL.md                # TDD methodology (internal)
 ├── verification/SKILL.md       # Verification gate (internal)
 ├── systematic-debugging/SKILL.md
 │
@@ -100,7 +98,7 @@ Detailed docs loaded on demand by skills — see `docs/reference/`:
 
 | File | Content |
 |------|---------|
-| `review-tiers.md` | Tier table, recommendation matrix, security file patterns |
+| `review-profiles.md` | Profiles, recommendation matrix, engine adapters, security patterns |
 | `methodology.md` | TDD cycle, verification gate, systematic debugging |
 | `design-system.md` | interface-design integration for UI work |
 | `labels.md` | Label definitions and colors |

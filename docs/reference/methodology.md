@@ -15,25 +15,25 @@ This ensures you are not blamed for pre-existing test failures.
 
 ## TDD Cycle (Split-Model)
 
-Enforced in `/kick`: Opus writes tests, Sonnet implements. One skill boundary per step.
+Enforced in `/kick`'s `execute` step: the Opus coordinator writes tests, a Sonnet implementer subagent makes them pass. Context isolation per task.
 
 | Phase | Model | What Happens |
 |-------|-------|-------------|
-| RED | Opus (kick) | Writes ALL failing tests for the implementation step |
-| GREEN + REFACTOR + COMMIT | Sonnet (tdd) | Implements each test, refactors, commits — loops internally |
+| RED | Opus (`execute` coordinator) | Writes ALL failing tests for the task, in-context |
+| GREEN + REFACTOR + COMMIT | Sonnet (implementer subagent) | Implements each test, refactors, commits — in an isolated window |
 
-1. **RED (Opus)**: Write all failing tests for this step's acceptance criteria
+1. **RED (Opus)**: Write all failing tests for this task's acceptance criteria
 2. **Verify**: Tests fail for the right reason (missing feature, not syntax error)
-3. **Invoke `tdd` ONCE (Sonnet)**: Sonnet loops through each failing test — GREEN → REFACTOR → COMMIT per test
-4. **Continue (Opus)**: After `tdd` returns, proceed to next step
+3. **Dispatch the implementer subagent (Sonnet)**: it loops each failing test — GREEN → REFACTOR → COMMIT — in its own context, then returns a short status
+4. **Continue (Opus)**: absorb the status, move to the next task
 
-No production code without a failing test first. The better model writes tests because the test IS the spec — a bad test is invisible while bad code gets caught immediately.
+No production code without a failing test first. The better model writes tests because the test IS the spec — a bad test is invisible while bad code gets caught immediately. The noisy edit-test-iterate loop lives in the subagent's window, keeping the coordinator lean (standard 200k).
 
 ### TDD Violations
 
 If you find yourself:
 - Writing code before tests → delete code, write test first
-- Writing implementation code directly instead of invoking `tdd` → delete code, use the Skill tool
+- Writing production code in the coordinator instead of dispatching the implementer subagent → delete code, dispatch it
 - Test passes immediately → test does not test what you think, rewrite
 - Adding features beyond the test → remove extras, stay minimal
 
