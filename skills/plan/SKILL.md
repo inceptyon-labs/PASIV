@@ -108,6 +108,8 @@ SECURITY_PATTERNS="auth|crypto|password|payment|token|secret|credential|session|
 
 (Tiers are the current S/O/SC/OC/SOC chains; phase 2 turns these into `.pasiv.yml` review profiles.)
 
+**If `PLAN_PREAPPROVED` is set** (autonomous parent flow) — skip every question, use the `REVIEW_TIER` the router already set, display the plan briefly, go to Step 6.
+
 **If `WORKFLOW_PLAN_APPROVAL` is true** — AskUserQuestion, two questions:
 1. "Approve this implementation plan?" → Approve / Revise / Cancel
 2. "What review tier?" → S / O / SC / OC / SOC (mark the recommended one "(Recommended)", flag "[security]" where applicable)
