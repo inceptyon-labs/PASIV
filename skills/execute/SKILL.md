@@ -87,6 +87,16 @@ TaskUpdate: { taskId: <id>, status: completed }
 
 Run `TaskList`. More tasks → loop. All done → continue below. **Do not stop to check in between tasks** — execute the plan through.
 
+## Bounded Parallel Dispatch (optimization)
+
+The per-task loop above is the default. When the plan's next tasks are **independent**, dispatch their implementer subagents concurrently to cut wall-clock — but only when all of these hold:
+
+- **Disjoint files** — the tasks' `files` metadata (from `plan`) share no path. The `files` list IS the test; no overlap means no write conflict.
+- **No dependency** — neither task is in the other's `blockedBy` chain.
+- **Worktree isolation** — dispatch each with the Task tool's `isolation: "worktree"` so parallel writers don't collide (it auto-cleans if untouched).
+
+Mark every parallel task `in_progress` before dispatching. You still write each task's RED, and each still gets its own review as it completes. When overlap is uncertain, **serialize** — parallelism is the optimization, not the baseline. Never two writers on one file.
+
 ## After all tasks: Format & Lint
 
 Run the project's formatter, then linter. If anything changed:
