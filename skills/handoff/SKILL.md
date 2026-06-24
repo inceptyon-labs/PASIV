@@ -14,6 +14,10 @@ user-invocable: true
 
 Write a structured handoff file to preserve context for the next session.
 
+**Input:** `$ARGUMENTS` — optional description of what the next session will focus on; tailor the handoff to it.
+
+**Capture only what the next session can't reconstruct from the repo.** Reference artifacts — plans, diffs, issues, designs — by **path or URL; don't duplicate** their content. **Redact** any secrets, tokens, or PII.
+
 ## Steps
 
 1. **Determine the topic**: Use the current issue title, feature name, or ask the user if unclear.
@@ -73,6 +77,9 @@ Issue: #{number} - {title} (if applicable)
 ## Next Steps (ordered)
 1. {First thing to do next session}
 2. {Second thing}
+
+## Suggested Skills
+- {Skills the next session should invoke — e.g. pasiv:kick, pasiv:plan, pasiv:review}
 
 ## Files to Load Next Session
 - {Explicit list of files the next session should read}

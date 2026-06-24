@@ -76,6 +76,16 @@ Setup project:
 
 Read the spec file (and plan.md if exists).
 
+## Step 1.5: Gap Pre-Flight (before decomposing)
+
+Before mapping the spec to issues, scan for ambiguities that would decompose into vague tasks. For each real gap, surface it with a **recommended default** — don't decompose blind, don't stall:
+
+> "The spec doesn't specify X. I'll assume Y unless you say otherwise."
+
+Recommend an answer to every gap; the user confirms or redirects in one pass. If a gap is answerable by reading the codebase or the design doc, resolve it there — don't ask. Keep this **fast**: surface only the few gaps that would actually produce vague tasks, not a full interview (that's `/brainstorm`'s job).
+
+Record the resolved decisions — they become each issue's context and the eventual plan's `User decisions (already made)` header, so `/kick` doesn't re-ask.
+
 ## Step 2: Analyze & Map to Hierarchy
 
 Break down the spec using the Issue Type Hierarchy:
@@ -202,5 +212,5 @@ Report:
 - Total Epics/Features/Tasks created
 - Project URL
 - Suggested implementation order
-- Any spec gaps or questions
+- Any residual gaps (most resolved in the Step 1.5 pre-flight)
 - Links to all items
