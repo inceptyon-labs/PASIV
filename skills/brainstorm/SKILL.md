@@ -43,6 +43,11 @@ Refine ideas into validated designs through Socratic dialogue.
 
 **One question at a time.** Do not overwhelm with multiple questions.
 
+**Three rules (the grill-me interview):**
+- **Recommend an answer to every question** — state the option you'd pick and why. The user confirms or redirects; they don't generate from scratch. Keeps momentum.
+- **Codebase-first** — if a question is answerable by reading the code, read it instead of spending the user's turn.
+- **Walk the decision tree** — resolve dependencies one at a time; later questions build on earlier answers. Stop when core purpose, constraints, success criteria, and scope are nailed.
+
 ### Question Types
 
 **Clarifying questions** - Fill in gaps:
@@ -212,6 +217,10 @@ docs/designs/YYYY-MM-DD-<feature-name>.md
 
 ## Open Questions
 [any unresolved items - should be minimal]
+
+## Key Decisions
+[Decisions resolved during brainstorming, quotable — these seed the plan's `User decisions (already made)` header so `/kick`'s plan step doesn't re-ask]
+- [decision]: [what + why]
 
 ## Next Steps
 - [ ] Create issues with `/backlog docs/designs/YYYY-MM-DD-<feature-name>.md`
