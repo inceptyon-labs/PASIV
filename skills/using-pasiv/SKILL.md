@@ -65,7 +65,7 @@ When to use EnterPlanMode: only for ad-hoc work that does not fit any PASIV skil
 
 ## Task Backend
 
-PASIV supports pluggable task backends configured via `.pasiv.yml` in target project root. Default: github (backward compatible). Run `/pasiv init` to configure.
+PASIV supports pluggable task backends configured via `.pasiv.yml` in target project root. Default: local (zero-dependency); github/beans are opt-in. Run `/pasiv init` to configure.
 
 ## Decision Flow
 

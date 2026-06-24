@@ -6,7 +6,7 @@
 
 ## Task Backend Setup
 
-Run `/pasiv init` to configure, or create `.pasiv.yml` manually. Default: github.
+Run `/pasiv init` to configure, or create `.pasiv.yml` manually. Default: local (github/beans opt-in).
 
 ## Commands
 

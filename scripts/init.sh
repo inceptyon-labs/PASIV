@@ -5,7 +5,7 @@ set -euo pipefail
 # Usage: init.sh <backend> [--project-board] [--no-project-board]
 # Backends: github, beans, local
 
-BACKEND="${1:-github}"
+BACKEND="${1:-local}"
 PROJECT_BOARD="true"
 
 for arg in "$@"; do

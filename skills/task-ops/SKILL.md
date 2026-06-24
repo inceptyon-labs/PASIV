@@ -23,7 +23,7 @@ Read `.pasiv.yml` if it exists to determine the task backend:
 [ -f .pasiv.yml ] && cat .pasiv.yml || echo "missing"
 ```
 
-- If file missing or `task_backend` not set: default to `github`
+- If file missing or `task_backend` not set: default to `local` (zero-dependency; github/beans are opt-in via `.pasiv.yml`)
 - Extract `task_backend` value: `github`, `beans`, or `local`
 
 ## Step 2: Route to Backend

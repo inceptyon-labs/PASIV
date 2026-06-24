@@ -26,7 +26,7 @@ Each step-skill shares this session's context (`IDENTIFIER`, `WORKFLOW_*`, `REVI
 ## Step 0: Detect backend + workflow config + issue
 
 Read `.pasiv.yml` (`[ -f .pasiv.yml ] && cat .pasiv.yml || echo missing`):
-- `TASK_BACKEND` = github | beans | local (default github). `IDENTIFIER` is the issue number / bean ID / local ID.
+- `TASK_BACKEND` = github | beans | local (default local). `IDENTIFIER` is the issue number / bean ID / local ID.
 - Workflow flags from `workflow:` (all default **true**): `WORKFLOW_PLAN_APPROVAL`, `WORKFLOW_TDD`, `WORKFLOW_REVIEW`, `WORKFLOW_VERIFICATION`.
 
 Get the issue. If the argument is `next` → **Skill:** `task-ops` `get-next` → `IDENTIFIER`. Then **Skill:** `task-ops` `get $IDENTIFIER` → store `IDENTIFIER`, `ISSUE_TITLE`, `ISSUE_BODY`, `ISSUE_LABELS` (github backend: also `ISSUE_URL`, used by the project-board moves in Steps 1.5 and `finish`).
