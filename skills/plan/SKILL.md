@@ -90,9 +90,9 @@ Then one block per task:
 
 Save to `docs/plans/YYYY-MM-DD-<issue-slug>.md`.
 
-## Step 5: Approval + review tier
+## Step 5: Approval + review profile
 
-Recommend a review tier from size + security signal:
+Recommend a review profile from size + security signal (values below are profile aliases resolved by the `review` skill):
 
 ```bash
 SECURITY_PATTERNS="auth|crypto|password|payment|token|secret|credential|session|login|oauth|jwt|apikey|private|key"
@@ -106,17 +106,17 @@ SECURITY_PATTERNS="auth|crypto|password|payment|token|secret|credential|session|
 | L  | OC | SOC [security] |
 | XL | SOC | SOC [security] |
 
-(Tiers are the current S/O/SC/OC/SOC chains; phase 2 turns these into `.pasiv.yml` review profiles.)
+(`S/O/SC/OC/SOC` are recognized profile aliases; the named profiles `quick`/`standard`/`deep` and any `.pasiv.yml` `review.profiles` also work. See the `review` skill.)
 
-**If `PLAN_PREAPPROVED` is set** (autonomous parent flow) — skip every question, use the `REVIEW_TIER` the router already set, display the plan briefly, go to Step 6.
+**If `PLAN_PREAPPROVED` is set** (autonomous parent flow) — skip every question, use the `REVIEW_PROFILE` the router already set, display the plan briefly, go to Step 6.
 
 **If `WORKFLOW_PLAN_APPROVAL` is true** — AskUserQuestion, two questions:
 1. "Approve this implementation plan?" → Approve / Revise / Cancel
-2. "What review tier?" → S / O / SC / OC / SOC (mark the recommended one "(Recommended)", flag "[security]" where applicable)
+2. "What review profile?" → the recommended one + alternatives (S/O/SC/OC/SOC or a named profile; mark the recommended "(Recommended)", flag "[security]" where applicable)
 
-Store `REVIEW_TIER`. Approve → Step 6. Revise → ask, update plan, re-ask. Cancel → stop, explain.
+Store `REVIEW_PROFILE`. Approve → Step 6. Revise → ask, update plan, re-ask. Cancel → stop, explain.
 
-**If `WORKFLOW_PLAN_APPROVAL` is false** — auto-approve, use the recommended tier, display it. If `WORKFLOW_REVIEW` is also false, set `REVIEW_TIER = "SKIP"`. Continue.
+**If `WORKFLOW_PLAN_APPROVAL` is false** — auto-approve, use the recommended profile, display it. If `WORKFLOW_REVIEW` is also false, set `REVIEW_PROFILE = "none"`. Continue.
 
 ## Step 6: Create native tasks
 
@@ -128,7 +128,7 @@ For each plan task, `TaskCreate` with the **full** Goal/Files/Acceptance Criteri
 ```
 ````
 
-Then create a **Review** task (`Review: [REVIEW_TIER]`) and a **Verification Gate** task. Set dependencies: each step blocks the next; review blockedBy all steps; verification blockedBy review. Run `TaskList` to show the structure.
+Then create a **Review** task (`Review: [REVIEW_PROFILE]`) and a **Verification Gate** task. Set dependencies: each step blocks the next; review blockedBy all steps; verification blockedBy review. Run `TaskList` to show the structure.
 
 ## Step 7: Self-review (yourself, not a subagent)
 

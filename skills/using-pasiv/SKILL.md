@@ -46,12 +46,7 @@ When to use EnterPlanMode: only for ad-hoc work that does not fit any PASIV skil
 ### Code Review
 | Skill | When to Use |
 |-------|-------------|
-| `/s-review` | S (Sonnet) — trivial changes |
-| `/o-review` | O (Opus) — simple features |
-| `/sc-review` | SC (Sonnet → Codex) — moderate, budget |
-| `/oc-review` | OC (Opus → Codex) — complex, quality |
-| `/soc-review` | SOC (Sonnet → Opus → Codex) — security-critical |
-| `/codex-review` | Standalone Codex review |
+| `/review [profile]` | Review the branch diff at a chosen depth — `quick` / `standard` / `deep` / `codex`, or legacy `S`/`O`/`SC`/`OC`/`SOC`. Profiles are configurable in `.pasiv.yml`. |
 
 ### Context Management
 | Skill | When to Use |
@@ -83,7 +78,7 @@ Is this about creating issues? → /issue, /parent, or /backlog
     ↓
 Is this about implementing an issue? → /kick
     ↓
-Is this a standalone review? → /s-review .. /soc-review
+Is this a standalone review? → /review [profile]
     ↓
 Is this about scanning a repo? → /repo-scan
     ↓
