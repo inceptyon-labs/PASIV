@@ -31,6 +31,9 @@ if [ -f "package.json" ]; then
     npm test
   elif command -v bun &> /dev/null; then
     bun test
+  else
+    echo "❌ No test framework detected"
+    exit 1
   fi
 elif [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
   pytest
@@ -38,8 +41,10 @@ elif [ -f "go.mod" ]; then
   go test ./...
 elif [ -f "Cargo.toml" ]; then
   cargo test
-elif [ -f "build.gradle" ] || [ -f "pom.xml" ]; then
-  ./gradlew test || mvn test
+elif [ -f "build.gradle" ]; then
+  ./gradlew test
+elif [ -f "pom.xml" ]; then
+  mvn test
 else
   echo "❌ No test framework detected"
   exit 1
