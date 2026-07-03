@@ -34,6 +34,7 @@ A profile is an ordered list of passes; each pass is an `engine` plus (for claud
    | `none` | — (skip) | |
    | `quick` | claude:sonnet | trivial diffs — one cheap pass |
    | `standard` | claude:opus → codex | cross-family diversity |
+   | `fast` | claude:opus ∥ codex (concurrent) | same diversity, one round of wall-clock — trades the cascade (pass 2 seeing pass 1's fixes) for speed |
    | `deep` | claude:opus → codex → claude:opus | final pass re-checks the cumulative fixes from both prior rounds |
    | `codex` | codex | codex-only |
 
@@ -90,7 +91,16 @@ Classify each finding: blocker | important | nit. Return findings only — no pr
 - **claude transport** — subagent (Claude Code) or `claude -p "<brief>\n\n<diff>"` (Codex): pass the brief + diff.
 - **codex transport** — MCP `codex` (Claude Code) with `code`=diff / `prompt`=brief / `context`="pass N of <profile>"; or native review (Codex). Codex MCP/CLI times out on large inputs — chunk a big diff.
 
-**After each pass:** fix every **blocker** and **important** finding (TDD — failing test first if missing), then:
+**Concurrent group (`fast`, or a `parallel:` list in a custom profile):** both reviewers get the **same** BASE/HEAD and diff. Under Claude Code, dispatch the claude subagent with `run_in_background: true`, run the codex MCP call while it works, then join. Merge the findings, dedupe (same file:line + same defect = one finding, keep the higher severity), then do **one** fix round for the group.
+
+`.pasiv.yml` syntax for a custom concurrent group:
+
+```yaml
+profiles:
+  fast: [{ parallel: [{ engine: claude, model: opus }, { engine: codex }] }]
+```
+
+**After each pass (or group):** fix every **blocker** and **important** finding (TDD — failing test first if missing), then:
 
 **Use Skill tool:** `git-ops` with args: `commit "fix: address <engine> review findings"`
 
