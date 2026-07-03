@@ -50,6 +50,8 @@ Never resolve conflicts yourself — abort and report; the caller decides.
 
 ## Response Format
 
+The ✓ line is the whole report on success — never paste raw git output back. On error: the failing command and its error text only.
+
 Return a brief confirmation:
 ```
 ✓ [operation]: [details]

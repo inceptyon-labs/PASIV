@@ -4,6 +4,7 @@ set -euo pipefail
 # PASIV project initializer
 # Usage: init.sh <backend> [--project-board|--no-project-board] [--no-plan-approval]
 #        [--no-tdd] [--no-review] [--no-verification] [--ui-verify] [--verify-command=CMD]
+#        [--coordinator-model=MODEL]
 # Backends: github, beans, local
 
 BACKEND="${1:-local}"
@@ -14,6 +15,7 @@ REVIEW="true"
 VERIFICATION="true"
 UI_VERIFY="false"
 VERIFY_COMMAND=""
+COORDINATOR_MODEL=""
 
 for arg in "$@"; do
   case "$arg" in
@@ -25,6 +27,7 @@ for arg in "$@"; do
     --no-verification) VERIFICATION="false" ;;
     --ui-verify) UI_VERIFY="true" ;;
     --verify-command=*) VERIFY_COMMAND="${arg#--verify-command=}" ;;
+    --coordinator-model=*) COORDINATOR_MODEL="${arg#--coordinator-model=}" ;;
   esac
 done
 
@@ -103,6 +106,14 @@ if [ -n "$VERIFY_COMMAND" ]; then
 
 verify:
   command: "$VERIFY_COMMAND"
+EOF
+fi
+
+if [ -n "$COORDINATOR_MODEL" ]; then
+  cat >> .pasiv.yml << EOF
+
+models:
+  coordinator: $COORDINATOR_MODEL
 EOF
 fi
 
