@@ -29,6 +29,10 @@ Read `.pasiv.yml` for beans settings:
 | Feature | feature |
 | Task | task |
 
+## Status Mapping
+
+Normalize beans status in every return: `draft` → `open`, `in-progress` → `in-progress`, `completed`/`scrapped` → `closed`.
+
 ## Available Operations
 
 ### create

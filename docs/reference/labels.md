@@ -1,5 +1,7 @@
 # Labels
 
+Canonical label definitions. `skills/issue-ops/SKILL.md` carries the runtime copy of the color table — keep in sync.
+
 ## Categories
 
 | Category | Labels |

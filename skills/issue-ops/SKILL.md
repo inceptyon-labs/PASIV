@@ -14,7 +14,7 @@ Perform issue operation: $ARGUMENTS
 
 ## Label Definitions
 
-PASIV labels with their colors and descriptions. Create missing labels before use.
+Runtime copy of `docs/reference/labels.md` (keep in sync). Create missing labels before use.
 
 | Label | Color | Description |
 |-------|-------|-------------|
@@ -25,23 +25,20 @@ PASIV labels with their colors and descriptions. Create missing labels before us
 | `priority:high` | `DC2626` | Critical priority |
 | `priority:medium` | `F59E0B` | Medium priority |
 | `priority:low` | `10B981` | Low priority |
+| `size:XS` | `C4B5FD` | Extra small task (<1 hour) |
 | `size:S` | `DBEAFE` | Small task (1-4 hours) |
 | `size:M` | `BFDBFE` | Medium task (4-8 hours) |
-| `size:L` | `93C5FD` | Large task (8+ hours) |
+| `size:L` | `93C5FD` | Large task (8-16 hours) |
+| `size:XL` | `60A5FA` | Extra large task (16+ hours) |
 | `area:frontend` | `EC4899` | Web/UI changes |
 | `area:backend` | `8B5CF6` | API/server changes |
 | `area:infra` | `6B7280` | DevOps/CI/CD |
 | `area:db` | `3B82F6` | Database schema/queries |
 
-## Issue Type Hierarchy
+## Conventions
 
-Use the correct issue type based on scope:
-
-| Level | Type | Scope | Example |
-|-------|------|-------|---------|
-| **Epic** | Strategic | Multiple features, spans weeks/months | "User Authentication System" |
-| **Feature** | Tactical | Single capability, spans days/week | "OAuth Login" |
-| **Task** | Execution | Single work item, hours | "Create OAuth callback endpoint" |
+- Normalize GitHub state in every return: `OPEN` → `open`, `CLOSED` → `closed`.
+- If the caller omits `OWNER`/`REPO` for a GraphQL operation, derive them: `gh repo view --json owner,name -q '.owner.login + " " + .name'`.
 
 ## Available Operations
 
@@ -167,7 +164,7 @@ Add a completion summary comment to an issue (for context sharing with sibling T
 Arguments: issue number, files_changed, key_decisions, notes_for_next
 
 ```bash
-gh issue comment $NUM --body "## ✅ Completed
+gh issue comment $NUM --body "## Completed
 
 **Files changed:**
 $FILES_CHANGED
@@ -211,9 +208,9 @@ query {
   }
 }" --jq '.data.repository.issue.subIssues.nodes[] | select(.state == "CLOSED")')
 
-# For each closed sibling, get comments containing "## ✅ Completed"
+# For each closed sibling, get comments containing "## Completed"
 for SIBLING_NUM in $(echo "$SIBLINGS" | jq -r '.number'); do
-  gh issue view $SIBLING_NUM --comments --json comments -q '.comments[] | select(.body | contains("## ✅ Completed")) | .body'
+  gh issue view $SIBLING_NUM --comments --json comments -q '.comments[] | select(.body | contains("## Completed")) | .body'
 done
 ```
 

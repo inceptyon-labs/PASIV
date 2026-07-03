@@ -62,7 +62,14 @@ These operations are supported by all backends:
 | `get-sibling-context` | `IDENTIFIER [OWNER REPO]` | Get context from completed siblings |
 | `get-next` | (none) | Get the highest priority actionable task |
 
-Note: GitHub backend requires `OWNER` and `REPO` for GraphQL operations (`get-sub-issues`, `get-parent`, `get-sibling-context`). Beans and local backends do not need these — they work with local files.
+Note: GitHub backend requires `OWNER` and `REPO` for GraphQL operations (`get-sub-issues`, `get-parent`, `get-sibling-context`); it can derive them itself if omitted. Beans and local backends do not need these — they work with local files.
+
+## Shared Contract (all backends)
+
+- **Status vocabulary:** every backend returns `open | in-progress | closed`. Mapping: github `OPEN`→`open`, `CLOSED`→`closed`; beans `draft`→`open`, `in-progress`→`in-progress`, `completed`/`scrapped`→`closed`; local is native.
+- **Completion summaries** use the heading `## Completed` in all backends — `get-sibling-context` filters on it.
+- **Labels:** canonical definitions live in `docs/reference/labels.md`; `issue-ops` carries the runtime copy (colors) and creates missing labels on every `create`. Callers never pre-create labels.
+- **`get-next`:** returns the highest-priority open Task (id + title), or a "No open tasks" message — never the string `null`.
 
 ## Response Format
 
