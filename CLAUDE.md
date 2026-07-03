@@ -51,8 +51,15 @@ Present your implementation plan before coding. After 3 failed fix attempts, sto
 
 ```
 hooks/
-├── hooks.json                  # PreCompact hook
-└── pre-compact.sh              # Reminds to write handoff
+├── hooks.json                  # PreCompact + UserPromptSubmit hooks
+├── pre-compact.sh              # Reminds to write handoff
+└── kick-guard.sh               # Enforces step-skill invocation on /kick and /review
+
+scripts/                        # Deterministic tooling (found via *pasiv*/scripts/ pattern)
+├── init.sh                     # Project initializer
+├── read-config.sh              # .pasiv.yml → KEY=VALUE (kick Step 0)
+├── verify-checks.sh            # Detect + run all checks concurrently (verification)
+└── token-report.sh             # Per-model token summary + history (finish)
 
 skills/
 ├── brainstorm/SKILL.md         # /brainstorm (ideation)

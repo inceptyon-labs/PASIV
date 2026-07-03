@@ -27,10 +27,14 @@ Each step-skill shares this session's context (`IDENTIFIER`, `WORKFLOW_*`, `REVI
 
 ## Step 0: Detect backend + workflow config + issue
 
-Read `.pasiv.yml` (`[ -f .pasiv.yml ] && cat .pasiv.yml || echo missing`):
-- `TASK_BACKEND` = github | beans | local (default local). `IDENTIFIER` is the issue number / bean ID / local ID.
-- Workflow flags from `workflow:` (all default **true**): `WORKFLOW_PLAN_APPROVAL`, `WORKFLOW_TDD`, `WORKFLOW_REVIEW`, `WORKFLOW_VERIFICATION`.
-- Opt-ins (default **off**): `WORKFLOW_UI_VERIFY` from `workflow.ui_verify`; `VERIFY_COMMAND` from `verify.command`; `COORDINATOR_MODEL` from `models.coordinator` (any frontier model id the host exposes — used for frontier implementer escalations and substituted for `opus` in built-in review profiles); `TOKEN_REPORT` from `metrics.tokens` (per-model token summary + history at finish); `AUTO_REFLECT` from `workflow.auto_reflect` (run `reflect` at finish when a reflection signal fired).
+Load config **deterministically** — never parse the YAML yourself:
+
+```bash
+CFG=$(find ~/.claude -name "read-config.sh" -path "*pasiv*/scripts/*" 2>/dev/null | head -1)
+[ -n "$CFG" ] && bash "$CFG" || echo "read-config.sh not found — using defaults (TASK_BACKEND=local, workflow all true, opt-ins off)"
+```
+
+Store every emitted `KEY=VALUE` as session context (defaults are baked into the script). `IDENTIFIER` is the issue number / bean ID / local ID. Semantics: `COORDINATOR_MODEL` (when set — any frontier model id the host exposes) is used for frontier implementer escalations and substituted for `opus` in built-in review profiles; `TOKEN_REPORT`/`AUTO_REFLECT` fire at finish; `DESIGN_SYSTEM` is the path Step 1.9 loads.
 
 Get the issue. If the argument is `next` → **Skill:** `task-ops` `get-next` → `IDENTIFIER`. Then **Skill:** `task-ops` `get-context $IDENTIFIER` — one fork returns everything: `ISSUE_TITLE`, `ISSUE_BODY`, `ISSUE_LABELS` (github: also `ISSUE_URL`), `PARENT_IDENTIFIER` (or none), sub-issue list, and sibling context if a parent exists. Store it all — Steps 0.5/1.5/1.75 consume it without further task-ops calls.
 

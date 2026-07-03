@@ -18,22 +18,14 @@ allowed-tools:
 **Good claim:** "Tests pass: 47/47, 0 skipped, exit 0"
 **Bad claim:** "Tests should pass"
 
-**Round 1 — run all applicable checks concurrently.** They are independent reads of the tree; wall-clock should be the slowest check, not the sum. One Bash call: each applicable check backgrounded to its own log, then `wait`:
+**Run all applicable checks with the deterministic runner** — it detects the stack, runs tests/build/lint/typecheck/smoke (incl. `verify.command`) concurrently, and prints ✓/✗ per check with failure log tails. Never compose the check commands yourself:
 
 ```bash
-mkdir -p /tmp/pasiv-verify
-{ <test cmd>;      echo "exit:$?"; } > /tmp/pasiv-verify/tests.log 2>&1 &
-{ <build cmd>;     echo "exit:$?"; } > /tmp/pasiv-verify/build.log 2>&1 &
-{ <lint cmd>;      echo "exit:$?"; } > /tmp/pasiv-verify/lint.log 2>&1 &
-{ <typecheck cmd>; echo "exit:$?"; } > /tmp/pasiv-verify/typecheck.log 2>&1 &
-{ <verify.command>; echo "exit:$?"; } > /tmp/pasiv-verify/smoke.log 2>&1 &
-wait
-tail -1 /tmp/pasiv-verify/*.log
+VC=$(find ~/.claude -name "verify-checks.sh" -path "*pasiv*/scripts/*" 2>/dev/null | head -1)
+bash "$VC"
 ```
 
-Lint runs **without** auto-fix in this round — never modify files while tests run. If the stack shares mutable build state across commands (e.g. Gradle daemon, a build dir that both `build` and `test` write), fall back to serial for the conflicting pair.
-
-All exit 0 → report. **Any failure → fix serially** (escalation table below, auto-fix allowed now), re-running **only the failed checks** until each passes. Checks 1–5 below define the per-stack commands.
+Exit 0 → all detected checks passed → write the report. Exit 1 → **fix the failed checks serially** (escalation table below; lint auto-fix is allowed now — the runner itself never mutates files), then **re-run the script** until it exits 0. Full logs live in `/tmp/pasiv-verify/<check>.log`. If the runner reports "no checks detected", flag it in the report — after TDD that should not happen.
 
 ## Fix escalation (applies to every check)
 
@@ -47,44 +39,6 @@ Loop each check until it passes. Hard rules:
 - NEVER skip, disable, or mark tests as skipped to get past a failure
 - NEVER use `--no-verify` or similar bypass flags
 - NEVER move to the next check while the current one fails
-
-## Check 1: Tests (required)
-
-**Skill:** `test-runner`
-
-Pass → Check 2. Fail → escalation table. "No tests found" should not happen after TDD — flag it in the report and continue.
-
-## Check 2: Build (if applicable)
-
-```bash
-if [ -f package.json ] && grep -q '"build"' package.json; then npm run build
-elif [ -f go.mod ]; then go build ./...
-elif [ -f Cargo.toml ]; then cargo build
-fi
-```
-
-## Check 3: Lint (if configured)
-
-Try auto-fix first (`npm run lint -- --fix`, `cargo clippy --fix`), then:
-
-```bash
-if [ -f package.json ] && grep -q '"lint"' package.json; then npm run lint
-elif [ -f go.mod ]; then golangci-lint run
-elif [ -f Cargo.toml ]; then cargo clippy
-fi
-```
-
-## Check 4: Type check (if applicable)
-
-```bash
-if [ -f tsconfig.json ]; then
-  if grep -q '"typecheck"' package.json 2>/dev/null; then npm run typecheck; else tsc --noEmit; fi
-fi
-```
-
-## Check 5: Project smoke command (if configured)
-
-If `.pasiv.yml` has `verify.command`, run it verbatim — exit 0 required, escalation table applies. If not configured, skip silently.
 
 ## Report
 
