@@ -18,7 +18,22 @@ allowed-tools:
 **Good claim:** "Tests pass: 47/47, 0 skipped, exit 0"
 **Bad claim:** "Tests should pass"
 
-Run checks 1–5 in order. A check passes only on exit code 0 — investigate skipped tests and warnings before counting a pass.
+**Round 1 — run all applicable checks concurrently.** They are independent reads of the tree; wall-clock should be the slowest check, not the sum. One Bash call: each applicable check backgrounded to its own log, then `wait`:
+
+```bash
+mkdir -p /tmp/pasiv-verify
+{ <test cmd>;      echo "exit:$?"; } > /tmp/pasiv-verify/tests.log 2>&1 &
+{ <build cmd>;     echo "exit:$?"; } > /tmp/pasiv-verify/build.log 2>&1 &
+{ <lint cmd>;      echo "exit:$?"; } > /tmp/pasiv-verify/lint.log 2>&1 &
+{ <typecheck cmd>; echo "exit:$?"; } > /tmp/pasiv-verify/typecheck.log 2>&1 &
+{ <verify.command>; echo "exit:$?"; } > /tmp/pasiv-verify/smoke.log 2>&1 &
+wait
+tail -1 /tmp/pasiv-verify/*.log
+```
+
+Lint runs **without** auto-fix in this round — never modify files while tests run. If the stack shares mutable build state across commands (e.g. Gradle daemon, a build dir that both `build` and `test` write), fall back to serial for the conflicting pair.
+
+All exit 0 → report. **Any failure → fix serially** (escalation table below, auto-fix allowed now), re-running **only the failed checks** until each passes. Checks 1–5 below define the per-stack commands.
 
 ## Fix escalation (applies to every check)
 

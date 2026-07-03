@@ -102,6 +102,10 @@ TaskUpdate: { taskId: <id>, status: completed }
 
 Run `TaskList`. More tasks → loop. All done → continue below. **Do not stop to check in between tasks** — execute the plan through.
 
+## RED-Ahead Pipelining (optimization)
+
+You are idle while an implementer runs GREEN — use that window. When the **next** task is independent of the running one (disjoint `files`, not in its `blockedBy` chain), dispatch the current implementer with `run_in_background: true`, write the next task's RED tests while it runs, then join its report before dispatching the next GREEN. One task ahead, no further — RED for a task that depends on unwritten code is a spec written against a guess. When the next task is dependent, wait as normal.
+
 ## Bounded Parallel Dispatch (optimization)
 
 The per-task loop above is the default. When the plan's next tasks are **independent**, dispatch their implementer subagents concurrently to cut wall-clock — but only when all of these hold:

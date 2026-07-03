@@ -9,6 +9,7 @@ A review **profile** is an ordered list of passes; each pass is an `engine` plus
 | `none` | — | skip review |
 | `quick` | claude:sonnet | trivial changes |
 | `standard` | claude:opus → codex | most changes (default) |
+| `fast` | claude:opus ∥ codex (concurrent) | same reviewer diversity in one round of wall-clock — no cascade; findings merged and deduped, fixed once |
 | `deep` | claude:opus → codex → claude:opus | security-critical / large refactors — final pass re-checks cumulative fixes |
 | `codex` | codex | codex-only |
 

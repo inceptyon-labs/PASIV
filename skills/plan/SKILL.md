@@ -9,6 +9,7 @@ allowed-tools:
   - Glob
   - Grep
   - Skill
+  - Task
   - TaskCreate
   - TaskUpdate
   - TaskList
@@ -22,6 +23,8 @@ Produce a plan a fresh implementer can execute with zero prior context, then cre
 ## Step 1: Understand before planning
 
 Read the issue and the code the change actually touches. Trace the real flow end to end. Map which files get created/modified and the single responsibility of each — decomposition gets locked here.
+
+**Scout fan-out (large surfaces only):** when the change spans 3+ subsystems or unfamiliar territory, dispatch parallel read-only Haiku subagents (Task tool, one message) instead of reading serially — one per subsystem: "GOAL: map how <subsystem> handles <concern>. CONTRACT: ≤15 lines, file:line refs + one-sentence facts, no file contents." Then read yourself only the ranges a planning decision hinges on. Small diffs don't get scouts — the fan-out costs more than the reading.
 
 Lazy about the solution, never about reading. Do not skip comprehension to ship a small diff — the smallest change in the wrong place is a second bug.
 
