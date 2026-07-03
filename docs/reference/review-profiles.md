@@ -27,7 +27,11 @@ The old tier letters are recognized profile names: `S`→`quick`, `O`→[claude:
 | `size:L` | OC (standard) | SOC (deep) `[security]` |
 | `size:XL` | SOC (deep) | SOC (deep) `[security]` |
 
-Security patterns: `auth|crypto|payment|token|secret|password|session|oauth|jwt|key|credential`
+Security patterns (canonical — `plan` Step 5 and `kick`'s parent flow carry runtime copies, keep in sync):
+
+```
+auth|crypto|password|payment|token|secret|credential|session|login|oauth|jwt|apikey|private|key
+```
 
 ## `.pasiv.yml` override (optional — built-ins cover the common cases)
 

@@ -12,17 +12,7 @@ allowed-tools:
 
 Create a GitHub issue from a short description: $ARGUMENTS
 
-**This skill creates Tasks** - single work items that take hours to complete.
-
-## Issue Type Hierarchy
-
-| Level | Type | Scope | Example |
-|-------|------|-------|---------|
-| **Epic** | Strategic | Multiple features, spans weeks/months | "User Authentication System" |
-| **Feature** | Tactical | Single capability, spans days/week | "OAuth Login" |
-| **Task** | Execution | Single work item, hours | "Create OAuth callback endpoint" |
-
-**This skill creates: Task** (use `/parent` for Features, `/backlog` for Epics)
+**This skill creates Tasks** — single work items that take hours to complete. Use `/parent` for Features (days/week), `/backlog` for Epics (weeks/months).
 
 **Helper skills (run with Haiku in forked context for efficiency):**
 - `task-ops` - Task operations router (routes to correct backend)
@@ -39,9 +29,9 @@ Create a GitHub issue from a short description: $ARGUMENTS
 Store TASK_BACKEND (default: "local").
 
 2. **Verify scope is Task-level**:
-   - S (1-4h): Single file/component change → **Task**
+   - XS (<1h) / S (1-4h): Single file/component change → **Task**
    - M (4-8h): Few files, moderate complexity → **Task**
-   - L (8+h): Multiple components → Suggest `/parent` for a **Feature** instead
+   - L (8-16h) / XL (16+h): Multiple components → Suggest `/parent` for a **Feature** instead
 
 3. **Determine labels**:
    - Area: frontend, backend, infra, db

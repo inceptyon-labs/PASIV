@@ -28,23 +28,7 @@ Parse spec and create issues: $ARGUMENTS (file path, default: spec.md)
 - Capabilities within each section → **Features** (children of Epic)
 - Individual work items → **Tasks** (children of Feature)
 
-## Label Definitions
-
-Create missing labels before use:
-
-| Label | Color | Description |
-|-------|-------|-------------|
-| `pasiv` | `1a1a2e` | Created by PASIV automation |
-| `priority:high` | `DC2626` | Critical priority |
-| `priority:medium` | `F59E0B` | Medium priority |
-| `priority:low` | `10B981` | Low priority |
-| `size:S` | `DBEAFE` | Small task (1-4 hours) |
-| `size:M` | `BFDBFE` | Medium task (4-8 hours) |
-| `size:L` | `93C5FD` | Large task (8+ hours) |
-| `area:frontend` | `EC4899` | Web/UI changes |
-| `area:backend` | `8B5CF6` | API/server changes |
-| `area:infra` | `6B7280` | DevOps/CI/CD |
-| `area:db` | `3B82F6` | Database schema/queries |
+Missing labels are created automatically by the backend on `create` (definitions: `docs/reference/labels.md`).
 
 ## Step 0: Detect Backend & Setup
 
@@ -56,15 +40,6 @@ Create missing labels before use:
 Store TASK_BACKEND (default: "local").
 
 **If TASK_BACKEND is "github":**
-
-Ensure labels exist:
-```bash
-EXISTING=$(gh label list --json name -q '.[].name')
-
-if ! echo "$EXISTING" | grep -q "^pasiv$"; then
-  gh label create "pasiv" --color "1a1a2e" --description "Created by PASIV automation" --force
-fi
-```
 
 Setup project:
 - **Use Skill tool:** `project-ops` with args: `setup`
