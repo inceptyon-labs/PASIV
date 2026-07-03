@@ -45,6 +45,8 @@ TaskUpdate: { taskId: <id>, status: in_progress }
 
 For each acceptance criterion, write a test covering the behavior, edges, and boundaries. Run them; confirm they FAIL because the feature is missing (not a syntax/import error).
 
+**Adequacy check before dispatch** — the test is the spec; an unguarded AC becomes unwritten code. Map each acceptance criterion to at least one failing test. Any AC without coverage: write its test now. Only then dispatch.
+
 If `WORKFLOW_TDD` is false: skip RED; the subagent implements to the AC and adds tests after.
 
 **3. GREEN — dispatch a fresh implementer subagent**
@@ -112,6 +114,8 @@ Run the project's formatter, then linter. If anything changed:
 ```bash
 npm test || pytest || go test ./... || cargo test || bun test
 ```
+
+Then typecheck if the project has one (`tsc --noEmit` / `npm run typecheck` / `mypy` / `cargo check`) — catch type errors here, before review sees the diff.
 
 **If tests fail — systematic debugging, no guessing:**
 

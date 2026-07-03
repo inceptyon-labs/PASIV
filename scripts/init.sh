@@ -2,16 +2,29 @@
 set -euo pipefail
 
 # PASIV project initializer
-# Usage: init.sh <backend> [--project-board] [--no-project-board]
+# Usage: init.sh <backend> [--project-board|--no-project-board] [--no-plan-approval]
+#        [--no-tdd] [--no-review] [--no-verification] [--ui-verify] [--verify-command=CMD]
 # Backends: github, beans, local
 
 BACKEND="${1:-local}"
 PROJECT_BOARD="true"
+PLAN_APPROVAL="true"
+TDD="true"
+REVIEW="true"
+VERIFICATION="true"
+UI_VERIFY="false"
+VERIFY_COMMAND=""
 
 for arg in "$@"; do
   case "$arg" in
     --no-project-board) PROJECT_BOARD="false" ;;
     --project-board) PROJECT_BOARD="true" ;;
+    --no-plan-approval) PLAN_APPROVAL="false" ;;
+    --no-tdd) TDD="false" ;;
+    --no-review) REVIEW="false" ;;
+    --no-verification) VERIFICATION="false" ;;
+    --ui-verify) UI_VERIFY="true" ;;
+    --verify-command=*) VERIFY_COMMAND="${arg#--verify-command=}" ;;
   esac
 done
 
@@ -73,6 +86,25 @@ EOF
     exit 1
     ;;
 esac
+
+# --- Append workflow config ---
+cat >> .pasiv.yml << EOF
+
+workflow:
+  plan_approval: $PLAN_APPROVAL
+  tdd: $TDD
+  review: $REVIEW
+  verification: $VERIFICATION
+  ui_verify: $UI_VERIFY
+EOF
+
+if [ -n "$VERIFY_COMMAND" ]; then
+  cat >> .pasiv.yml << EOF
+
+verify:
+  command: "$VERIFY_COMMAND"
+EOF
+fi
 
 echo "✓ Created .pasiv.yml ($BACKEND backend)"
 

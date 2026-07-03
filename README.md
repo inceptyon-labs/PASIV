@@ -127,7 +127,7 @@ No `.pasiv.yml` defaults to Local Markdown (zero-dependency). GitHub and Beans a
 | `/handoff` | Handoff doc | Save session context for next session |
 | `/reflect` | Memory / feedback | Persist durable facts, corrections, and reusable workflows from the session |
 | `/repo-scan` | Report | Security scan for vulnerabilities, malware, secrets |
-| `/review [profile]` | - | Review the diff at a depth — `quick`/`standard`/`deep`/`codex` (or legacy `S`/`O`/`SC`/`OC`/`SOC`) |
+| `/review [profile]` | - | Review the diff at a depth — `quick`/`standard`/`deep`/`codex` |
 
 ## Workflow Patterns
 
@@ -245,11 +245,11 @@ During plan approval, select a review profile with smart recommendations based o
 
 | Profile | Passes | When Recommended |
 |---------|--------|------------------|
-| `quick` | Sonnet | `size:XS`, trivial |
+| `quick` | Sonnet | `size:XS`/`size:S`, trivial |
 | `standard` | Opus → Codex | most changes (default) |
-| `deep` | Sonnet → Opus → Codex | `size:XL`, security-critical |
+| `deep` | Opus → Codex → Opus | `size:L`/`size:XL`, security-critical — final pass re-checks cumulative fixes |
 
-Configurable in `.pasiv.yml`; legacy `S`/`O`/`SC`/`OC`/`SOC` work as aliases. See `docs/reference/review-profiles.md`.
+Configurable in `.pasiv.yml`. See `docs/reference/review-profiles.md`.
 
 ### Split-Model TDD
 
@@ -303,6 +303,9 @@ Before merge, fresh evidence is required with **smart escalation**:
 | Build | Same strategy - simple first, escalate if complex |
 | Lint | Haiku auto-fixes (usually works) |
 | TypeCheck | Simple types first, escalate if complex |
+| Smoke | Opt-in: runs `verify.command` from `.pasiv.yml` if configured |
+
+**UI verification (opt-in):** with `workflow.ui_verify: true`, frontend/mobile tasks get driven in the running app — launch, exercise the change, screenshot — before the gate. Enable per project in `/pasiv init`.
 
 ### Epic & Feature Support (Autonomous)
 
@@ -322,13 +325,13 @@ When you `/kick` an **Epic**:
 Epic: User Authentication System
 
 ├── Feature: Email/Password Login
-│   ├── Create user table        → S   (size:XS, area:db)
-│   ├── Create auth endpoint     → OC  (size:M) [security]
-│   └── Create login form        → SC  (size:M, area:frontend)
+│   ├── Create user table        → quick     (size:XS, area:db)
+│   ├── Create auth endpoint     → deep      (size:M) [security]
+│   └── Create login form        → standard  (size:M, area:frontend)
 │
 └── Feature: OAuth Login
-    ├── Add OAuth config         → SC  (size:S) [security]
-    └── Add OAuth callback       → OC  (size:M) [security]
+    ├── Add OAuth config         → standard  (size:S) [security]
+    └── Add OAuth callback       → deep      (size:M) [security]
 
 Total: 5 Tasks across 2 Features
 Approve and start autonomous run? [Yes/Customize/Cancel]
@@ -423,7 +426,7 @@ Reviews run as **profiles** — an ordered chain of passes resolved by the `revi
 | `standard` | Opus → Codex | most changes (default) |
 | `deep` | Sonnet → Opus → Codex | security-critical / large |
 
-Passes are **cascading** (each sees prior fixes) and **host-aware** — a Claude subagent or the Codex MCP under Claude Code; `claude -p` (Claude-as-reviewer) or native under a Codex host. Configurable in `.pasiv.yml`; legacy `S`/`O`/`SC`/`OC`/`SOC` work as aliases. Standalone: `/review [profile]`. Full matrix, schema, and adapters: `docs/reference/review-profiles.md`.
+Passes are **cascading** (each sees prior fixes) and **host-aware** — a Claude subagent or the Codex MCP under Claude Code; `claude -p` (Claude-as-reviewer) or native under a Codex host. Configurable in `.pasiv.yml`. Standalone: `/review [profile]`. Full rule, schema, and adapters: `docs/reference/review-profiles.md`.
 
 ---
 
@@ -475,6 +478,20 @@ beans:
 task_backend: local
 local:
   path: docs/tasks
+```
+
+Workflow toggles and verification extras (written by `/pasiv init`):
+
+```yaml
+workflow:
+  plan_approval: true
+  tdd: true
+  review: true
+  verification: true
+  ui_verify: false      # opt-in: drive the app + screenshot for UI tasks before merge
+
+verify:
+  command: "npm run smoke"   # optional: extra gate command, must exit 0
 ```
 
 ### `CLAUDE.md` (PASIV section)
@@ -607,12 +624,10 @@ skills/
 docs/
 ├── reference/                  # On-demand reference docs (loaded by skills)
 │   ├── review-profiles.md
-│   ├── methodology.md
 │   ├── design-system.md
 │   ├── labels.md
 │   ├── github-projects.md
-│   ├── model-optimization.md
-│   └── examples.md
+│   └── model-optimization.md
 ├── designs/                    # Design documents from /brainstorm
 ├── plans/                      # Implementation plans
 └── scans/                      # Security scan reports

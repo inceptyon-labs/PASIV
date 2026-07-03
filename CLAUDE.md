@@ -22,7 +22,7 @@ Run `/pasiv init` to configure, or create `.pasiv.yml` manually. Default: local 
 | `/handoff` | Write structured session handoff for context preservation |
 | `/reflect` | Persist durable facts, corrections, and reusable workflows from the session |
 | `/pasiv init` | Interactive setup wizard for task backend and config |
-| `/review [profile]` | Review the diff at a depth — quick/standard/deep/codex (or legacy S/O/SC/OC/SOC) |
+| `/review [profile]` | Review the diff at a depth — quick/standard/deep/codex |
 | `/repo-scan` | Security scan a repo for vulnerabilities and secrets |
 | `/de-vibe` | Strip AI tells - de-slop docs, gitignore AI configs, drop restate-comments, scrub commit trailers |
 
@@ -41,9 +41,9 @@ Run `/pasiv init` to configure, or create `.pasiv.yml` manually. Default: local 
 
 TDD enforced in `/kick`: RED → GREEN → REFACTOR → COMMIT. The `execute` coordinator (Opus) writes RED tests in-context; a fresh Sonnet implementer subagent does GREEN (constrained by the test) in an isolated context — keeping the session in standard 200k. No production code without a failing test first.
 
-Verification gate runs before every merge. Tests, build, lint, and type-check must pass with fresh evidence. No "should work" claims.
+Verification gate runs before every merge. Tests, build, lint, and type-check must pass with fresh evidence — plus an optional project smoke command (`verify.command`) and, for UI tasks, an optional drive-the-app check (`workflow.ui_verify`), both opt-in via `.pasiv.yml`. No "should work" claims.
 
-Review runs as profiles (`quick`/`standard`/`deep`, configurable in `.pasiv.yml`) scaled to change size and security sensitivity; legacy S/O/SC/OC/SOC are aliases. Passes are cascading (each sees cumulative changes) and host-aware (Claude or Codex as the reviewer).
+Review runs as profiles (`quick`/`standard`/`deep`, configurable in `.pasiv.yml`) scaled to change size and security sensitivity. Passes are cascading (each sees cumulative changes) and host-aware (Claude or Codex as the reviewer).
 
 Present your implementation plan before coding. After 3 failed fix attempts, stop and reassess architecture.
 
@@ -100,10 +100,8 @@ Detailed docs loaded on demand by skills — see `docs/reference/`:
 
 | File | Content |
 |------|---------|
-| `review-profiles.md` | Profiles, recommendation matrix, engine adapters, security patterns |
-| `methodology.md` | TDD cycle, verification gate, systematic debugging |
+| `review-profiles.md` | Profiles, recommendation rule, engine adapters, security patterns |
 | `design-system.md` | interface-design integration for UI work |
 | `labels.md` | Label definitions and colors |
 | `github-projects.md` | Project board setup and auto-prioritization |
 | `model-optimization.md` | Which models run which skills |
-| `examples.md` | Detailed command examples and workflows |

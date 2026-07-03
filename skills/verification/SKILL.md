@@ -18,7 +18,7 @@ allowed-tools:
 **Good claim:** "Tests pass: 47/47, 0 skipped, exit 0"
 **Bad claim:** "Tests should pass"
 
-Run checks 1–4 in order. A check passes only on exit code 0 — investigate skipped tests and warnings before counting a pass.
+Run checks 1–5 in order. A check passes only on exit code 0 — investigate skipped tests and warnings before counting a pass.
 
 ## Fix escalation (applies to every check)
 
@@ -67,6 +67,10 @@ if [ -f tsconfig.json ]; then
 fi
 ```
 
+## Check 5: Project smoke command (if configured)
+
+If `.pasiv.yml` has `verify.command`, run it verbatim — exit 0 required, escalation table applies. If not configured, skip silently.
+
 ## Report
 
 After all checks pass:
@@ -78,6 +82,7 @@ Tests:     ✓ 47/47 passed (exit 0)
 Build:     ✓ completed (exit 0)
 Lint:      ✓ no errors (exit 0)
 TypeCheck: ✓ no errors (exit 0)
+Smoke:     ✓ verify.command passed (exit 0)   [omit line if not configured]
 
 All verification checks passed. Ready to merge.
 ```

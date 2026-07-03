@@ -46,7 +46,7 @@ When to use EnterPlanMode: only for ad-hoc work that does not fit any PASIV skil
 ### Code Review
 | Skill | When to Use |
 |-------|-------------|
-| `/review [profile]` | Review the branch diff at a chosen depth — `quick` / `standard` / `deep` / `codex`, or legacy `S`/`O`/`SC`/`OC`/`SOC`. Profiles are configurable in `.pasiv.yml`. |
+| `/review [profile]` | Review the branch diff at a chosen depth — `quick` / `standard` / `deep` / `codex`. Profiles are configurable in `.pasiv.yml`. |
 
 ### Context Management
 | Skill | When to Use |
