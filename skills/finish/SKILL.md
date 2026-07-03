@@ -66,12 +66,14 @@ If this task has a parent:
 
 ## Step 4.5: Session wrap-up (opt-ins, single-task flow only — the parent flow's router does these once at the end)
 
-**If `TOKEN_REPORT` is true:** run the token report and include its table in the Step 5 report:
+**If `TOKEN_REPORT` is true:** run the token report:
 
 ```bash
 TR_SCRIPT=$(find ~/.claude -name "token-report.sh" -path "*/pasiv/scripts/*" 2>/dev/null | head -1)
 [ -n "$TR_SCRIPT" ] && bash "$TR_SCRIPT" "$IDENTIFIER"
 ```
+
+The script's stdout table MUST be pasted verbatim into the Step 5 report — the user reads it in the CLI; the history file is the byproduct, not the deliverable. If the script isn't found, say so in the report instead of skipping silently.
 
 **If `AUTO_REFLECT` is true:** check whether any reflection signal fired during this task — escalation ladder used, three-strikes hit, user corrected the agent mid-run, review found blockers, plan was reworked after approval. Any signal → **Skill:** `reflect`. No signals → skip silently, don't mention it.
 
@@ -82,6 +84,10 @@ TR_SCRIPT=$(find ~/.claude -name "token-report.sh" -path "*/pasiv/scripts/*" 2>/
 
 Issue $IDENTIFIER merged to main.
 Review: [REVIEW_PROFILE] · Verification: ✓ · Commit: [short SHA]
+
+Token usage (session xxxxxxxx):                    [TOKEN_REPORT only — the
+  <model>: N calls · in X · out Y · cache-read Z    script's table, verbatim]
+  → docs/metrics/tokens.jsonl
 
 Next up: [next priority issue, or "No open issues"] — run /kick next
 ```
