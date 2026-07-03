@@ -1,6 +1,6 @@
 ---
 name: git-ops
-description: Git operations helper. Use for branch creation, commits, push, merge. Internal skill - typically called by /start.
+description: Git operations helper. Use for branch creation, commits, push, merge. Internal skill - typically called by /kick.
 model: haiku
 context: fork
 allowed-tools:

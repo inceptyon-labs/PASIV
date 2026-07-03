@@ -97,7 +97,7 @@ Note nits, don't block on them. Push back (with evidence) if a finding is wrong.
 **From `/kick`:** mark the review task `completed`, check off the issue's acceptance criteria (**Skill:** `task-ops` `check-off-criteria $IDENTIFIER`), and end with:
 
 ```
->>> REVIEW COMPLETE — proceed to verification (Step 6) <<<
+>>> REVIEW COMPLETE — proceed to the verification gate <<<
 ```
 
 **Standalone:** print a findings summary grouped by severity (blocker / important / nit) with `file:line`, and what was fixed vs noted.

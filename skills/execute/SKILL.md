@@ -128,5 +128,5 @@ npm test || pytest || go test ./... || cargo test || bun test
 End your response with the continuation marker the caller depends on:
 
 ```
->>> EXECUTE COMPLETE — proceed to review (Step 4) <<<
+>>> EXECUTE COMPLETE — proceed to the review skill <<<
 ```

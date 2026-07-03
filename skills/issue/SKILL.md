@@ -88,4 +88,4 @@ If TASK_BACKEND is "github":
 
 **This skill only creates issues. Do NOT continue to implement the issue.**
 
-If the user wants to implement the issue, they must explicitly use `/start NUMBER`.
+If the user wants to implement the issue, they must explicitly use `/kick NUMBER`.

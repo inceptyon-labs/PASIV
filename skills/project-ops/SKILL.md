@@ -1,6 +1,6 @@
 ---
 name: project-ops
-description: GitHub Project operations helper. Project setup, add issues, update status. Internal — called by /start or /issue.
+description: GitHub Project operations helper. Project setup, add issues, update status. Internal — called by /kick or /issue.
 model: haiku
 context: fork
 allowed-tools:
