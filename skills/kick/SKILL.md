@@ -21,6 +21,8 @@ Thin router. Set up context, then sequence the step-skills: **plan → execute �
 
 Each step-skill shares this session's context (`IDENTIFIER`, `WORKFLOW_*`, `REVIEW_PROFILE`, `PARENT_IDENTIFIER`, …) — set those here, then invoke the skills in order, waiting for each one's `>>> … COMPLETE <<<` marker before the next.
 
+**Never perform a step's work inline instead of invoking its skill** — even when it looks faster. Hand-rolling a step is how its opt-ins (token report, auto-reflect, parent cascade, project-board moves) silently drop. If a step-skill fails to load, say so — don't improvise it.
+
 ---
 
 ## Step 0: Detect backend + workflow config + issue
@@ -69,6 +71,12 @@ Invoke the step-skills in order. Each reads the session context above.
 4. **Skill:** `review` — runs `REVIEW_PROFILE` (skips itself if `WORKFLOW_REVIEW` false or profile `none`). Wait for `>>> REVIEW COMPLETE <<<`.
 5. **Verification gate:** if `WORKFLOW_VERIFICATION` true → mark the verification task `in_progress`; if `WORKFLOW_UI_VERIFY` true and `ISSUE_LABELS` has `area:frontend`/`area:mobile`, first drive the affected flow in the running app (launch, exercise the change, screenshot) and fix any regression you observe; then **Skill:** `verification` (Haiku→Opus escalation), mark `completed`. Else skip.
 6. **Skill:** `finish` — completion summary, handoff, merge, close, parent cascade, report. Wait for `>>> FINISH COMPLETE <<<`.
+7. **Wrap-up audit:** if `TOKEN_REPORT` is true and the final report above does **not** contain a "Token usage" table, run it now and print the table verbatim:
+
+   ```bash
+   TR_SCRIPT=$(find ~/.claude -name "token-report.sh" -path "*pasiv*/scripts/*" 2>/dev/null | head -1)
+   [ -n "$TR_SCRIPT" ] && bash "$TR_SCRIPT" "$IDENTIFIER"
+   ```
 
 Done.
 
