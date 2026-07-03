@@ -28,6 +28,7 @@ Each step-skill shares this session's context (`IDENTIFIER`, `WORKFLOW_*`, `REVI
 Read `.pasiv.yml` (`[ -f .pasiv.yml ] && cat .pasiv.yml || echo missing`):
 - `TASK_BACKEND` = github | beans | local (default local). `IDENTIFIER` is the issue number / bean ID / local ID.
 - Workflow flags from `workflow:` (all default **true**): `WORKFLOW_PLAN_APPROVAL`, `WORKFLOW_TDD`, `WORKFLOW_REVIEW`, `WORKFLOW_VERIFICATION`.
+- Opt-ins (default **off**): `WORKFLOW_UI_VERIFY` from `workflow.ui_verify`; `VERIFY_COMMAND` from `verify.command`.
 
 Get the issue. If the argument is `next` → **Skill:** `task-ops` `get-next` → `IDENTIFIER`. Then **Skill:** `task-ops` `get $IDENTIFIER` → store `IDENTIFIER`, `ISSUE_TITLE`, `ISSUE_BODY`, `ISSUE_LABELS` (github backend: also `ISSUE_URL`, used by the project-board moves in Steps 1.5 and `finish`).
 
@@ -59,7 +60,7 @@ Invoke the step-skills in order. Each reads the session context above.
 1. **Skill:** `plan` — produces the plan, sets `REVIEW_PROFILE`, creates native tasks. Wait for `>>> PLAN COMPLETE <<<`.
 2. **Skill:** `execute` — you (Opus) write RED; a fresh Sonnet subagent does GREEN per task; format/lint; full suite. Wait for `>>> EXECUTE COMPLETE <<<`.
 3. **Skill:** `review` — runs `REVIEW_PROFILE` (skips itself if `WORKFLOW_REVIEW` false or profile `none`). Wait for `>>> REVIEW COMPLETE <<<`.
-4. **Verification gate:** if `WORKFLOW_VERIFICATION` true → mark the verification task `in_progress`, **Skill:** `verification` (Haiku→Opus escalation), mark `completed`. Else skip.
+4. **Verification gate:** if `WORKFLOW_VERIFICATION` true → mark the verification task `in_progress`; if `WORKFLOW_UI_VERIFY` true and `ISSUE_LABELS` has `area:frontend`/`area:mobile`, first drive the affected flow in the running app (launch, exercise the change, screenshot) and fix any regression you observe; then **Skill:** `verification` (Haiku→Opus escalation), mark `completed`. Else skip.
 5. **Skill:** `finish` — completion summary, handoff, merge, close, parent cascade, report. Wait for `>>> FINISH COMPLETE <<<`.
 
 Done.
@@ -76,15 +77,7 @@ Recursively collect every leaf Task under this issue (a sub-issue with no sub-is
 
 ### Recommend a profile per task
 
-Per task, from size + security signal (`auth|crypto|password|payment|token|secret|credential|session|login|oauth|jwt|apikey|private|key`):
-
-| Size | Default | If security |
-|------|---------|-------------|
-| XS | S | O [security] |
-| S | O | SC [security] |
-| M | SC | OC [security] |
-| L | OC | SOC [security] |
-| XL | SOC | SOC [security] |
+Per task: XS/S → `quick` · M → `standard` · L/XL → `deep`. Security signal (`auth|crypto|password|payment|token|secret|credential|session|login|oauth|jwt|apikey|private|key`) bumps one level (`quick`→`standard`, `standard`→`deep`) and tags `[security]`.
 
 ### Present + baseline (once) + approve
 

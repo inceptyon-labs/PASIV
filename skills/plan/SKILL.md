@@ -92,27 +92,19 @@ Save to `docs/plans/YYYY-MM-DD-<issue-slug>.md`.
 
 ## Step 5: Approval + review profile
 
-Recommend a review profile from size + security signal (values below are profile aliases resolved by the `review` skill):
+Recommend a review profile from size + security signal:
 
 ```bash
 SECURITY_PATTERNS="auth|crypto|password|payment|token|secret|credential|session|login|oauth|jwt|apikey|private|key"
 ```
 
-| Size | Default | If a planned file matches SECURITY_PATTERNS |
-|------|---------|----------------------------------------------|
-| XS | S | O [security] |
-| S  | O | SC [security] |
-| M  | SC | OC [security] |
-| L  | OC | SOC [security] |
-| XL | SOC | SOC [security] |
-
-(`S/O/SC/OC/SOC` are recognized profile aliases; the named profiles `quick`/`standard`/`deep` and any `.pasiv.yml` `review.profiles` also work. See the `review` skill.)
+**Rule:** XS/S → `quick` · M → `standard` · L/XL → `deep`. If any planned file matches SECURITY_PATTERNS, bump one level (`quick`→`standard`, `standard`→`deep`) and tag `[security]`. (Any `.pasiv.yml` `review.profiles` name also works — see the `review` skill.)
 
 **If `PLAN_PREAPPROVED` is set** (autonomous parent flow) — skip every question, use the `REVIEW_PROFILE` the router already set, display the plan briefly, go to Step 6.
 
 **If `WORKFLOW_PLAN_APPROVAL` is true** — AskUserQuestion, two questions:
 1. "Approve this implementation plan?" → Approve / Revise / Cancel
-2. "What review profile?" → the recommended one + alternatives (S/O/SC/OC/SOC or a named profile; mark the recommended "(Recommended)", flag "[security]" where applicable)
+2. "What review profile?" → the recommended one + alternatives (`quick`/`standard`/`deep`/`none` or a `.pasiv.yml` profile; mark the recommended "(Recommended)", flag "[security]" where applicable)
 
 Store `REVIEW_PROFILE`. Approve → Step 6. Revise → ask, update plan, re-ask. Cancel → stop, explain.
 

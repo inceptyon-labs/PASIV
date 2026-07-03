@@ -1,6 +1,6 @@
 ---
 name: review
-description: Review the branch diff at a configurable depth. Use for "review", "code review", "s-review/o-review/sc-review/oc-review/soc-review", "codex review", or a named profile (quick/standard/deep/codex). Reads review profiles from .pasiv.yml with built-in fallbacks. Also called by /kick.
+description: Review the branch diff at a configurable depth. Use for "review", "code review", "codex review", or a named profile (quick/standard/deep/codex). Reads review profiles from .pasiv.yml with built-in fallbacks. Also called by /kick.
 model: opus
 user-invocable: true
 allowed-tools:
@@ -29,14 +29,15 @@ A profile is an ordered list of passes; each pass is an `engine` plus (for claud
 1. **`.pasiv.yml` `review.profiles.<name>`** if defined.
 2. **Built-ins:**
 
-   | Profile | Passes |
-   |---------|--------|
-   | `none` | — (skip) |
-   | `quick` | claude:sonnet |
-   | `standard` | claude:opus → codex |
-   | `deep` | claude:sonnet → claude:opus → codex |
+   | Profile | Passes | Rationale |
+   |---------|--------|-----------|
+   | `none` | — (skip) | |
+   | `quick` | claude:sonnet | trivial diffs — one cheap pass |
+   | `standard` | claude:opus → codex | cross-family diversity |
+   | `deep` | claude:opus → codex → claude:opus | final pass re-checks the cumulative fixes from both prior rounds |
+   | `codex` | codex | codex-only |
 
-3. **Legacy tier aliases** (back-compat for the size/security recommendation and old muscle memory): `S`→`quick`, `O`→[claude:opus], `SC`→[claude:sonnet, codex], `OC`→`standard`, `SOC`→`deep`, `codex`→[codex].
+   Sonnet is never paired with another pass — its findings are a subset of opus in the same family; pair-diversity comes from crossing engines.
 
 `.pasiv.yml` schema (optional — built-ins cover the common cases):
 
@@ -47,7 +48,7 @@ review:
     none:     []
     quick:    [{ engine: claude, model: sonnet }]
     standard: [{ engine: claude, model: opus }, { engine: codex }]
-    deep:     [{ engine: claude, model: sonnet }, { engine: claude, model: opus }, { engine: codex }]
+    deep:     [{ engine: claude, model: opus }, { engine: codex }, { engine: claude, model: opus }]
 ```
 
 ## Engines — host-aware dispatch
@@ -80,6 +81,7 @@ Independent code review of the diff below (BASE <BASE_SHA> → HEAD <HEAD_SHA>).
 What it should do: <issue title / acceptance criteria>.
 Look for: correctness bugs, security (injection/auth/XSS/secrets), missing error handling,
 test gaps, and over-engineering (code that stdlib/native/an existing helper already covers).
+Check each acceptance criterion has a covering test — list any uncovered criterion as a finding.
 Classify each finding: blocker | important | nit. Return findings only — no preamble.
 ```
 
