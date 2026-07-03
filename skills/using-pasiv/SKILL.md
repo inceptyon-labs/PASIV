@@ -54,11 +54,6 @@ When to use EnterPlanMode: only for ad-hoc work that does not fit any PASIV skil
 | `/handoff` | End of session, before switching tasks, or when prompted by PreCompact |
 | `/reflect` | End of session, to persist durable facts, corrections, and reusable workflows to memory (deliberate; never auto-fires) |
 
-### Security
-| Skill | When to Use |
-|-------|-------------|
-| `/repo-scan` | Scan a repo for vulnerabilities, obfuscated code, malware, secrets |
-
 ### Setup
 | Skill | When to Use |
 |-------|-------------|
@@ -80,8 +75,6 @@ Is this about creating issues? → /issue, /parent, or /backlog
 Is this about implementing an issue? → /kick
     ↓
 Is this a standalone review? → /review [profile]
-    ↓
-Is this about scanning a repo? → /repo-scan
     ↓
 End of session or context filling up? → /handoff (resume this task)
     ↓

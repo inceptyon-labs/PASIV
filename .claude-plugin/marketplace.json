@@ -23,6 +23,20 @@
         "inception"
       ],
       "strict": true
+    },
+    {
+      "name": "pasiv-extras",
+      "source": "./extras",
+      "description": "Standalone utilities: repo security scan, first-push repo prep, App Store readiness, de-vibe, image generation. Ad hoc — not loaded by the core workflow.",
+      "version": "1.0.0",
+      "category": "productivity",
+      "tags": [
+        "security",
+        "app-store",
+        "images",
+        "utilities"
+      ],
+      "strict": true
     }
   ]
 }

@@ -129,9 +129,9 @@ No `.pasiv.yml` defaults to Local Markdown (zero-dependency). GitHub and Beans a
 | `/kick next` | - | Work on highest priority ready task |
 | `/handoff` | Handoff doc | Save session context for next session |
 | `/reflect` | Memory / feedback | Persist durable facts, corrections, and reusable workflows from the session |
-| `/repo-scan` | Report | Security scan for vulnerabilities, malware, secrets |
 | `/review [profile]` | - | Review the diff at a depth — `quick`/`standard`/`fast`/`deep`/`codex` |
-| `/de-vibe` | - | Strip AI tells — de-slop docs, drop restate-comments, scrub trailers |
+
+**Standalone utilities** live in the separate **`pasiv-extras`** plugin (`/plugin install pasiv-extras@pasiv`) so they don't load into every session: `/repo-scan` (security vetting), `/repo-ready` (first-push prep), `/app-store-ready` (submission validator + ASO), `/de-vibe` (strip AI tells), `/nano-banana` (image generation).
 
 ## Workflow Patterns
 
@@ -146,7 +146,6 @@ Choose your entry point based on what you have:
 | Clear requirements | `/backlog spec.md` | → issues → `/kick` |
 | Single task | `/issue` | → `/kick 42` |
 | Existing issue | `/kick 42` | (inline planning) |
-| Forked/cloned repo | `/repo-scan` | → security report |
 | New project | `/pasiv init` | → configured and ready |
 | End of session | `/handoff` | → context preserved |
 
@@ -417,25 +416,25 @@ Handoffs live at `docs/handoffs/handoff-YYYY-MM-DD-{topic}.md` and are archived 
 
 ---
 
-## Security Scanning
+## Extras Plugin
 
 > *"You're asking me for inception."*
 
-```
-/repo-scan                  # Scan current repo
-/repo-scan ~/path/to/repo   # Scan a specific directory
+Standalone utilities ship as a **separate plugin** so the core workflow stays lean — their descriptions aren't loaded into sessions that don't need them:
+
+```bash
+/plugin install pasiv-extras@pasiv
 ```
 
-Multi-ecosystem security scan that checks for:
-- Dependency vulnerabilities (CVEs)
-- Suspicious install scripts
-- Obfuscated or encoded code
-- Network calls to unknown servers
-- Malware patterns (miners, shells, exfiltration)
-- Hardcoded secrets and credentials
-- File system anomalies
+| Skill | What it does |
+|-------|--------------|
+| `/repo-scan` | Multi-ecosystem security vetting — CVEs, malware patterns, obfuscated code, secrets; PASS/CAUTION/FAIL report in `docs/scans/` |
+| `/repo-ready` | Prep for first GitHub push — README, LICENSE, community files, secret scan |
+| `/app-store-ready` | Apple App Store submission validator + ASO/keyword optimizer |
+| `/de-vibe` | Strip AI tells — de-slop docs, drop restate-comments, scrub trailers |
+| `/nano-banana` | Image generation via Google Gemini (icons, logos, graphics) |
 
-Generates a report in `docs/scans/` with a verdict: **PASS**, **CAUTION**, or **FAIL**.
+Enable/disable per project or on demand — the core `pasiv` plugin never depends on them.
 
 ---
 
@@ -641,8 +640,6 @@ skills/
 ├── handoff-ops/SKILL.md        # Handoff file management (Haiku)
 ├── reflect/SKILL.md            # /reflect (persist learnings to memory/skills)
 │
-├── repo-scan/SKILL.md          # /repo-scan (security scanning)
-│
 ├── using-pasiv/SKILL.md        # Skill awareness guide
 ├── verification/SKILL.md       # Verification gate (Haiku → Opus)
 ├── systematic-debugging/SKILL.md # Debug methodology (Opus)
@@ -654,6 +651,15 @@ skills/
 ├── git-ops/SKILL.md            # Git operations (Haiku)
 ├── project-ops/SKILL.md        # GitHub Project operations (Haiku)
 └── test-runner/SKILL.md        # Test execution (Haiku)
+
+extras/                         # pasiv-extras plugin — ad hoc utilities
+├── .claude-plugin/plugin.json
+└── skills/
+    ├── repo-scan/              # /repo-scan (security vetting)
+    ├── repo-ready/             # /repo-ready (first-push prep)
+    ├── app-store-ready/        # /app-store-ready (submission + ASO)
+    ├── de-vibe/                # /de-vibe (strip AI tells)
+    └── nano-banana/            # /nano-banana (image generation)
 
 docs/
 ├── reference/                  # On-demand reference docs (loaded by skills)
