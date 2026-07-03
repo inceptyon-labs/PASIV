@@ -4,6 +4,8 @@ description: Interactive PASIV setup. Creates .pasiv.yml. Use for "pasiv init", 
 model: sonnet
 allowed-tools:
   - Bash
+  - Read
+  - Edit
   - AskUserQuestion
   - Skill
 user-invocable: true
@@ -21,10 +23,19 @@ Interactive setup wizard for configuring PASIV in the current project.
 [ -f .pasiv.yml ] && echo "exists" || echo "missing"
 ```
 
-If `.pasiv.yml` exists:
-- Read and display current config
-- Ask: "Reconfigure PASIV?" (Yes / No)
-- If No: stop
+If `.pasiv.yml` exists, Read it, display it, and ask (AskUserQuestion): "PASIV is already configured here. What do you want to do?"
+
+- **Update (Recommended)** — ask only about settings missing from the current config; everything else untouched
+- **Reconfigure** — full wizard; rewrites `.pasiv.yml` from scratch (custom keys like `model_routing` / `review.profiles` are lost — say so)
+- **Cancel** — stop
+
+**Update mode** (skip steps 2–7):
+
+1. Compare the current file against the managed settings: `workflow.plan_approval`, `workflow.tdd`, `workflow.review`, `workflow.verification`, `workflow.ui_verify`, `workflow.auto_reflect`, `metrics.tokens`, `verify.command`, `models.coordinator`.
+2. Ask the corresponding wizard question (steps 4–4.5 wording) for each **missing** key only — batch into as few AskUserQuestion calls as possible (max 4 questions per call). Nothing missing → report "config is current" and stop.
+3. Patch `.pasiv.yml` with Edit: new `workflow.*` keys go inside the existing `workflow:` block; `metrics:` / `verify:` / `models:` are appended as new blocks. Do **not** run the init script.
+4. Write declined booleans explicitly (`auto_reflect: false`) so they aren't re-asked next update; declined string opt-ins (`verify.command`, `models.coordinator`) stay absent and will be offered again next time.
+5. Display the updated file and stop.
 
 ### 2. Choose Task Backend
 
