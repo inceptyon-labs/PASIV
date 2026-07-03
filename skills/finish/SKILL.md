@@ -69,7 +69,7 @@ If this task has a parent:
 **If `TOKEN_REPORT` is true:** run the token report:
 
 ```bash
-TR_SCRIPT=$(find ~/.claude -name "token-report.sh" -path "*/pasiv/scripts/*" 2>/dev/null | head -1)
+TR_SCRIPT=$(find ~/.claude -name "token-report.sh" -path "*pasiv*/scripts/*" 2>/dev/null | head -1)
 [ -n "$TR_SCRIPT" ] && bash "$TR_SCRIPT" "$IDENTIFIER"
 ```
 
