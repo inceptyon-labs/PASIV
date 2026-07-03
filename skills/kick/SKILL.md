@@ -28,7 +28,7 @@ Each step-skill shares this session's context (`IDENTIFIER`, `WORKFLOW_*`, `REVI
 Read `.pasiv.yml` (`[ -f .pasiv.yml ] && cat .pasiv.yml || echo missing`):
 - `TASK_BACKEND` = github | beans | local (default local). `IDENTIFIER` is the issue number / bean ID / local ID.
 - Workflow flags from `workflow:` (all default **true**): `WORKFLOW_PLAN_APPROVAL`, `WORKFLOW_TDD`, `WORKFLOW_REVIEW`, `WORKFLOW_VERIFICATION`.
-- Opt-ins (default **off**): `WORKFLOW_UI_VERIFY` from `workflow.ui_verify`; `VERIFY_COMMAND` from `verify.command`; `COORDINATOR_MODEL` from `models.coordinator` (e.g. `fable` — used for frontier implementer escalations and substituted for `opus` in built-in review profiles).
+- Opt-ins (default **off**): `WORKFLOW_UI_VERIFY` from `workflow.ui_verify`; `VERIFY_COMMAND` from `verify.command`; `COORDINATOR_MODEL` from `models.coordinator` (e.g. `fable` — used for frontier implementer escalations and substituted for `opus` in built-in review profiles); `TOKEN_REPORT` from `metrics.tokens` (per-model token summary + history at finish); `AUTO_REFLECT` from `workflow.auto_reflect` (run `reflect` at finish when a reflection signal fired).
 
 Get the issue. If the argument is `next` → **Skill:** `task-ops` `get-next` → `IDENTIFIER`. Then **Skill:** `task-ops` `get $IDENTIFIER` → store `IDENTIFIER`, `ISSUE_TITLE`, `ISSUE_BODY`, `ISSUE_LABELS` (github backend: also `ISSUE_URL`, used by the project-board moves in Steps 1.5 and `finish`).
 
@@ -105,4 +105,4 @@ For each Task: set `IDENTIFIER`/`PARENT_IDENTIFIER` and `REVIEW_PROFILE = REVIEW
 
 ### After all tasks
 
-Parents auto-close via `finish`'s cascade. Find the next issue (`gh issue list --label priority:high --state open --limit 1`, fallback any open) and report the Epic/Feature summary with each Task ✓ and its profile, then "Run `/kick next` to continue."
+Parents auto-close via `finish`'s cascade. Wrap-up opt-ins run **once here**, not per task: if `TOKEN_REPORT`, run the token report (finish Step 4.5's command) with the Epic/Feature identifier; if `AUTO_REFLECT` and any reflection signal fired during any task, **Skill:** `reflect`. Then find the next issue (`gh issue list --label priority:high --state open --limit 1`, fallback any open) and report the Epic/Feature summary with each Task ✓ and its profile, then "Run `/kick next` to continue."

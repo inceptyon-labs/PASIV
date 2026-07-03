@@ -64,6 +64,17 @@ If this task has a parent:
    - github backend: **Use Skill tool:** `project-ops` with args: `move-to-done ... $PARENT_URL`
    - **Use Skill tool:** `task-ops` with args: `close $PARENT_IDENTIFIER "All sub-issues completed"`
 
+## Step 4.5: Session wrap-up (opt-ins, single-task flow only — the parent flow's router does these once at the end)
+
+**If `TOKEN_REPORT` is true:** run the token report and include its table in the Step 5 report:
+
+```bash
+TR_SCRIPT=$(find ~/.claude -name "token-report.sh" -path "*/pasiv/scripts/*" 2>/dev/null | head -1)
+[ -n "$TR_SCRIPT" ] && bash "$TR_SCRIPT" "$IDENTIFIER"
+```
+
+**If `AUTO_REFLECT` is true:** check whether any reflection signal fired during this task — escalation ladder used, three-strikes hit, user corrected the agent mid-run, review found blockers, plan was reworked after approval. Any signal → **Skill:** `reflect`. No signals → skip silently, don't mention it.
+
 ## Step 5: Report
 
 ```
