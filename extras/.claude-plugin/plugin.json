@@ -1,0 +1,19 @@
+{
+  "name": "pasiv-extras",
+  "description": "PASIV standalone utilities — repo-scan, repo-ready, app-store-ready, de-vibe, nano-banana. Ad hoc tools outside the core workflow; install only when needed.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Inceptyon Labs"
+  },
+  "repository": "https://github.com/inceptyon-labs/PASIV",
+  "license": "MIT",
+  "keywords": [
+    "security",
+    "app-store",
+    "images",
+    "utilities"
+  ],
+  "skills": [
+    "./skills"
+  ]
+}

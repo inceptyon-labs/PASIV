@@ -23,8 +23,8 @@ Run `/pasiv init` to configure, or create `.pasiv.yml` manually. Default: local 
 | `/reflect` | Persist durable facts, corrections, and reusable workflows from the session |
 | `/pasiv init` | Interactive setup wizard for task backend and config |
 | `/review [profile]` | Review the diff at a depth — quick/standard/fast/deep/codex |
-| `/repo-scan` | Security scan a repo for vulnerabilities and secrets |
-| `/de-vibe` | Strip AI tells - de-slop docs, gitignore AI configs, drop restate-comments, scrub commit trailers |
+
+Standalone utilities (`/repo-scan`, `/repo-ready`, `/app-store-ready`, `/de-vibe`, `/nano-banana`) live in the separate `pasiv-extras` plugin — install ad hoc via `/plugin install pasiv-extras@pasiv`.
 
 ## Workflow
 
@@ -70,9 +70,6 @@ skills/
 ├── review/SKILL.md             # /review — profile-driven, host-aware
 ├── finish/SKILL.md             # merge / handoff / close
 │
-├── repo-scan/SKILL.md          # /repo-scan (security)
-├── de-vibe/SKILL.md            # /de-vibe (strip AI tells)
-│
 ├── using-pasiv/SKILL.md        # Skill awareness (session start)
 ├── verification/SKILL.md       # Verification gate (internal)
 ├── systematic-debugging/SKILL.md
@@ -85,6 +82,9 @@ skills/
 ├── handoff-ops/SKILL.md        # Handoff files (Haiku)
 ├── project-ops/SKILL.md        # GitHub projects (Haiku)
 └── test-runner/SKILL.md        # Test execution (Haiku)
+
+extras/skills/                  # pasiv-extras plugin (ad hoc, not core workflow)
+├── repo-scan/ · repo-ready/ · app-store-ready/ · de-vibe/ · nano-banana/
 
 docs/
 ├── designs/                    # Design documents from /brainstorm
