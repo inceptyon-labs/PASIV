@@ -53,17 +53,20 @@ If `WORKFLOW_TDD` is false: skip RED; the subagent implements to the AC and adds
 
 Resolve the implementer model from the task's `modelTier`:
 - `.pasiv.yml` has a `model_routing` section → `model = model_routing[modelTier][host]`, where host is `claude` (`$CLAUDECODE` set) or `codex` (`$CODEX_*` set). E.g. `mechanical` → Haiku on Claude.
-- No `model_routing` (default) → **Sonnet**.
+- `frontier` with no `model_routing` entry → `COORDINATOR_MODEL` if set (kick Step 0), else **Opus**.
+- Otherwise (default) → **Sonnet**.
 
 **Use the Task tool** at the resolved `model`, passing the prompt below filled in. Do NOT make the subagent read the plan file — hand it everything:
 
 ```
 You are implementing one task. Make the failing tests pass with the least code that works.
 
-TASK: <task Goal>
-FILES: <files from metadata>
+GOAL: <task Goal>
+SCOPE: <files from metadata> plus their test files. Anything outside is OUT OF BOUNDS —
+if the fix seems to need another file, return BLOCKED and say why instead of expanding scope.
 FAILING TESTS: <test file paths> — run `<verifyCommand>` to see them fail.
 ACCEPTANCE CRITERIA: <acceptanceCriteria>
+DONE MEANS: `<verifyCommand>` passes, then the full suite passes once.
 
 Climb the ladder before writing — stop at the first rung that holds:
 1 needs to exist? 2 already in this codebase (reuse)? 3 stdlib? 4 native platform feature?
@@ -71,17 +74,23 @@ Climb the ladder before writing — stop at the first rung that holds:
 Never simplify away trust-boundary validation, data-loss handling, security, or accessibility.
 
 For EACH failing test: write minimal code → run `<verifyCommand>` → refactor while green → commit
-via the git-ops skill (`commit "feat: <what> (#<issue>)"`). When all tests pass, run the full suite once.
+via the git-ops skill (`commit "feat: <what> (#<issue>)"`).
 
-Report back ONLY: a status line — DONE | DONE_WITH_CONCERNS | BLOCKED — then per-cycle one-liners
-(test → GREEN/REFACTOR/COMMIT) and any concerns. Keep it short; this report is your return value.
+CONTRACT — report back ≤15 lines, nothing else: a status line (DONE | DONE_WITH_CONCERNS | BLOCKED),
+per-cycle one-liners (test → GREEN/REFACTOR/COMMIT), and any concerns. No raw test output (summarize
+failures as file:line), no diffs over 30 lines, no narration. This report is your return value.
 ```
+
+When re-dispatching after a failure (ladder below), append a `PRIOR ATTEMPTS:` section with the earlier failure reports verbatim — the next model must not rediscover the dead ends.
 
 **4. Handle the subagent's status**
 
 - **DONE** → mark the task completed.
 - **DONE_WITH_CONCERNS** → read the concerns. Correctness/scope concern → address before continuing; observation → note and continue.
-- **BLOCKED** → assess: missing context → re-dispatch with it; needs more reasoning → bump `modelTier` one step (mechanical→standard→frontier), re-resolve the model, re-dispatch; task too large → split; plan wrong → escalate to the user. Never re-dispatch the same model with no change.
+- **BLOCKED or failed** → climb the escalation ladder:
+  1. Missing context → re-dispatch **once** at the same tier with the context added. This is the only same-tier retry.
+  2. Second failure at a tier → bump `modelTier` one step (mechanical→standard→frontier), re-resolve the model, re-dispatch with both failure reports in `PRIOR ATTEMPTS`. Never a third attempt at the same tier, never a silent step down.
+  3. Task too large → split. Plan wrong → escalate to the user. Failing at frontier → stop and hand the user both failure reports; that signals a design problem, not an implementation one.
 
 Never write the production code yourself — that pollutes your context and defeats the isolation. Your job is RED + coordination.
 

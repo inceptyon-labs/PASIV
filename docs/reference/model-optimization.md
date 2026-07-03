@@ -49,6 +49,22 @@ model_routing:
 
 This lets a well-specified mechanical task run on **Haiku** (cheaper than the flat Sonnet) and keeps a plan portable across hosts. Reviews are **not** tier-routed — the review profile already names each pass's model.
 
+Any model name your host exposes is valid in a routing slot, including `fable`.
+
+## Coordinator Model Override (optional)
+
+```yaml
+models:
+  coordinator: fable   # opt-in; absent → behavior unchanged (Opus)
+```
+
+When set, kick Step 0 reads it into `COORDINATOR_MODEL` and two things change:
+
+- `execute` resolves `frontier`-tier tasks (including BLOCKED escalations that reach frontier) to this model instead of Opus.
+- `review` substitutes it for `opus` in the built-in profiles (explicit `review.profiles` entries run as written).
+
+Useful while a stronger model is on the subscription — delete the block when it's gone and everything reverts to the defaults. The escalation ladder in `execute` carries failure reports upward (`PRIOR ATTEMPTS`), so the pinned model never rediscovers a cheaper tier's dead ends.
+
 ## 1M Context Gotcha (subscription cost)
 
 The 1M context window is a **session-level beta** (`claude-opus-4-8[1m]`), negotiated when the session connects — it cannot be passed per-message or stripped per-dispatch. A subagent dispatched from a 1M parent **inherits the 1M tier but not the `/extra-usage` entitlement** for its own model. So when `execute` (Opus) dispatches its Sonnet implementer subagent under a 1M session, that worker can fail with `Extra usage is required for 1M context` or meter outside your subscription. There is no per-subagent opt-out (filed and closed not-planned).

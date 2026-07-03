@@ -84,30 +84,24 @@ Common patterns:
 
 ## Report Format
 
+**Contract: failures only.** Passing output is one line — never paste raw runner output back.
+
 ### Success
 
 ```
-✓ All tests passed
-
-Tests:     47/47 passed
-Skipped:   0
-Exit code: 0
+✓ 47 passed (exit 0)
 ```
 
 ### Failure
 
 ```
-✗ Tests failed
-
-Tests:     45/47 passed, 2 failed
-Skipped:   0
-Exit code: 1
+✗ 45/47 passed, 2 failed (exit 1)
 
 Failed tests:
 - test/auth.test.ts:42 - should reject invalid tokens
 - test/user.test.ts:15 - should validate email format
 
-[Include relevant error messages from output]
+[Only the assertion/error line per failure — not the full runner output]
 ```
 
 ### No Tests Found
@@ -144,10 +138,4 @@ This likely means:
 
 ## Output
 
-Return structured report with:
-1. Status icon (✓/✗/⚠)
-2. Summary line
-3. Test counts
-4. Exit code
-5. Failed test details (if any)
-6. Error context (if needed)
+Return the report format above and nothing else: one line on success; on failure, the summary line plus per-failure `file:line` and its assertion/error line.

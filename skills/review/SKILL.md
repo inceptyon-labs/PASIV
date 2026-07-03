@@ -39,6 +39,8 @@ A profile is an ordered list of passes; each pass is an `engine` plus (for claud
 
    Sonnet is never paired with another pass — its findings are a subset of opus in the same family; pair-diversity comes from crossing engines.
 
+   If `COORDINATOR_MODEL` is set (from kick Step 0; standalone, read `.pasiv.yml` `models.coordinator`), substitute it for `opus` in the built-in profiles. Explicit `review.profiles` entries run as written.
+
 `.pasiv.yml` schema (optional — built-ins cover the common cases):
 
 ```yaml
