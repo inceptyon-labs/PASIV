@@ -71,7 +71,7 @@ If GitHub was selected:
 
 1. "Visually verify UI changes before merge?" — Yes: for frontend/mobile tasks, drive the app and screenshot the change before the verification gate / No: rely on tests and review only. → UI_VERIFY (opt-in; some projects don't want the extra wall-clock per task)
 2. "Add a project smoke command to the verification gate?" — No / Yes — type the command via Other (e.g. `npm run smoke`, `./scripts/e2e.sh`). → VERIFY_COMMAND (empty if No)
-3. "Pin a coordinator model for frontier escalations and review passes?" — No (Recommended): default Opus / Yes — type the model via Other (e.g. `fable` while subscribed). → COORDINATOR_MODEL (empty if No)
+3. "Pin a coordinator model for frontier escalations and review passes?" — No (Recommended): default Opus / Yes — type the model via Other (any frontier model id your plan exposes). → COORDINATOR_MODEL (empty if No)
 4. "Enable end-of-workflow extras?" — multiSelect: Token report — per-model token summary at finish, history in `docs/metrics/tokens.jsonl` / Auto-reflect — run `reflect` at finish when the task hit escalations, corrections, or review blockers. → TOKEN_REPORT / AUTO_REFLECT (both off if none selected)
 
 ### 5. Run Init Script

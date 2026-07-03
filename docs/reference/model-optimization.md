@@ -49,13 +49,13 @@ model_routing:
 
 This lets a well-specified mechanical task run on **Haiku** (cheaper than the flat Sonnet) and keeps a plan portable across hosts. Reviews are **not** tier-routed — the review profile already names each pass's model.
 
-Any model name your host exposes is valid in a routing slot, including `fable`.
+Any model name your host exposes is valid in a routing slot — including a frontier model above Opus when one is available.
 
 ## Coordinator Model Override (optional)
 
 ```yaml
 models:
-  coordinator: fable   # opt-in; absent → behavior unchanged (Opus)
+  coordinator: <frontier-model>   # opt-in; absent → behavior unchanged (Opus)
 ```
 
 When set, kick Step 0 reads it into `COORDINATOR_MODEL` and two things change:
@@ -63,7 +63,7 @@ When set, kick Step 0 reads it into `COORDINATOR_MODEL` and two things change:
 - `execute` resolves `frontier`-tier tasks (including BLOCKED escalations that reach frontier) to this model instead of Opus.
 - `review` substitutes it for `opus` in the built-in profiles (explicit `review.profiles` entries run as written).
 
-Useful while a stronger model is on the subscription — delete the block when it's gone and everything reverts to the defaults. The escalation ladder in `execute` carries failure reports upward (`PRIOR ATTEMPTS`), so the pinned model never rediscovers a cheaper tier's dead ends.
+Useful while a frontier model is available on your plan — delete the block when it's gone and everything reverts to the defaults. The escalation ladder in `execute` carries failure reports upward (`PRIOR ATTEMPTS`), so the pinned model never rediscovers a cheaper tier's dead ends.
 
 ## 1M Context Gotcha (subscription cost)
 
