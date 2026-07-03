@@ -17,6 +17,8 @@ allowed-tools:
 
 Symptom-focused fixes mask problems and create technical debt.
 
+Commands below show `npm test` — substitute the project's actual runner (`pytest`, `go test ./...`, `cargo test`, …).
+
 ---
 
 ## Phase 1: Root Cause Investigation
@@ -159,7 +161,7 @@ npm test
 
 ### Commit
 
-**Use Skill tool**: `git-ops` with args: `commit "fix: [root cause description] (#$ISSUE_NUM)"`
+**Use Skill tool**: `git-ops` with args: `commit "fix: [root cause description] (#$ISSUE_NUM)"` — omit the `(#…)` ref when no issue number is in context (standalone invocation).
 
 ---
 
@@ -208,39 +210,8 @@ When debugging, maintain this log:
 
 ## Common Debugging Scenarios
 
-### Test Passes Locally, Fails in CI
-
-Check:
-- Environment variables
-- Node/Python/Go version differences
-- File system case sensitivity (Mac vs Linux)
-- Timezone differences
-- Missing test fixtures
-
-### Intermittent Failures
-
-Check:
-- Race conditions
-- Shared mutable state
-- External service dependencies
-- Time-based logic
-- Random number usage without seed
-
-### "It Was Working Yesterday"
-
-Check:
-- Recent commits: `git log --oneline -20`
-- Dependency updates: `git diff HEAD~5 package-lock.json`
-- Environment changes
-- External API changes
-
----
-
-## Effectiveness
-
-| Approach | Avg Time | Success Rate |
-|----------|----------|--------------|
-| Systematic debugging | 15-30 min | 95% first-time |
-| Random fix attempts | 2-3 hours | 40% first-time |
-
-Invest in understanding. It pays off.
+| Scenario | Check |
+|----------|-------|
+| Passes locally, fails in CI | env vars, runtime version, FS case sensitivity (Mac vs Linux), timezone, missing fixtures |
+| Intermittent failures | race conditions, shared mutable state, external services, time-based logic, unseeded randomness |
+| "Was working yesterday" | `git log --oneline -20`, lockfile diffs, environment changes, external API changes |

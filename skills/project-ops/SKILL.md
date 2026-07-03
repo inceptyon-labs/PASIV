@@ -12,6 +12,8 @@ user-invocable: false
 
 Perform project operation: $ARGUMENTS
 
+**On permission errors:** if any `gh project` command fails with a scope/permission error, report that the token is missing the `project` scope — fix is `gh auth refresh -s project` — and stop.
+
 ## Available Operations
 
 ### setup
@@ -46,8 +48,8 @@ Arguments: project_num, owner, issue_url
 gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "$ISSUE_URL"
 ```
 
-### move-to-in-progress
-Move an issue to "In Progress" status.
+### move-to-in-progress / move-to-done
+Move an issue to the "In Progress" or "Done" status. Same recipe, `STATUS_NAME` = `"In Progress"` or `"Done"`.
 
 Arguments: project_id, project_num, owner, issue_url
 
@@ -55,37 +57,18 @@ Arguments: project_id, project_num, owner, issue_url
 # Get item ID
 ITEM_ID=$(gh project item-list "$PROJECT_NUM" --owner "$OWNER" --format json \
   | jq -r --arg url "$ISSUE_URL" '.items[] | select(.content.url == $url) | .id')
+# Empty ITEM_ID → issue not on the board: run add-issue, then retry this lookup once.
 
-# Get Status field
+# Get Status field + target option
 STATUS_FIELD=$(gh project field-list "$PROJECT_NUM" --owner "$OWNER" --format json \
   | jq -r '.fields[] | select(.name == "Status")')
 FIELD_ID=$(echo "$STATUS_FIELD" | jq -r '.id')
-IN_PROGRESS_ID=$(echo "$STATUS_FIELD" | jq -r '.options[] | select(.name == "In Progress") | .id')
+OPTION_ID=$(echo "$STATUS_FIELD" | jq -r --arg s "$STATUS_NAME" '.options[] | select(.name == $s) | .id')
+# Empty OPTION_ID → the board has non-default status columns: report the available option names and skip the move.
 
 # Update status
 gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
-  --field-id "$FIELD_ID" --single-select-option-id "$IN_PROGRESS_ID"
-```
-
-### move-to-done
-Move an issue to "Done" status.
-
-Arguments: project_id, project_num, owner, issue_url
-
-```bash
-# Get item ID
-ITEM_ID=$(gh project item-list "$PROJECT_NUM" --owner "$OWNER" --format json \
-  | jq -r --arg url "$ISSUE_URL" '.items[] | select(.content.url == $url) | .id')
-
-# Get Status field
-STATUS_FIELD=$(gh project field-list "$PROJECT_NUM" --owner "$OWNER" --format json \
-  | jq -r '.fields[] | select(.name == "Status")')
-FIELD_ID=$(echo "$STATUS_FIELD" | jq -r '.id')
-DONE_ID=$(echo "$STATUS_FIELD" | jq -r '.options[] | select(.name == "Done") | .id')
-
-# Update status
-gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" \
-  --field-id "$FIELD_ID" --single-select-option-id "$DONE_ID"
+  --field-id "$FIELD_ID" --single-select-option-id "$OPTION_ID"
 ```
 
 ## Response Format
