@@ -21,6 +21,7 @@ Complete checklist of Apple's hard requirements for App Store submission.
 - **No alpha channel** (transparency) — Apple will reject
 - **No rounded corners** — Apple applies its own superellipse mask. Provide square/unmasked artwork.
 - **No layers or effects** that suggest interactivity (glass, shine)
+- **Contents.json valid** — all required sizes referenced in the appiconset
 - Apple specifies pixel dimensions — DPI/PPI is not a submission requirement
 
 ### Platform-Specific Icon Sizes

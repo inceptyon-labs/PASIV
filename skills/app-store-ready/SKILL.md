@@ -15,7 +15,7 @@ allowed-tools:
   - TaskList
   - TaskGet
   - AskUserQuestion
-  # Write tools — only used in `optimize` or `fix` mode
+  # Write tools — reports (all modes) + metadata edits (`optimize` mode only)
   - Write
   - Edit
   # Web tools — used for ASO/competitor research
@@ -37,70 +37,51 @@ conversion. Be direct — flag blockers as BLOCKER, warnings as WARNING, and sug
 
 **Input:** `$ARGUMENTS`
 
-## Subcommands
+## Modes
 
-Parse `$ARGUMENTS` to determine the mode:
+Parse `$ARGUMENTS` to pick the mode, then run exactly the listed steps, in order:
 
-| Command | What it does |
-|---------|-------------|
-| *(empty)* or `full` | Run everything — validate + aso + creative + compete |
-| `validate` | Hard requirements only (assets, metadata, compliance, binary) |
-| `aso` | ASO engine (keywords, title/subtitle, description, localization) |
-| `creative` | Screenshot & creative analysis (messaging, hierarchy, A/B ideas) |
-| `compete [keyword]` | Competitor intelligence for target keywords |
-| `optimize` | One-pass optimization of all metadata |
-| `reviewer` | "If I were Apple reviewer" rejection prediction |
-| `go` | Pre-submission go/no-go checklist |
+| Command | What it does | Steps | Report format (references/report-formats.md) |
+|---------|-------------|-------|----------------------------------------------|
+| *(empty)* or `full` | Run everything | 0 → 1 → gate → 2 → 3 → 4 → 5 → 6 | § Submission Report |
+| `validate` | Hard requirements only (assets, metadata, compliance, binary) | 0 → 1 → 6 | § Submission Report |
+| `aso` | ASO engine (keywords, title/subtitle, description, localization) | 0 → 2 → 6 | § ASO Report |
+| `creative` | Screenshot & creative analysis (messaging, hierarchy, A/B ideas) | 0 → 3 → 6 | none — per Step 3 structure |
+| `compete [keyword]` | Competitor intelligence for target keywords | 0 → 4 → 6 | § Competitive Intelligence |
+| `optimize` | One-pass metadata optimization — writes to metadata files | 0 → 2 → apply edits → 6 | § ASO Report + files edited |
+| `reviewer` | "If I were Apple reviewer" rejection prediction | 0 → 1 → 6 | § Review Risk Assessment |
+| `go` | Pre-submission go/no-go checklist | 0 → 1 → 6 | § Go/No-Go Checklist |
 
 If arguments contain an app name, keyword, or competitor reference, use that context throughout.
 
----
+`optimize` is the only mode that edits project files. It applies the winning metadata variants
+from Step 2 to the local metadata files found in Step 0 (e.g. `fastlane/metadata/*/name.txt`,
+`subtitle.txt`, `keywords.txt`, `description.txt`, `promotional_text.txt`). It never edits code,
+assets, or Info.plist. If no local metadata files exist, output the optimized values in the report instead.
+
+**Web search rule** (Steps 2 and 4): use the best available web search tool — Perplexity MCP if
+present, else WebSearch, else any search MCP (e.g. brave-search).
 
 ## Step 0: Discover the Project
 
-Before anything else, understand what you're working with. Search the project for:
+Runs in every mode. Search the project:
 
-```
-# iOS project files
-Glob: **/*.xcodeproj/**
-Glob: **/*.xcworkspace/**
-Glob: **/Info.plist
-Glob: **/*.entitlements
-Glob: **/Assets.xcassets/**
-Glob: **/AppIcon.appiconset/**
-Glob: **/LaunchScreen.storyboard
-Glob: **/PrivacyInfo.xcprivacy
+- iOS project: `**/*.xcodeproj/**`, `**/*.xcworkspace/**`, `**/Info.plist`, `**/*.entitlements`,
+  `**/Assets.xcassets/**`, `**/AppIcon.appiconset/**`, `**/LaunchScreen.storyboard`, `**/PrivacyInfo.xcprivacy`
+- Screenshots/marketing: `**/*screenshot*/**`, `**/*Screenshot*/**`, `**/*preview*/**`,
+  `**/fastlane/**`, `**/Fastlane/**`, `**/metadata/**`
+- Config: `**/*.pbxproj`, `**/Podfile`, `**/Package.swift`, `**/project.yml` (XcodeGen), `**/Mintfile`
 
-# Screenshots and marketing assets
-Glob: **/*screenshot*/**
-Glob: **/*Screenshot*/**
-Glob: **/*preview*/**
-Glob: **/Fastlane/**
-Glob: **/fastlane/**
-Glob: **/metadata/**
+Build a mental map: **project type** (native Swift/ObjC, React Native, Flutter, Expo),
+**assets location** (icons, screenshots, metadata), **build config** (version, build number,
+bundle ID, entitlements), **dependencies** (frameworks/SDKs — affects privacy labels).
 
-# Config files
-Glob: **/*.pbxproj
-Glob: **/Podfile
-Glob: **/Package.swift
-Glob: **/project.yml  (XcodeGen)
-Glob: **/Mintfile
-```
-
-Build a mental map of:
-- **Project type**: native Swift/ObjC, React Native, Flutter, Expo, etc.
-- **Assets location**: where icons, screenshots, and metadata live
-- **Build config**: version, build number, bundle ID, entitlements
-- **Dependencies**: what frameworks/SDKs are included (affects privacy labels)
-
-Store findings for use in subsequent steps. If the project structure is unclear, ask the user.
-
----
+Store findings for subsequent steps. If the project structure is unclear, ask the user.
 
 ## Step 1: Submission Validation — Blocking Checks
 
-These are local, deterministic checks that determine if the app CAN ship. Run these first.
-Read `references/validation-requirements.md` for the complete checklist, then execute each check.
+Local, deterministic checks that determine if the app CAN ship. Read
+`references/validation-requirements.md` for the complete checklist, then execute each check.
 
 For each item, output one of:
 - **PASS** — requirement met
@@ -115,97 +96,53 @@ Classify findings into three tiers:
 
 ### 1.1 App Icon
 
-Find the AppIcon.appiconset and verify:
+Find the AppIcon.appiconset and verify every check in validation-requirements.md § App Icon
+Requirements: 1024×1024 PNG, no alpha channel, no baked rounded corners, valid color space,
+valid Contents.json, platform-specific sizes (tvOS/visionOS need layered stacks that can't be
+auto-generated), appearance variants (dark/tinted — optional but recommended).
 
-| Check | Requirement |
-|-------|------------|
-| 1024×1024 exists | Required for App Store Connect (iOS/iPadOS/macOS) |
-| No alpha channel | Apple rejects icons with transparency |
-| No baked rounded corners | Apple applies its own superellipse mask — provide square/unmasked artwork |
-| Color space | sRGB, Display P3, or Gray Gamma 2.2 |
-| Format | PNG only |
-| Contents.json valid | All required sizes referenced |
-| Appearance variants | iOS/iPadOS/macOS support dark, tinted, and default variants (optional but recommended) |
-
-Platform-specific icon sizes (if targeting multiple platforms):
-- **iOS/iPadOS/macOS**: 1024×1024
-- **watchOS**: 1024×1024
-- **tvOS**: 400×240 (front layer) + 400×240 (back layer) — layered icon stack
-- **visionOS**: 1024×1024 — also uses layered icon system
-
-Note on Xcode 15+: a single 1024×1024 icon works for iOS/iPadOS/macOS auto-generation,
-but tvOS and visionOS require layered icon stacks that can't be auto-generated from a single image.
-
-Read the icon image and evaluate:
-- Is it legible at 29×29 (small size on device)?
-- Sufficient contrast between foreground and background?
-- Does it look professional and distinct?
+Then read the icon image and evaluate: legible at 29×29 (small size on device)? Sufficient
+contrast between foreground and background? Professional and distinct?
 
 ### 1.2 Screenshots
 
 Read `references/screenshot-sizes.md` for exact required resolutions per device class.
 
-Search for screenshots in the project (fastlane/metadata, marketing folders, etc.).
-For each device class, verify:
+Search for screenshots (fastlane/metadata, marketing folders, etc.). For each device class, verify:
 - Required resolutions present
 - No stretched or distorted images
 - Text is readable and not cut off at edges
 - Safe margins maintained (no critical content in outer 5%)
 
-If screenshots are found, read each one and evaluate:
-- Does it communicate the app's value?
-- Is the text legible?
-- Does the visual hierarchy guide the eye?
+If screenshots are found, read each one and evaluate: does it communicate the app's value, is
+the text legible, does the visual hierarchy guide the eye?
 
 ### 1.3 App Metadata
 
-Search for metadata in fastlane/metadata, App Store Connect exports, or ask the user:
+Search for metadata in fastlane/metadata, App Store Connect exports, or ask the user. Check every
+field against the limits in validation-requirements.md § Metadata Requirements — note keywords
+are 100 BYTES, not chars (matters for CJK/emoji), and title/subtitle keywords carry the strongest
+search weight.
 
-| Field | Limit | Required | Notes |
-|-------|-------|----------|-------|
-| App Name | 30 chars | Yes | Keywords here have strongest weight |
-| Subtitle | 30 chars | Yes | Appears below name in search |
-| Description | 4000 chars | Yes | Not indexed for search |
-| Keywords | 100 bytes | Yes | Note: BYTES not chars — matters for CJK/emoji |
-| Promotional Text | 170 chars | No | Editable without new build |
-| Support URL | — | Recommended | Not strictly required, but strongly recommended |
-| Marketing URL | — | No | Recommended |
-| Privacy Policy URL | — | Yes | Required for all apps |
-
-For any missing required fields, mark as BLOCKER.
-For URLs, ask the user to verify they're live and accessible.
+Mark any missing required field as BLOCKER. Ask the user to verify URLs are live and accessible.
 
 ### 1.4 Privacy & Compliance
 
 Check for `PrivacyInfo.xcprivacy` (required as of Spring 2024).
 
-Scan the codebase for framework usage that implies data collection:
-- CoreLocation → location data
-- AVFoundation / camera usage → photos/video
-- Contacts framework → contact data
-- HealthKit → health data
-- AppTrackingTransparency → tracking
-- AdSupport → advertising
-- UserNotifications → push notifications
-- StoreKit → purchases
+Scan the codebase for framework usage that implies data collection: CoreLocation (location),
+AVFoundation/camera (photos/video), Contacts (contact data), HealthKit (health data),
+AppTrackingTransparency (tracking), AdSupport (advertising), UserNotifications (push),
+StoreKit (purchases).
 
-Cross-reference with Info.plist usage descriptions:
-- `NSCameraUsageDescription`
-- `NSPhotoLibraryUsageDescription`
-- `NSLocationWhenInUseUsageDescription`
-- `NSLocationAlwaysAndWhenInUseUsageDescription`
-- `NSMicrophoneUsageDescription`
-- `NSContactsUsageDescription`
-- `NSCalendarsUsageDescription`
-- `NSHealthShareUsageDescription`
-- etc.
+Cross-reference with Info.plist usage descriptions (full `NS*UsageDescription` key list in
+validation-requirements.md § Permission Usage Descriptions):
+- Framework usage without a corresponding usage description → BLOCKER
+- Generic descriptions like "This app needs access to your camera" → WARNING (Apple rejects vague descriptions)
 
-Flag any framework usage without a corresponding usage description (BLOCKER).
-Flag generic usage descriptions like "This app needs access to your camera" (WARNING — Apple rejects vague descriptions).
-
-**Third-party SDK privacy manifests**: Check if included SDKs (pods, SPM packages) ship their
-own `PrivacyInfo.xcprivacy`. Apple now requires this for commonly-used SDKs. Flag any popular
-SDK (Firebase, Facebook, Amplitude, etc.) without a bundled privacy manifest.
+**Third-party SDK privacy manifests**: check if included SDKs (pods, SPM packages) ship their own
+`PrivacyInfo.xcprivacy`. Apple requires this for commonly-used SDKs. Flag any popular SDK
+(Firebase, Facebook, Amplitude, etc.) without a bundled privacy manifest.
 
 ### 1.5 Binary & Build Checks
 
@@ -218,19 +155,14 @@ If an .xcodeproj or project config is accessible:
 
 ### 1.6 Additional Submission Checks
 
-These are commonly overlooked and cause rejection:
+Commonly overlooked; cause rejection or upload failure. Run every check in
+validation-requirements.md § Additional Submission Checks: export compliance
+(ITSAppUsesNonExemptEncryption), age rating accuracy, TestFlight readiness (no simulator
+i386/x86_64 archs), associated domains / universal links, IAP/subscription config in App Store
+Connect, background modes justified, APNS certificate if push entitlement exists, content rights.
 
-| Check | What to verify |
-|-------|---------------|
-| TestFlight readiness | Is the build uploadable? Check for simulator architectures (i386/x86_64) |
-| IAP/subscription config | If StoreKit is used, are products configured in App Store Connect? |
-| Age rating accuracy | Does the content match the declared age rating? |
-| Export compliance | Does the app use encryption? (ITSAppUsesNonExemptEncryption) |
-| Content rights | If using third-party content, are licenses in order? |
-| Deep links / universal links | Are associated domains configured correctly? |
-| Push notification setup | If entitlement exists, is APNS certificate configured? |
-| Background modes | Are all declared background modes actually used and justified? |
-| Account deletion | If app has sign-in/account creation, is there an in-app account deletion flow? (5.1.1(v) — BLOCKER) |
+Plus: **account deletion** — if the app has sign-in/account creation, an in-app account deletion
+flow is required (5.1.1(v) — BLOCKER). Full rules in validation-requirements.md § Required Capabilities.
 
 ### 1.7 Guideline Risk Detection
 
@@ -251,15 +183,13 @@ Scan the codebase and metadata for patterns that trigger rejection:
 | Misleading UI (fake system dialogs) | 4.3 — Spam |
 | Sign-in exists without account deletion option | 5.1.1(v) — Account Deletion Required |
 
-### Decision Gate
+### Decision Gate (`full` mode)
 
-**If ANY blockers were found in Step 1, STOP here.** Do not proceed to ASO, creative, or
-competitor analysis. Generate a blocker-focused report (Step 6) and present it to the user.
-The app cannot ship until blockers are resolved — spending time on optimization is wasteful.
+**If ANY blockers were found in Step 1, STOP here.** Do not proceed to Steps 2-5. Generate a
+blocker-focused report (Step 6) and present it to the user. The app cannot ship until blockers
+are resolved — spending time on optimization is wasteful.
 
 Only proceed to Steps 2-5 if Step 1 yields zero blockers (warnings are OK to proceed with).
-
----
 
 ## Step 2: ASO Engine
 
@@ -267,7 +197,7 @@ Read `references/aso-guide.md` for keyword research methodology and optimization
 
 ### 2.1 Keyword Research
 
-If the user provides target keywords, use web search and perplexity to:
+If the user provides target keywords, use web search (see Web search rule) to:
 1. Find related high-volume keywords in the App Store ecosystem
 2. Cluster by intent: **discovery** (broad, top-funnel) vs **conversion** (specific, high-intent)
 3. Identify long-tail opportunities (lower competition, decent volume)
@@ -280,11 +210,7 @@ Present findings as a table:
 
 ### 2.2 Title & Subtitle Optimization
 
-Current limits (as of 2024):
-- **Title**: 30 characters max
-- **Subtitle**: 30 characters max
-
-Rules:
+Limits: **Title** 30 chars max, **Subtitle** 30 chars max. Rules:
 - Front-load the most important keyword in the title
 - Don't repeat words between title and subtitle
 - Avoid special characters that waste space (™, ®, etc.)
@@ -313,8 +239,8 @@ Structure:
 3. **Social proof** — press mentions, download numbers, awards
 4. **Call to action** — what to do next
 
-Generate both a feature-bullet variant and a storytelling variant.
-Place keywords naturally but don't stuff — description keywords have minimal ASO impact but affect conversion.
+Generate both a feature-bullet variant and a storytelling variant. Place keywords naturally but
+don't stuff — description keywords have minimal ASO impact but affect conversion.
 
 ### 2.5 Localization Suggestions
 
@@ -323,30 +249,23 @@ Based on the app category and keywords, recommend:
 - Whether to localize metadata only or full app
 - Quick-win locales where English works with just metadata translation
 
----
-
 ## Step 3: Creative Optimization
 
 ### 3.1 Screenshot Analysis
 
 Read each screenshot image and evaluate:
-
-| Criterion | What to check |
-|-----------|--------------|
-| Value proposition | Does the headline communicate a clear benefit? |
-| Visual hierarchy | Is the eye drawn to the right thing? |
-| Narrative flow | Do screenshots tell a story in sequence? |
-| Text readability | Can you read captions at device size? |
-| Device framing | Is the app shown in context? |
-| Clutter | Too many elements competing for attention? |
-| Brand consistency | Do all screenshots feel cohesive? |
+- **Value proposition** — does the headline communicate a clear benefit?
+- **Visual hierarchy** — is the eye drawn to the right thing?
+- **Narrative flow** — do screenshots tell a story in sequence?
+- **Text readability** — can you read captions at device size?
+- **Device framing** — is the app shown in context?
+- **Clutter** — too many elements competing for attention?
+- **Brand consistency** — do all screenshots feel cohesive?
 
 Recommend the narrative flow: Problem → Solution → Key Features → Social Proof → CTA
 
-For each screenshot, suggest:
-- Headline rewrite (if weak)
-- Layout improvements
-- What to emphasize vs de-emphasize
+For each screenshot, suggest: headline rewrite (if weak), layout improvements, what to emphasize
+vs de-emphasize.
 
 ### 3.2 A/B Test Suggestions
 
@@ -364,19 +283,14 @@ If a preview video exists or the user plans one:
 - End with a clear CTA
 - Ensure it works without sound (captions/text overlays)
 
----
-
 ## Step 4: Competitor Intelligence
 
-Use web search / perplexity to research competitors.
+Use web search (see Web search rule) to research competitors.
 
 ### 4.1 Identify Competitors
 
-For each target keyword, find the top 5-10 ranking apps. Extract:
-- App name and subtitle
-- Rating and review count
-- Apparent keyword strategy
-- Screenshot style and messaging
+For each target keyword, find the top 5-10 ranking apps. Extract: app name and subtitle, rating
+and review count, apparent keyword strategy, screenshot style and messaging.
 
 ### 4.2 Metadata Reverse Engineering
 
@@ -400,9 +314,9 @@ Search for competitor reviews focusing on:
 - Most requested features → your feature highlight
 - Sentiment patterns → position against weaknesses
 
----
-
 ## Step 5: iOS App Optimization
+
+Runs in `full` mode only.
 
 ### 5.1 App Size Analysis
 
@@ -415,128 +329,21 @@ Check the project for:
 ### 5.2 Accessibility
 
 Scan for:
-- Dynamic Type support (are fonts using preferred body style or hardcoded sizes?)
+- Dynamic Type support (fonts using preferred body style or hardcoded sizes?)
 - Color contrast ratios (do text/background combos meet WCAG AA?)
 - VoiceOver labels on interactive elements
 - Accessibility identifiers for UI testing
 
 ### 5.3 Localization Completeness
 
-Check `.lproj` directories:
-- Which locales are supported?
-- Are all strings localized or are there hardcoded English strings?
-- Are there storyboard/XIB localizations?
-- Missing `.strings` files?
-
----
+Check `.lproj` directories: which locales are supported, hardcoded English strings, missing
+storyboard/XIB localizations, missing `.strings` files.
 
 ## Step 6: Generate Report
 
-Based on the mode, output a structured report.
-
-### For `validate` or `full`:
-
-```markdown
-# App Store Submission Report
-## Generated: [date]
-
-## Summary
-- Blockers: X
-- Warnings: Y  
-- Passes: Z
-- Overall: GO / NO-GO
-
-## Blockers (Must Fix)
-1. [BLOCKER] ...
-
-## Warnings (Should Fix)
-1. [WARNING] ...
-
-## Passes
-1. [PASS] ...
-
-## Recommendations
-- Priority 1: ...
-- Priority 2: ...
-```
-
-### For `aso`:
-
-```markdown
-# ASO Optimization Report
-
-## Current Metadata
-- Title: ...
-- Subtitle: ...
-- Keywords: ...
-
-## Keyword Research
-[table]
-
-## Optimized Metadata
-### Option A (keyword-focused)
-### Option B (brand-focused)
-### Option C (balanced)
-
-## Keyword Field
-[optimized field with reasoning]
-
-## Description
-[optimized description]
-```
-
-### For `compete`:
-
-```markdown
-# Competitive Intelligence Report
-
-## Target Keywords: ...
-## Top Competitors
-[analysis per competitor]
-
-## Gap Analysis
-## Opportunities
-## Recommended Strategy
-```
-
-### For `go`:
-
-```markdown
-# Pre-Submission Go/No-Go Checklist
-
-## Hard Requirements
-- [ ] Icon: 1024×1024, no alpha ✅/❌
-- [ ] Screenshots: all device classes ✅/❌
-- [ ] Privacy policy URL: live ✅/❌
-- [ ] Support URL: live ✅/❌
-[... full checklist]
-
-## Verdict: GO / NO-GO
-## If NO-GO, fix these first:
-1. ...
-```
-
-### For `reviewer` ("If I Were Apple Reviewer"):
-
-```markdown
-# Apple Review Risk Assessment
-
-## Likely Outcome: APPROVE / REJECT / RISKY
-
-## Potential Rejection Reasons
-1. [Risk Level: HIGH/MED/LOW] ...
-   - Guideline: X.X.X
-   - Evidence: ...
-   - Fix: ...
-
-## What a Reviewer Will Check First
-1. ...
-
-## Recommended Changes Before Submission
-1. ...
-```
-
----
+Output a structured report using the skeleton for the current mode. Report format: see
+references/report-formats.md § <name from the Modes table>. `optimize` appends the list of files
+edited; `creative` has no fixed skeleton — structure findings per Step 3.
 
 ## Important Behaviors
 
@@ -548,8 +355,6 @@ Based on the mode, output a structured report.
 - **Prioritize blockers.** Always surface rejection-causing issues before optimization suggestions.
 - **Save the report.** Write the full report to `docs/app-store-ready/report-[date].md`.
 
----
-
 ## Reference Files
 
 Load these as needed — don't read all upfront:
@@ -560,3 +365,4 @@ Load these as needed — don't read all upfront:
 | `references/screenshot-sizes.md` | When checking screenshots |
 | `references/aso-guide.md` | During Step 2 (ASO) |
 | `references/rejection-reasons.md` | During reviewer mode or risk detection |
+| `references/report-formats.md` | During Step 6 (report skeletons) |
