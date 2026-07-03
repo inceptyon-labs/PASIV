@@ -20,7 +20,7 @@ Prepare the current project for its first push to a public or private git host. 
 
 **Input:** $ARGUMENTS (optional — pass `--dry-run` to print the plan without writing files)
 
----
+`assets/` and `references/` paths below are relative to this skill's directory.
 
 ## Phase 1: Preflight
 
@@ -32,22 +32,11 @@ If not a git repo, stop and suggest `git init` first.
 
 If `origin` already exists and points to a real remote, ask whether to continue — this skill is for *first* push prep. If they say yes, skip the final `gh repo create` step at the end.
 
----
-
 ## Phase 2: Scan for Signals
 
 Gather everything inferrable before asking the user anything. Run these in parallel where possible.
 
-**Project type & stack** (read only the files that exist):
-- `package.json` → name, description, author, license, scripts, deps → detect framework (React/Next/Vue/Fastify/Express/etc.)
-- `pyproject.toml` / `setup.py` / `requirements.txt` → Python
-- `Cargo.toml` → Rust
-- `go.mod` → Go
-- `Gemfile` → Ruby
-- `composer.json` → PHP
-- `pubspec.yaml` → Dart/Flutter
-- `Dockerfile`, `docker-compose.yml` → deployment signals
-- `.github/workflows/` → existing CI
+**Project type & stack** (read only the files that exist): `package.json` (name, description, author, license, scripts, deps → detect framework: React/Next/Vue/Fastify/Express/etc.), `pyproject.toml`/`setup.py`/`requirements.txt` (Python), `Cargo.toml` (Rust), `go.mod` (Go), `Gemfile` (Ruby), `composer.json` (PHP), `pubspec.yaml` (Dart/Flutter), `Dockerfile`/`docker-compose.yml` (deployment signals), `.github/workflows/` (existing CI).
 
 **Existing docs** (so we don't overwrite):
 ```bash
@@ -66,11 +55,9 @@ git config --get user.name && git config --get user.email && gh api user --jq .l
 gh api user/orgs --jq '.[].login' 2>/dev/null
 ```
 
-Capture both the personal login AND every org the user belongs to — you'll present these as pick-list options in Question 6 so the user doesn't have to hand-type an org slug.
+Capture both the personal login AND every org the user belongs to — these become the pick-list options in Question 6.
 
 Store everything detected as a **repo-manifest** you'll reference through the rest of the skill.
-
----
 
 ## Phase 3: Propose & Confirm
 
@@ -85,55 +72,26 @@ Secrets:  clean ✓
 
 Then ask **only** the questions that can't be inferred. Use `AskUserQuestion` with multiple-choice where possible.
 
-**Question 1 — License:**
-- MIT (most permissive, default for open source)
-- Apache-2.0 (permissive + patent grant)
-- AGPL-3.0 (copyleft, network use triggers)
-- Proprietary / None (no LICENSE file)
-- Other (user specifies)
+**Question 1 — License:** MIT (most permissive, default for open source) | Apache-2.0 (permissive + patent grant) | AGPL-3.0 (copyleft, network use triggers) | Proprietary/None (no LICENSE file) | Other (user specifies)
 
-**Question 2 — Visibility:**
-- Public
-- Private
+**Question 2 — Visibility:** Public | Private
 
-**Question 3 — Accept contributions?** (gates CONTRIBUTING.md + templates)
-- Yes — include CONTRIBUTING.md, issue templates, PR template
-- No — skip contribution scaffolding
+**Question 3 — Accept contributions?** (gates CONTRIBUTING.md + templates): Yes (include CONTRIBUTING.md, issue templates, PR template) | No (skip contribution scaffolding)
 
-**Question 4 — Repo description:**
-Draft a one-line description (≤350 chars, GitHub's limit) from the scan. Present it and ask:
-- Use as-is
-- Edit it (user provides text)
-- Generate 3 alternatives to choose from
+**Question 4 — Repo description:** Draft a one-line description (≤350 chars, GitHub's limit) from the scan. Present it and offer: use as-is | edit it (user provides text) | generate 3 alternatives to choose from
 
-**Question 5 — Logo / banner:**
-- Already have one (provide path)
-- Generate with nano-banana
-- Skip
+**Question 5 — Logo / banner:** Already have one (provide path) | Generate with nano-banana | Skip
 
 **Question 6 — Repo owner:**
-Build `AskUserQuestion` options from the origin-hint scan — one option per owner the user could realistically push to:
-- The user's personal login (from `gh api user`)
-- Each org from `gh api user/orgs` as its own option
+Build `AskUserQuestion` options from the origin-hint scan — the personal login plus each org, one option each. Always a pick-list, never free text: hand-typed org slugs are the #1 cause of `CreateRepository` errors, and the failure surfaces as an unrelated-looking GraphQL permissions denial.
 
-Present them as a pick-list rather than a free-text field. Hand-typing org slugs is the #1 cause of `CreateRepository` permission errors (e.g. `inception-labs` vs the user's actual org `inceptyon-labs`) — the error comes back as a GraphQL permissions denial that looks unrelated to the typo, so it's painful to debug.
-
-If the user has zero orgs, skip the question and default silently to the personal login. If they have exactly one org AND it matches a common signal in the repo (README mentions it, existing remotes, package.json author field, etc.), surface that org as the Recommended option; otherwise list personal first.
+If the user has zero orgs, skip the question and default silently to the personal login. If they have exactly one org AND it matches a signal in the repo (README mentions it, existing remotes, package.json author field), surface that org as the Recommended option; otherwise list personal first.
 
 The repo name defaults to the directory basename — confirm or override as a separate (simpler) question.
 
-**Question 7 — CI starter?**
-Only ask if no `.github/workflows/` exists AND the project has a detectable test command:
-- Yes — generate a basic CI workflow (test + build on PR)
-- No
+**Question 7 — CI starter?** Only ask if no `.github/workflows/` exists AND the project has a detectable test command: Yes (basic CI workflow — test + build on PR) | No
 
-**Question 8 — GitGuardian cloud scanning?** (optional; gitleaks hook + CI are installed automatically either way)
-- Yes — print GitGuardian enrollment instructions in Phase 6
-- No — skip (gitleaks alone is enough for solo/small projects)
-
-GitGuardian is a paid SaaS with a generous free tier (public repos + ≤25 devs). It adds continuous history scanning, Slack/email alerts, and a UI for triaging incidents. Overkill for solo; worth it for teams.
-
----
+**Question 8 — GitGuardian cloud scanning?** (optional; gitleaks hook + CI are installed automatically either way): Yes (print enrollment instructions in Phase 6) | No (gitleaks alone is enough for solo/small projects)
 
 ## Phase 4: Generate Artifacts
 
@@ -145,69 +103,11 @@ Fetch the SPDX-standard text for the chosen license. For MIT/Apache-2.0/AGPL-3.0
 
 ### 4b. README.md
 
-If a README exists, **enhance it** rather than replacing. Check for and add any missing sections:
-- Logo/banner at top (if generated or provided)
-- Badges row (license, CI status placeholder, version if in package.json)
-- One-line description (from Phase 3)
-- Quickstart / Install
-- Usage
-- Configuration / Environment Variables
-- API (if server project)
-- Contributing (link to CONTRIBUTING.md)
-- License
+If a README exists, **enhance it** rather than replacing. Check for and add any missing sections: logo/banner at top (if generated or provided), badges row (license, CI status placeholder, version if in package.json), one-line description (from Phase 3), Quickstart/Install, Usage, Configuration/Environment Variables, API (if server project), Contributing (link to CONTRIBUTING.md), License.
 
 If no README exists, generate from the repo-manifest with all standard sections.
 
-**Section header icons — avoid emoji, use Iconify-served Lucide SVGs.**
-
-Default to no icons. If the existing README uses emoji headers OR the user asks for icons, use Lucide icons served via the [Iconify](https://iconify.design/) CDN instead of emoji. Why:
-
-- **Theme-neutral.** A fixed hex color renders the same on GitHub's light and dark themes. Emoji rendering varies by OS (Apple/Win/Linux) and looks inconsistent across the user base.
-- **Professional voice.** Major OSS projects (React, Tauri, Tailwind) don't use emoji in section headers — icons read as "indie shop with taste," emoji reads as "personal weekend project."
-- **Consistent with the in-app icon set.** Most projects that have a UI already use Lucide (or could). The README icons then match the app's visual vocabulary.
-- **One-line per icon, no SVG files in the repo.** No `.github/icons/*.svg` to maintain.
-
-**Pattern:**
-
-```markdown
-## <img src="https://api.iconify.design/lucide/sparkles.svg?color=%238B5CF6&height=22" align="absmiddle" /> Section Title
-```
-
-- **Service**: `api.iconify.design/{prefix}/{name}.svg` — supports Lucide, Heroicons, Phosphor, Material, Tabler, ~150 sets. Stick to one set per README; default Lucide.
-- **`color`**: URL-encode the `#`. Pick one accent color matching the project's brand (button color, logo accent). Default `%238B5CF6` (violet-500) reads well on both themes.
-- **`height`**: 22 for `##` headers, 24 for top-level visual sections. Width auto-scales.
-- **`align="absmiddle"`**: vertically centers the icon with the header text on GitHub.
-- **Do NOT use `currentColor`** — `lucide-static` SVGs default to stroke="currentColor" which renders dark-on-dark in GitHub's dark mode (invisible). Iconify's `?color=` param resolves this.
-
-**Icon-to-section cheat sheet** (use as starting point; pick what fits the actual content):
-
-| Section | Lucide icon name |
-|---|---|
-| Features / Overview | `sparkles` |
-| Quick Start / Install | `rocket` |
-| Tech Stack | `boxes` |
-| Project Structure | `folder-tree` |
-| Usage | `compass` or `book-open` |
-| Configuration | `settings-2` |
-| API | `terminal` |
-| Devices / Platforms | `smartphone` |
-| Backgrounds / Design | `palette` |
-| Typography | `type` |
-| Images / Media | `image-plus` |
-| Layout | `layout-grid` |
-| Storage / Data | `database` |
-| Export / Download | `download` |
-| AI / Generation | `sparkles` or `wand-sparkles` |
-| Providers / Plugins | `blocks` |
-| Brand / Context | `folder-heart` |
-| Editor / Interaction | `mouse-pointer-2` |
-| Contributing | `users` or `heart-handshake` |
-| License | `scale` |
-| Acknowledgments | `heart` |
-| Contact | `mail` |
-| Security | `shield` |
-
-Verify a chosen icon exists by hitting `https://api.iconify.design/lucide/<name>.svg` once before writing it in. (Iconify returns 404 for unknown names, so a broken icon shows as a broken `<img>` tag in the rendered README.)
+**Section header icons:** default to none. If the existing README uses emoji headers OR the user asks for icons, read `references/readme-icons.md` and follow it.
 
 ### 4c. CONTRIBUTING.md (if accepting contributions)
 
@@ -224,38 +124,7 @@ If no CONTRIBUTING.md is being written (contributions = No), add the same block 
 
 ### 4d. CODE_OF_CONDUCT.md (if accepting contributions)
 
-**Do NOT generate the full Contributor Covenant text verbatim.** The canonical Covenant 2.1 enumerates harassment categories (sexual language, slurs, threats of violence) that Anthropic's output-safety filter frequently flags mid-stream, causing the request to fail with `invalid_request_error: Output blocked by content filtering policy`. The skill then halts partway through writing artifacts — a bad UX that's confusing to debug.
-
-Instead, write a **short linking CODE_OF_CONDUCT.md** that:
-
-1. States the project adopts the Contributor Covenant 2.1 by reference
-2. Links to the canonical text at `https://www.contributor-covenant.org/version/2/1/code_of_conduct/`
-3. Includes the maintainer reporting email (from `git config user.email`, confirm if ambiguous)
-4. Summarizes the enforcement ladder in one line — do NOT reproduce the full behavioral examples
-
-This is the conventional approach for mature projects (React, Kubernetes, Rust) — they adopt by reference rather than vendoring the full text. It avoids the filter issue, stays current if the Covenant is revised, and reduces maintenance.
-
-Template:
-
-```markdown
-# Code of Conduct
-
-This project adopts the **[Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)** as its Code of Conduct.
-
-By participating in this project, you agree to abide by its terms.
-
-## Reporting
-
-Violations may be reported to the project maintainers at **{email}**. All reports will be reviewed and investigated promptly and fairly. Maintainers are obligated to respect the privacy and security of the reporter.
-
-## Enforcement
-
-Enforcement follows the Covenant's standard four-tier ladder (Correction → Warning → Temporary Ban → Permanent Ban). See the [full text]({covenant-url}) for details.
-
-## Attribution
-
-Adapted from the [Contributor Covenant](https://www.contributor-covenant.org), version 2.1.
-```
+**Do NOT vendor the full Contributor Covenant text** — its verbatim harassment-category enumerations trip the output content filter mid-generation and halt the skill. Adopt by reference instead (the React/Kubernetes/Rust convention): copy `assets/code-of-conduct.md` to `CODE_OF_CONDUCT.md`, substituting `{email}` (maintainer email from `git config user.email`, confirm if ambiguous) and `{covenant-url}` (`https://www.contributor-covenant.org/version/2/1/code_of_conduct/`).
 
 If the user specifically requests the full vendored text, generate it with a warning that the request may fail and need a retry.
 
@@ -281,9 +150,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 4g. .github/ templates (if accepting contributions)
 
-- `.github/ISSUE_TEMPLATE/bug_report.md`
-- `.github/ISSUE_TEMPLATE/feature_request.md`
-- `.github/PULL_REQUEST_TEMPLATE.md`
+`.github/ISSUE_TEMPLATE/bug_report.md`, `.github/ISSUE_TEMPLATE/feature_request.md`, `.github/PULL_REQUEST_TEMPLATE.md`
 
 ### 4h. CI workflow (if approved)
 
@@ -295,233 +162,23 @@ Check the existing `.gitignore` for common omissions given the detected stack (e
 
 ### 4j. Logo (if requested)
 
-**Use Skill tool:** `nano-banana` with args describing the project, `--transparent` flag. Save to `assets/logo.png` or `.github/logo.png`. Reference from README.
+**Use Skill tool:** `nano-banana` with args describing the project, `--transparent` flag. Save into the target repo at `./assets/logo.png` or `./.github/logo.png` (the project's directories, not this skill's `assets/`). Reference from README.
 
 ### 4k. Secret-scanning hook (always install)
 
 Defense-in-depth. Phase 2's scan catches what's *already* committed; this hook prevents *future* leaks. Always install — no question needed. The CONTRIBUTING.md step (4c) tells contributors to activate it once per clone.
 
-**`.githooks/pre-commit`** (must be `chmod +x` after writing):
-
-```bash
-#!/usr/bin/env bash
-# Blocks commits containing secrets (API keys, tokens, etc).
-# Uses gitleaks against staged changes only.
-
-set -e
-
-if ! command -v gitleaks >/dev/null 2>&1; then
-  cat >&2 <<'EOF'
-pre-commit: gitleaks not found.
-Install it:
-  macOS:   brew install gitleaks
-  Linux:   https://github.com/gitleaks/gitleaks/releases
-To bypass (NOT recommended): git commit --no-verify
-EOF
-  exit 1
-fi
-
-gitleaks protect --staged --redact --verbose --config "$(git rev-parse --show-toplevel)/.gitleaks.toml" || {
-  cat >&2 <<'EOF'
-
-pre-commit: secrets detected in staged changes (see output above).
-- If false positive, add to .gitleaks.toml [allowlist].
-- If real, REMOVE the secret, rotate the credential, and restage.
-- To bypass (NOT recommended): git commit --no-verify
-EOF
-  exit 1
-}
-```
-
-**`.gitleaks.toml`** — extends default rules with custom rules for services the default ruleset misses, plus a generic catchall for unknown services:
-
-```toml
-[extend]
-useDefault = true
-
-# ===== Custom rules for services not in the default ruleset =====
-# The default ruleset covers ~180 services (AWS, GitHub, Stripe, Slack, HF,
-# OpenAI, etc.) but misses services with generic-looking formats (UUIDs,
-# sk_+hex). Add rules here as you integrate new providers.
-
-[[rules]]
-id = "elevenlabs-api-key"
-description = "ElevenLabs API key (sk_ + 48 hex)"
-regex = '''\bsk_[a-f0-9]{48}\b'''
-keywords = ["sk_"]
-
-[[rules]]
-id = "fal-ai-api-key"
-description = "FAL.ai API key (UUID:hex32)"
-regex = '''\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[0-9a-f]{32}\b'''
-keywords = ["fal"]
-
-[[rules]]
-id = "google-api-key"
-description = "Google / Gemini API key"
-regex = '''\bAIza[0-9A-Za-z_-]{35}\b'''
-keywords = ["AIza"]
-
-[[rules]]
-id = "revenuecat-api-key"
-description = "RevenueCat public SDK key"
-regex = '''\b(goog|appl|amzn)_[A-Za-z0-9]{32,}\b'''
-keywords = ["goog_", "appl_", "amzn_"]
-
-# Catchall: long opaque string assigned to a secret-looking variable.
-# Catches unknown/future services at the cost of occasional false positives
-# (allowlist them below as they come up).
-[[rules]]
-id = "generic-secret-assignment"
-description = "Long opaque value assigned to a secret-looking variable (catchall)"
-regex = '''(?i)(api[_-]?key|apikey|secret|token|auth[_-]?token|access[_-]?key|private[_-]?key|password|passwd)\s*[:=]\s*['"]([A-Za-z0-9_\-:.]{24,})['"]'''
-secretGroup = 2
-entropy = 3.5
-keywords = ["key", "secret", "token", "auth", "password", "passwd"]
-
-[allowlist]
-description = "Known-safe paths and placeholder values"
-
-paths = [
-  '''(^|/)\.env\.example$''',
-  '''(^|/)README\.md$''',
-  '''(^|/)docs/''',
-]
-
-regexes = [
-  '''YOUR_[A-Z_]+_KEY''',
-  '''YOUR_[A-Z_]+_API_KEY''',
-  '''AIza[A-Za-z0-9_-]{0,5}EXAMPLE''',
-]
-```
+Copy `assets/pre-commit` to `.githooks/pre-commit` and `chmod +x` it. Copy `assets/gitleaks.toml` to `.gitleaks.toml` at the repo root. Both are generic — no substitutions needed; custom `[[rules]]` for new providers get appended later per the comments in the file.
 
 **Do NOT run `git config core.hooksPath .githooks` on behalf of the user.** It's a per-clone setting stored in `.git/config`, not versioned. The CONTRIBUTING.md / README setup step handles this for contributors.
 
 ### 4l. Secret-scanning CI (backstop)
 
-Install `.github/workflows/gitleaks.yml` whenever any `.github/workflows/` directory is being created. This catches contributors who bypassed the local hook (`--no-verify`) or never ran the `hooksPath` setup.
-
-**`.github/workflows/gitleaks.yml`**:
-
-```yaml
-name: gitleaks
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-
-jobs:
-  scan:
-    name: scan for secrets
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # full history so PRs scan every commit
-
-      - name: Install gitleaks
-        run: |
-          GITLEAKS_VERSION=8.29.1
-          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-            | tar -xz -C /tmp gitleaks
-          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
-          gitleaks version
-
-      - name: Run gitleaks
-        run: gitleaks detect --source . --config .gitleaks.toml --redact --verbose --no-banner
-```
-
-**Why the direct CLI install instead of `gitleaks/gitleaks-action@v2`?** The commercial action now requires a paid `GITLEAKS_LICENSE` secret for *all* organization repos (not just >25 committers, as the older docs suggest — see https://github.com/gitleaks/gitleaks-action#-announcement). The gitleaks CLI itself is MIT-licensed and free. Installing it directly sidesteps the license gate entirely, works identically for personal and org repos, and avoids the Node.js 20 deprecation warning the v2 action currently emits.
+Whenever any `.github/workflows/` directory is being created, copy `assets/gitleaks-workflow.yml` to `.github/workflows/gitleaks.yml` (no substitutions). This catches contributors who bypassed the local hook (`--no-verify`) or never ran the `hooksPath` setup. It installs the MIT-licensed gitleaks CLI directly — do not swap in `gitleaks/gitleaks-action@v2`, which now requires a paid `GITLEAKS_LICENSE` for all org repos.
 
 ### 4m. Register with TARS (optional)
 
-If `~/.tars/tars.db` exists, register this project in TARS so it appears in the desktop app's project list with populated metadata. **Skip silently** if the DB doesn't exist — TARS is an optional personal tool, not a pasiv dependency.
-
-**Preflight:**
-```bash
-test -f ~/.tars/tars.db || echo "skip-tars"
-pgrep -fl tars-desktop >/dev/null && echo "warn: tars-desktop is running — writes may race with the app"
-```
-
-If tars-desktop is running, tell the user and ask whether to wait for them to quit, or proceed anyway (WAL mode makes concurrent writes safe but the app won't see new rows until it re-queries).
-
-**Populate these fields from the repo-manifest (Phase 2) + answers (Phase 3).** Leave anything you can't confidently infer as `null` — the user can fill it in via the desktop app later.
-
-| Field | Source |
-|---|---|
-| `description` | Phase 3 Question 4 answer |
-| `icon_path` | Phase 4j logo path (relative to repo root), or existing logo found in the scan |
-| `platforms` | Array: `["Web"]`, `["iOS"]`, `["Android"]`, `["Desktop"]`, or combinations. Infer from detected stack (Expo → iOS+Android, SvelteKit/Next → Web, Tauri → Desktop, etc.) |
-| `app_framework` | Detected primary framework (SvelteKit, Next, Expo, Tauri, Flutter…) |
-| `web_hosting` | Cloudflare Workers, Vercel, Netlify, Fly.io, AWS, etc. — inferred from wrangler.toml, vercel.json, fly.toml, Dockerfile, etc. |
-| `deploy_command` | From package.json `scripts.deploy` / `scripts.publish` / similar |
-| `start_command` | From package.json `scripts.dev` / `scripts.start`, or `cargo run`, `flutter run`, etc. |
-| `database_provider` | Neon, Supabase, Postgres, SQLite, Planetscale, etc. — inferred from deps (`@neondatabase/serverless`, `@supabase/*`, etc.) |
-| `database_name` | From connection string in `.env.example` / `.dev.vars.example` (parse the path segment) |
-| `github_url` | `https://github.com/<owner>/<name>` from Phase 3 answers |
-| `ci_cd` | "GitHub Actions" if any `.github/workflows/*.yml` exists, else null |
-| `monitoring` | Sentry / Datadog / etc. — inferred from deps |
-| `ios_bundle_id` / `android_package_name` | Parse from `ios/` Info.plist / `android/app/build.gradle` if present |
-| `custom_fields` | Array of `{key, value}` pairs for interesting signals that don't map to a standard field (backend framework if the web framework is frontend-only, ORM, test runner, email/LLM integrations, etc.) |
-
-Leave the rest as `null` / `false` / `[]` defaults.
-
-**Insert via a single Python invocation** (Python 3 is always available on macOS/Linux, avoids shell-quoting pain with JSON values containing em-dashes, apostrophes, etc.):
-
-```bash
-python3 <<'PY'
-import sqlite3, json, uuid
-from datetime import datetime, timezone
-
-now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-path = "<absolute repo path>"       # e.g. "/Users/you/Development/myproj"
-name = "<repo basename>"            # e.g. "myproj"
-
-conn = sqlite3.connect('<expanded ~/.tars/tars.db>')
-conn.execute("PRAGMA busy_timeout=5000")
-
-row = conn.execute("SELECT id FROM projects WHERE path=?", (path,)).fetchone()
-if row:
-    pid = row[0]
-    action = "existed"
-else:
-    pid = str(uuid.uuid4())
-    project_data = {
-        "id": pid, "path": path, "name": name,
-        "git_info": None, "last_scanned": None, "assigned_profile_id": None,
-        "local_overrides": {"mcp_servers": [], "skills": [], "agents": [], "hooks": []},
-        "created_at": now, "updated_at": now,
-    }
-    conn.execute(
-        "INSERT INTO projects (id, name, path, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (pid, name, path, json.dumps(project_data), now, now),
-    )
-    action = "inserted"
-
-metadata = {
-    # ... fields from the table above, with null/false/[] defaults for the rest
-}
-
-conn.execute(
-    "INSERT OR REPLACE INTO project_metadata (project_id, data, updated_at) VALUES (?, ?, ?)",
-    (pid, json.dumps(metadata), now),
-)
-conn.commit()
-conn.close()
-print(f"{action}: {name} ({pid})")
-PY
-```
-
-**Notes:**
-- `INSERT OR REPLACE` on `project_metadata` lets re-runs update the metadata without duplicating.
-- `projects.path` is UNIQUE — the lookup-then-insert pattern preserves the existing UUID if the project is already registered.
-- Do NOT write to `project_secrets` — that table is encrypted with a key the desktop app owns; writing plaintext would corrupt the encryption scheme.
-- The ProjectMetadata Rust struct uses `#[serde(default)]` on every field, so omitting any field from the JSON is safe — it'll deserialize to the type's default when the app reads it.
-
-Report the action in Phase 5's final review (either "Registered in TARS as `<uuid>`" or "Updated TARS metadata for existing project `<uuid>`").
-
----
+If `~/.tars/tars.db` exists, read `references/tars-registration.md` and follow it. If not, skip silently.
 
 ## Phase 5: Final Review
 
@@ -555,11 +212,9 @@ Run a final check:
 git status --short
 ```
 
----
-
 ## Phase 6: Print gh repo create Command
 
-**Do NOT execute.** Print the command so the user can review and run it themselves. This is a shared-state action — creating a remote repo has consequences (name collision, wrong org, etc.) that merit explicit user action.
+**Do NOT execute.** Print shared-state commands (`gh repo create`, `git push`, GitGuardian enrollment) for the user to review and run themselves — this skill only writes local files (plus the local-only TARS row in 4m) and never commits. If the user asks to commit + push after review, they do it themselves or invoke `/acp`.
 
 Build from the manifest:
 
@@ -593,30 +248,7 @@ Complements gitleaks — same detection philosophy, adds cloud history + alerts.
 
 End with: "Review the artifacts, then run the commands above when you're ready."
 
----
-
-## STOP
-
-**This skill prepares artifacts and prints commands. It does NOT:**
-- Execute `gh repo create`
-- Push to remote
-- Commit changes (user decides when to commit)
-- Overwrite existing files without confirmation
-- Run `git config core.hooksPath .githooks` (per-clone setting — contributors do this themselves per the CONTRIBUTING.md setup step)
-- Enroll in or call GitGuardian's API (prints enrollment steps only)
-
-**It DOES (Phase 4m, local-only, silent if not applicable):**
-- Insert a row into `~/.tars/tars.db` so the project shows up in TARS with populated metadata. Reversible via `DELETE FROM projects WHERE path='…'` or via the desktop app's delete-project action.
-
-If the user asks to commit + push after review, they should do it themselves or invoke `/acp`.
-
----
-
 ## Principles
 
-- **Inferred-first, ask-second.** Every question should be one that can't be answered by reading the repo.
-- **Never overwrite silently.** Existing README/LICENSE/etc. are enhanced or skipped, never replaced without explicit yes.
-- **Secrets are a hard stop.** If committed secrets are found, halt and report. No exceptions.
-- **Print, don't execute, shared-state commands.** `gh repo create` and `git push` are the user's call.
+- **Inferred-first, ask-second.** Every question must be one the repo can't answer.
 - **Match the project's voice.** If the existing README is terse, stay terse. If it has ASCII diagrams and personality, match that energy.
-- **Link, don't vendor, filter-prone boilerplate.** The Contributor Covenant, long security disclosure templates, and anything that enumerates slurs/harassment categories verbatim can trip Anthropic's output-safety classifier mid-generation. Prefer short "adopted by reference" documents that link to the canonical source (see 4d). If the user insists on vendoring, warn them it may require a retry.
