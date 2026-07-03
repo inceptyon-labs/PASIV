@@ -111,7 +111,7 @@ Arguments: issue number
 # Get current body
 BODY=$(gh issue view $NUM --json body -q '.body')
 
-# Replace [ ] with [x] in Acceptance Criteria section
+# Replace [ ] with [x] throughout the body
 UPDATED_BODY=$(echo "$BODY" | sed 's/- \[ \]/- [x]/g')
 
 # Update the issue
@@ -186,12 +186,12 @@ $NOTES_FOR_NEXT
 Get the highest priority open task.
 
 ```bash
-# Try high priority first, then any open issue
-NEXT=$(gh issue list --label "priority:high" --state open --limit 1 --json number,title -q '.[0]')
-[ -z "$NEXT" ] && NEXT=$(gh issue list --state open --limit 1 --json number,title -q '.[0]')
+# Try high priority first, then any open issue (// empty: bare .[0] prints the string "null" on no match)
+NEXT=$(gh issue list --label "priority:high" --state open --limit 1 --json number,title -q '.[0] // empty')
+[ -z "$NEXT" ] && NEXT=$(gh issue list --state open --limit 1 --json number,title -q '.[0] // empty')
 ```
 
-Return: issue number and title.
+Return: issue number and title. If both queries are empty, return "No open issues."
 
 ### get-sibling-context
 Get completion summaries from closed sibling issues (for context when starting a Task).

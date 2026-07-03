@@ -330,7 +330,7 @@ find TARGET -type f \( -name "*.exe" -o -name "*.dll" -o -name "*.so" -o -name "
 
 ### Unusual permissions
 ```bash
-find TARGET -type f -perm +111 -not -path "*/.git/*" -not -path "*/node_modules/*" -not -name "*.sh" -not -name "gradlew" -not -name "mvnw" 2>/dev/null
+find TARGET -type f -perm /111 -not -path "*/.git/*" -not -path "*/node_modules/*" -not -name "*.sh" -not -name "gradlew" -not -name "mvnw" 2>/dev/null
 ```
 
 Flag unexpected hidden files, binaries in source directories, and files with unusual executable permissions.

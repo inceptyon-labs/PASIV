@@ -65,7 +65,7 @@ Find:
 grep -rnE $'\xe2\x80\x94|\xe2\x80\xa6' --include='*.md' . 2>/dev/null | grep -v node_modules | head -100   # em-dash, ellipsis (-E: BSD grep has no \| alternation)
 grep -rn $'\xc2\xa0' --include='*.md' . 2>/dev/null | grep -v node_modules | head -50   # NBSP (UTF-8 C2 A0)
 grep -rniE 'delve|leverage|utiliz|seamless|robust|comprehensive|streamline|cutting.?edge|state.?of.?the.?art|next.?generation|best practices|it'"'"'s worth noting|dive in|in conclusion|furthermore|moreover|game.?changer|supercharge' --include='*.md' . 2>/dev/null | grep -v node_modules | head -100
-grep -rnP '[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]' --include='*.md' . 2>/dev/null | grep -v node_modules | head -50   # emoji in docs
+find . -name '*.md' -not -path '*/node_modules/*' -exec perl -CSD -ne 'print "$ARGV:$.:$_" if /[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/' {} + 2>/dev/null | head -50   # emoji in docs (perl: BSD grep has no -P)
 ```
 
 ### Code comments

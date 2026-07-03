@@ -53,7 +53,7 @@ IDs follow the pattern `{type}-{sequential-number}`:
 
 To find the next number, glob existing files and increment:
 ```bash
-LAST=$(ls docs/tasks/{type}-*--*.md 2>/dev/null | sort -V | tail -1 | grep -oP '{type}-\K\d+')
+LAST=$(ls docs/tasks/{type}-*--*.md 2>/dev/null | sort -V | tail -1 | sed -E 's/.*{type}-([0-9]+)--.*/\1/')
 NEXT=$(printf "%03d" $((${LAST:-0} + 1)))
 ```
 
@@ -118,7 +118,7 @@ Read the task file, extract `parent` from frontmatter. If no parent, return empt
 Arguments: local ID
 
 1. Read the task file
-2. Replace `- [ ]` with `- [x]` in the Acceptance Criteria section
+2. Replace `- [ ]` with `- [x]` throughout the body
 3. Write updated file
 
 ### add-completion-summary

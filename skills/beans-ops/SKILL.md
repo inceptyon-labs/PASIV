@@ -130,10 +130,10 @@ Get the highest priority actionable task.
 # --ready: not blocked, excludes in-progress/completed/scrapped/draft
 # Default sort: status → priority → type → title
 # -t task: only tasks (not epics/features — those are containers)
-beans list --json --ready -t task | jq '.[0]'
+beans list --json --ready -t task | jq '.[0] // empty'
 ```
 
-Return: bean ID and title of the first ready task.
+Return: bean ID and title of the first ready task. If output is empty, return "No ready tasks."
 
 ### get-sibling-context
 
