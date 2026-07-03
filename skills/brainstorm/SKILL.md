@@ -2,6 +2,7 @@
 name: brainstorm
 description: Socratic design refinement before coding. Use for vague ideas or half-baked plans needing stress-testing. Outputs a validated design doc.
 model: opus
+user-invocable: true
 allowed-tools:
   - Read
   - Write
@@ -48,22 +49,7 @@ Refine ideas into validated designs through Socratic dialogue.
 - **Codebase-first** — if a question is answerable by reading the code, read it instead of spending the user's turn.
 - **Walk the decision tree** — resolve dependencies one at a time; later questions build on earlier answers. Stop when core purpose, constraints, success criteria, and scope are nailed.
 
-### Question Types
-
-**Clarifying questions** - Fill in gaps:
-- "Who will use this?"
-- "What triggers this flow?"
-- "What does success look like?"
-
-**Challenging questions** - Stress-test assumptions:
-- "What happens if X fails?"
-- "How would this work with 10x the data?"
-- "What's the simplest version that would be useful?"
-
-**Scoping questions** - Define boundaries:
-- "Is X in scope or out of scope?"
-- "Do we need Y for the first version?"
-- "What can we defer to later?"
+Mix three question types: **clarifying** (fill gaps), **challenging** (stress-test assumptions — failure modes, 10x scale, simplest useful version), **scoping** (in/out of v1, what defers).
 
 ### Preferred Format
 
@@ -95,39 +81,7 @@ Open-ended when choices aren't clear:
 
 ## Phase 3: Explore Approaches
 
-Present 2-3 different approaches with trade-offs.
-
-**Format:**
-
-```
-## Approach A: [Name] (Recommended)
-
-**Summary:** [1-2 sentences]
-
-**Pros:**
-- [benefit]
-- [benefit]
-
-**Cons:**
-- [drawback]
-- [drawback]
-
-**Best for:** [when to choose this]
-
----
-
-## Approach B: [Name]
-
-[same format]
-
----
-
-## Approach C: [Name] (if applicable)
-
-[same format]
-```
-
-**Always lead with your recommendation** and explain why.
+Present 2-3 different approaches. For each: `## Approach X: [Name]` with a 1-2 sentence summary, pros, cons, and "best for". Mark your pick `(Recommended)`, list it first, and explain why.
 
 **Ask:** "Which approach resonates, or would you like to explore a hybrid?"
 
@@ -249,27 +203,5 @@ Options:
 
 ## Principles
 
-### YAGNI (You Aren't Gonna Need It)
-- Remove features that aren't essential for v1
-- Challenge "nice to haves"
-- Prefer simple over flexible
-
-### One Question at a Time
-- Don't overwhelm with multiple questions
-- Let the user fully answer before moving on
-- Build understanding incrementally
-
-### Lead with Recommendations
-- Don't just present options neutrally
-- State which approach you'd choose and why
-- User can always disagree
-
-### Validate Incrementally
-- Don't dump a 2000-word design
-- Present in chunks, get feedback
-- Adjust before moving on
-
-### Document Decisions
-- Capture the "why" not just the "what"
-- Note what was explicitly deferred
-- Record key trade-off decisions
+- **YAGNI** — remove features not essential for v1, challenge "nice to haves", prefer simple over flexible.
+- **Document decisions** — capture the *why*, not just the *what*; record trade-offs and what was explicitly deferred.
