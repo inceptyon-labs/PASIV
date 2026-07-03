@@ -4,7 +4,7 @@ set -euo pipefail
 # PASIV project initializer
 # Usage: init.sh <backend> [--project-board|--no-project-board] [--no-plan-approval]
 #        [--no-tdd] [--no-review] [--no-verification] [--ui-verify] [--verify-command=CMD]
-#        [--coordinator-model=MODEL]
+#        [--coordinator-model=MODEL] [--token-report] [--auto-reflect]
 # Backends: github, beans, local
 
 BACKEND="${1:-local}"
@@ -16,6 +16,8 @@ VERIFICATION="true"
 UI_VERIFY="false"
 VERIFY_COMMAND=""
 COORDINATOR_MODEL=""
+TOKEN_REPORT="false"
+AUTO_REFLECT="false"
 
 for arg in "$@"; do
   case "$arg" in
@@ -28,6 +30,8 @@ for arg in "$@"; do
     --ui-verify) UI_VERIFY="true" ;;
     --verify-command=*) VERIFY_COMMAND="${arg#--verify-command=}" ;;
     --coordinator-model=*) COORDINATOR_MODEL="${arg#--coordinator-model=}" ;;
+    --token-report) TOKEN_REPORT="true" ;;
+    --auto-reflect) AUTO_REFLECT="true" ;;
   esac
 done
 
@@ -99,7 +103,16 @@ workflow:
   review: $REVIEW
   verification: $VERIFICATION
   ui_verify: $UI_VERIFY
+  auto_reflect: $AUTO_REFLECT
 EOF
+
+if [ "$TOKEN_REPORT" = "true" ]; then
+  cat >> .pasiv.yml << EOF
+
+metrics:
+  tokens: true
+EOF
+fi
 
 if [ -n "$VERIFY_COMMAND" ]; then
   cat >> .pasiv.yml << EOF
