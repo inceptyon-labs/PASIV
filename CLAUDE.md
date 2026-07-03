@@ -22,7 +22,7 @@ Run `/pasiv init` to configure, or create `.pasiv.yml` manually. Default: local 
 | `/handoff` | Write structured session handoff for context preservation |
 | `/reflect` | Persist durable facts, corrections, and reusable workflows from the session |
 | `/pasiv init` | Interactive setup wizard for task backend and config |
-| `/review [profile]` | Review the diff at a depth — quick/standard/deep/codex |
+| `/review [profile]` | Review the diff at a depth — quick/standard/fast/deep/codex |
 | `/repo-scan` | Security scan a repo for vulnerabilities and secrets |
 | `/de-vibe` | Strip AI tells - de-slop docs, gitignore AI configs, drop restate-comments, scrub commit trailers |
 
@@ -43,7 +43,7 @@ TDD enforced in `/kick`: RED → GREEN → REFACTOR → COMMIT. The `execute` co
 
 Verification gate runs before every merge. Tests, build, lint, and type-check must pass with fresh evidence — plus an optional project smoke command (`verify.command`) and, for UI tasks, an optional drive-the-app check (`workflow.ui_verify`), both opt-in via `.pasiv.yml`. No "should work" claims.
 
-Review runs as profiles (`quick`/`standard`/`deep`, configurable in `.pasiv.yml`) scaled to change size and security sensitivity. Passes are cascading (each sees cumulative changes) and host-aware (Claude or Codex as the reviewer).
+Review runs as profiles (`quick`/`standard`/`fast`/`deep`, configurable in `.pasiv.yml`) scaled to change size and security sensitivity. Passes are cascading (each sees cumulative changes; `fast` runs its pair concurrently instead) and host-aware (Claude or Codex as the reviewer).
 
 Present your implementation plan before coding. After 3 failed fix attempts, stop and reassess architecture.
 
