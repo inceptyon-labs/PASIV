@@ -63,6 +63,8 @@ The **baseline join** happens later (after plan, before execute — marked in bo
 
 ## Single-Task Flow
 
+**First, create the step checklist as native tasks** — one per step: `Step: plan`, `Step: execute`, `Step: review`, `Step: verify`, `Step: finish` (each blocked by the previous). Mark a step `in_progress` when invoking its skill and `completed` only after its `>>> … COMPLETE <<<` marker (or the gate result) returns. **Never mark a step completed without having invoked its skill.** Before declaring the kick done, run `TaskList` — any step task still pending means you skipped it; invoke its skill now. This checklist survives context growth; the prose above may not.
+
 Invoke the step-skills in order. Each reads the session context above.
 
 1. **Skill:** `plan` — produces the plan, sets `REVIEW_PROFILE`, creates native tasks. Wait for `>>> PLAN COMPLETE <<<`.
@@ -107,7 +109,7 @@ Move the Epic/Feature to In Progress.
 
 Order: `area:db` → `area:infra` → `area:backend` → `area:frontend`; within an area `priority:high → medium → low`. Within an Epic, process Features by the area-priority of their first Task, all Tasks in a Feature before the next.
 
-For each Task: set `IDENTIFIER`/`PARENT_IDENTIFIER` and `REVIEW_PROFILE = REVIEW_PROFILES[task]`, then run the **same step-skills** — but **skip baseline** (already run) and **skip plan's approval gate** (pre-approved):
+For each Task: set `IDENTIFIER`/`PARENT_IDENTIFIER` and `REVIEW_PROFILE = REVIEW_PROFILES[task]`, create the same five-step checklist as native tasks (see Single-Task Flow), then run the **same step-skills** — but **skip baseline** (already run) and **skip plan's approval gate** (pre-approved):
 
 1. **Skill:** `task-ops` `get $IDENTIFIER`; github: `project-ops` `move-to-in-progress …`; `task-ops` `get-sibling-context $PARENT_IDENTIFIER`; load design system if UI.
 2. **Skill:** `plan` — note `PLAN_PREAPPROVED=true` so it uses the given `REVIEW_PROFILE` and does **not** re-ask. Display the plan briefly.
