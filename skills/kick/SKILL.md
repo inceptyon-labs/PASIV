@@ -55,7 +55,7 @@ The **baseline join** happens later (after plan, before execute — marked in bo
 - **1** Display "Working on $IDENTIFIER: $ISSUE_TITLE".
 - **1.5** github backend: **Skill:** `project-ops` `setup` → `PROJECT_NUM`/`PROJECT_ID`, then `move-to-in-progress …`; if `PARENT_IDENTIFIER` (from get-context), move the parent to In Progress too.
 - **1.75** Sibling context came back with `get-context` — use its files/decisions/notes when planning.
-- **1.9** If `ISSUE_LABELS` has `area:frontend`/`area:mobile` and `.interface-design/system.md` exists: read it → `DESIGN_SYSTEM`; reference tokens during plan + execute. Else note "No design system found".
+- **1.9** If `ISSUE_LABELS` has `area:frontend`/`area:mobile`: resolve the design system — `.pasiv.yml` `design.system` path if set, else the first of `docs/design-system.md`, `design-system.md`, `DESIGN.md`, `.interface-design/system.md` that exists. Found → read it → `DESIGN_SYSTEM`; reference its tokens/patterns during plan + execute. None → note "No design system found — `/pasiv init` can set one up" and continue.
 
 ---
 

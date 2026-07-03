@@ -91,7 +91,7 @@ Run `/pasiv init` to configure PASIV for your project. The interactive wizard:
 4. **Creates project directories** — `docs/handoffs/`, `docs/designs/`, `docs/plans/`, `docs/scans/`
 5. **Writes `.pasiv.yml`** — your backend + workflow configuration
 6. **Appends PASIV rules to `CLAUDE.md`** — session start behavior, rules, directory map
-7. **Optionally initializes design system** — for frontend projects
+7. **Configures a design system** (frontend projects) — discovers an existing doc, creates a starter from your codebase's tokens, or records the path you point it at
 
 **Already configured?** Re-running `/pasiv init` offers **Update** mode: it asks only about settings missing from your current `.pasiv.yml` (new features since your last init) and patches them in — custom keys like `model_routing` and `review.profiles` are untouched.
 
@@ -314,6 +314,23 @@ Before merge, fresh evidence is required. All applicable checks run **concurrent
 
 **UI verification (opt-in):** with `workflow.ui_verify: true`, frontend/mobile tasks get driven in the running app — launch, exercise the change, screenshot — before the gate. Enable per project in `/pasiv init`.
 
+### Parallelism
+
+> *"Downwards is the only way forwards."*
+
+Nothing in the flow waits when it doesn't have to:
+
+| Stage | What runs in parallel |
+|-------|----------------------|
+| **Baseline** | Test suite runs in the background while you plan; joined before code |
+| **Context fetch** | Issue + parent + sub-issues + sibling context — one fork, not four |
+| **Planning** | Large surfaces fan out parallel read-only scout subagents |
+| **Implementation** | RED for the next independent task is written while the current implementer runs GREEN; fully independent tasks dispatch concurrently in isolated worktrees |
+| **Verification** | Tests, build, lint, typecheck, smoke all run concurrently — wall-clock is the slowest check, not the sum |
+| **Review** | `fast` profile runs both reviewers concurrently on the same diff |
+
+The rules: read-only work fans out; anything that writes is serialized — never two writers on one file. Parallelism is the optimization, not the baseline: uncertain overlap means serial.
+
 ### Epic & Feature Support (Autonomous)
 
 > *"We need to go deeper."*
@@ -440,25 +457,16 @@ Passes are **cascading** (each sees prior fixes; `fast` trades this for wall-clo
 
 ## Design System Integration
 
-PASIV integrates with [interface-design](https://github.com/Dammyjay93/interface-design) for consistent UI implementation.
+When `/kick` processes an issue labeled `area:frontend` or `area:mobile`, it loads **your project's design system** so implementation references established tokens (spacing, colors, typography) and patterns (buttons, cards, forms) instead of inventing new ones.
 
-**How it works:**
-- When `/kick` processes an issue with `area:frontend` or `area:mobile` label, it automatically loads `.interface-design/system.md`
-- The design system defines tokens (spacing, colors, typography) and patterns (buttons, cards, forms)
-- Implementation must reference established tokens and follow documented patterns
-- `/pasiv init` asks if your project has a frontend and offers to run `/interface-design:init`
+**Resolution order:**
 
-**Setup (per project):**
-```bash
-# Initialize design system in your project
-/interface-design:init
-```
+1. `.pasiv.yml` `design.system: <path>` — points at any markdown doc
+2. Common locations: `docs/design-system.md`, `design-system.md`, `DESIGN.md`, `.interface-design/system.md`
 
-**Verification:**
-```bash
-# Audit code against design system
-/interface-design:audit src/components
-```
+**Setup:** `/pasiv init` (frontend = yes) discovers an existing doc and records its path — or offers to **create a starter** `docs/design-system.md` with token values pulled from your codebase (Tailwind theme, CSS variables, theme files), or lets you **point to a path**.
+
+The [interface-design](https://github.com/Dammyjay93/interface-design) plugin is supported as an optional provider — if installed, its `init`/`audit` commands are offered — but PASIV no longer requires it. See `docs/reference/design-system.md`.
 
 ---
 
@@ -510,6 +518,9 @@ metrics:
 models:
   coordinator: <frontier-model>  # opt-in: a stronger model (when your plan has one)
                                  # for frontier escalations + built-in review passes
+
+design:
+  system: docs/design-system.md  # opt-in: loaded for area:frontend / area:mobile tasks
 ```
 
 ### `CLAUDE.md` (PASIV section)

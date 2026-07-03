@@ -31,7 +31,7 @@ If `.pasiv.yml` exists, Read it, display it, and ask (AskUserQuestion): "PASIV i
 
 **Update mode** (skip steps 2–7):
 
-1. Compare the current file against the managed settings: `workflow.plan_approval`, `workflow.tdd`, `workflow.review`, `workflow.verification`, `workflow.ui_verify`, `workflow.auto_reflect`, `metrics.tokens`, `verify.command`, `models.coordinator`.
+1. Compare the current file against the managed settings: `workflow.plan_approval`, `workflow.tdd`, `workflow.review`, `workflow.verification`, `workflow.ui_verify`, `workflow.auto_reflect`, `metrics.tokens`, `verify.command`, `models.coordinator`, `design.system` (step 6 flow, only if the project has a frontend).
 2. Ask the corresponding wizard question (steps 4–4.5 wording) for each **missing** key only — batch into as few AskUserQuestion calls as possible (max 4 questions per call). Nothing missing → report "config is current" and stop.
 3. Patch `.pasiv.yml` with Edit: new `workflow.*` keys go inside the existing `workflow:` block; `metrics:` / `verify:` / `models:` are appended as new blocks. Do **not** run the init script.
 4. Write declined booleans explicitly (`auto_reflect: false`) so they aren't re-asked next update; declined string opt-ins (`verify.command`, `models.coordinator`) stay absent and will be offered again next time.
@@ -106,14 +106,22 @@ Example: `bash "$INIT_SCRIPT" beans --no-plan-approval --ui-verify --verify-comm
 **Use AskUserQuestion tool:**
 
 **Question**: "Does this project have a frontend?"
-- Yes — Initialize design system for consistent UI
+- Yes — configure a design system so UI work stays consistent
 - No — Skip design system setup
 
-If Yes:
-- Check if `.interface-design/system.md` already exists
-- If exists: display "Design system already configured."
-- If missing and the `interface-design:init` skill is available: **Use Skill tool:** `interface-design:init`
-- If missing and the skill is not installed: note "interface-design plugin not installed — skipping design system setup" and continue
+If Yes, **discover first**: check `.pasiv.yml` `design.system`, then the common locations — `docs/design-system.md`, `design-system.md`, `DESIGN.md`, `.interface-design/system.md`, anything design-ish in `docs/` (`ls docs/ 2>/dev/null | grep -i 'design\|style\|token'`).
+
+- **Found** → show the path, confirm it's the design system, and write it to `.pasiv.yml`:
+
+  ```yaml
+  design:
+    system: <path>
+  ```
+
+- **Not found** → AskUserQuestion: "No design system doc found. What do you want to do?"
+  - **Create a starter (Recommended)** — write `docs/design-system.md` with `## Tokens` (colors, spacing, typography, radii/shadows) and `## Patterns` (buttons, forms, cards) sections. Pull real values from the codebase where discoverable — Tailwind config theme, CSS variables, theme files — instead of leaving blanks. Set `design.system: docs/design-system.md`. If the `interface-design:init` skill is installed, offer it as the creation method instead.
+  - **Point to a path** — user types it via Other; set `design.system` to it.
+  - **Skip** — no design system; `/kick` will note its absence on UI tasks.
 
 ### 7. Done
 
