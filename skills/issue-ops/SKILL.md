@@ -1,6 +1,6 @@
 ---
 name: issue-ops
-description: GitHub issue operations helper. Create, update, close issues. Internal — called by /start or /issue.
+description: GitHub issue operations helper. Create, update, close issues. Internal — called by /kick or /issue.
 model: haiku
 context: fork
 allowed-tools:

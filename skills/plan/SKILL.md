@@ -148,5 +148,5 @@ Fix and move on. No re-review.
 End your response with the continuation marker the caller depends on:
 
 ```
->>> PLAN COMPLETE — proceed to execute (Step 3) <<<
+>>> PLAN COMPLETE — proceed to the execute skill <<<
 ```

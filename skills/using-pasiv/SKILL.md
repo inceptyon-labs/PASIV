@@ -16,7 +16,7 @@ Before taking action on any development task, check if a PASIV skill applies. If
 
 PASIV skills have their own planning built in. Do not use the `EnterPlanMode` tool when executing PASIV skills.
 
-- `/kick` has Step 2 (Create Plan + Select Review Depth) — this IS the planning phase
+- `/kick` runs the `plan` step-skill (plan + review profile selection) — this IS the planning phase
 - `/brainstorm` IS a planning/design skill
 - `/backlog` creates structured work from plans
 
