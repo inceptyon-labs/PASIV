@@ -8,6 +8,12 @@ DIR=/tmp/pasiv-verify
 rm -rf "$DIR" && mkdir -p "$DIR"
 NAMES=()
 
+# Task's changed file set (committed-vs-base + staged + unstaged). Lint is
+# scoped to these so pre-existing issues in files the task never touched can
+# never enter the gate — and therefore never provoke an out-of-scope "fix".
+BASE=$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null || true)
+CHANGED=$( { git diff --name-only ${BASE:+"$BASE"}; git diff --name-only; git diff --name-only --cached; } 2>/dev/null | sort -u | grep -v '^$' || true)
+
 runsh() { local name=$1 cmd=$2; NAMES+=("$name"); { bash -c "$cmd"; echo "exit:$?"; } > "$DIR/$name.log" 2>&1 & }
 
 # --- tests ---
@@ -31,7 +37,11 @@ fi
 if [ -f package.json ] && grep -q '"lint"' package.json; then runsh lint "npm run lint"
 elif [ -f go.mod ] && command -v golangci-lint >/dev/null; then runsh lint "golangci-lint run"
 elif [ -f Cargo.toml ]; then runsh lint "cargo clippy"
-elif command -v swiftlint >/dev/null && { [ -f .swiftlint.yml ] || [ -f Package.swift ]; }; then runsh lint "swiftlint --strict"
+elif command -v swiftlint >/dev/null && { [ -f .swiftlint.yml ] || [ -f Package.swift ]; }; then
+  SWIFT_CHANGED=$(printf '%s\n' "$CHANGED" | grep '\.swift$' | tr '\n' ' ')
+  # Only lint the task's own changed .swift files. No changed swift → no lint
+  # check (nothing in this task could have broken it); never lint repo-wide.
+  [ -n "${SWIFT_CHANGED// /}" ] && runsh lint "swiftlint --strict --quiet $SWIFT_CHANGED"
 fi
 
 # --- typecheck ---
@@ -47,7 +57,7 @@ SMOKE=$(awk '/^verify:/{s=1;next} /^[A-Za-z_]+:/{s=0} s && $1=="command:"{sub(/^
 
 wait
 
-if [ ${#NAMES[@]} -eq 0 ]; then echo "⚠ no checks detected"; exit 0; fi
+if [ ${#NAMES[@]} -eq 0 ]; then echo "⚠ no checks detected"; echo "PASIV_VERIFY_RESULT=NONE"; exit 0; fi
 
 FAIL=0
 for n in "${NAMES[@]}"; do
@@ -60,4 +70,5 @@ for n in "${NAMES[@]}"; do
     tail -30 "$DIR/$n.log" | sed 's/^/    /'
   fi
 done
+[ "$FAIL" = "0" ] && echo "PASIV_VERIFY_RESULT=PASS" || echo "PASIV_VERIFY_RESULT=FAIL"
 exit $FAIL
