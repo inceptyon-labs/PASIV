@@ -131,7 +131,7 @@ No `.pasiv.yml` defaults to Local Markdown (zero-dependency). GitHub and Beans a
 | `/reflect` | Memory / feedback | Persist durable facts, corrections, and reusable workflows from the session |
 | `/review [profile]` | - | Review the diff at a depth — `quick`/`standard`/`fast`/`deep`/`codex` |
 
-**Standalone utilities** live in the separate **`pasiv-extras`** plugin (`/plugin install pasiv-extras@pasiv`) so they don't load into every session: `/repo-scan` (security vetting), `/repo-ready` (first-push prep), `/app-store-ready` (submission validator + ASO), `/de-vibe` (strip AI tells), `/nano-banana` (image generation).
+**Standalone utilities** live in the separate **`pasiv-extras`** plugin (`/plugin install pasiv-extras@pasiv`) so they don't load into every session: `/repo-scan` (security vetting), `/repo-ready` (first-push prep), `/app-store-ready` (submission validator + ASO), `/de-vibe` (strip AI tells), `/nano-banana` (image generation), `/design-pipeline` (PRD → finished UI design workflow).
 
 ## Workflow Patterns
 
@@ -433,6 +433,7 @@ Standalone utilities ship as a **separate plugin** so the core workflow stays le
 | `/app-store-ready` | Apple App Store submission validator + ASO/keyword optimizer |
 | `/de-vibe` | Strip AI tells — de-slop docs, drop restate-comments, scrub trailers |
 | `/nano-banana` | Image generation via Google Gemini (icons, logos, graphics) |
+| `/design-pipeline` | Guided end-to-end design workflow — PRD/spec → brief → visual options → design system → build → anti-slop gate |
 
 Enable/disable per project or on demand — the core `pasiv` plugin never depends on them.
 
@@ -659,7 +660,8 @@ extras/                         # pasiv-extras plugin — ad hoc utilities
     ├── repo-ready/             # /repo-ready (first-push prep)
     ├── app-store-ready/        # /app-store-ready (submission + ASO)
     ├── de-vibe/                # /de-vibe (strip AI tells)
-    └── nano-banana/            # /nano-banana (image generation)
+    ├── nano-banana/            # /nano-banana (image generation)
+    └── design-pipeline/        # /design-pipeline (PRD → finished UI)
 
 docs/
 ├── reference/                  # On-demand reference docs (loaded by skills)
