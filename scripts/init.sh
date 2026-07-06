@@ -39,11 +39,10 @@ echo "Initializing PASIV with backend: $BACKEND"
 
 # --- Create directories ---
 mkdir -p docs/designs
-mkdir -p docs/plans
 mkdir -p docs/handoffs/archive
 mkdir -p docs/scans
 
-for dir in docs/designs docs/plans docs/handoffs docs/handoffs/archive docs/scans; do
+for dir in docs/designs docs/handoffs docs/handoffs/archive docs/scans; do
   [ -z "$(ls -A "$dir" 2>/dev/null)" ] && touch "$dir/.gitkeep"
 done
 
@@ -189,7 +188,6 @@ Read the latest handoff in docs/handoffs/ if one exists. Load only the files tha
 - `.pasiv.yml` — task backend config (github, beans, or local)
 - `docs/handoffs/` — session handoffs (loaded at session start, archived after use)
 - `docs/designs/` — design docs from `/brainstorm`
-- `docs/plans/` — implementation plans
 - `docs/scans/` — security scan reports from `/repo-scan`
 PASIV_SECTION
 

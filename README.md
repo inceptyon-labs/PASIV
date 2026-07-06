@@ -88,7 +88,7 @@ Run `/pasiv init` to configure PASIV for your project. The interactive wizard:
 1. **Chooses your task backend** — GitHub Issues, Beans, or local markdown
 2. **Configures project board** (GitHub) or hooks (Beans)
 3. **Sets workflow toggles** — plan approval, TDD, review, verification, plus opt-in extras (UI verify, smoke command, coordinator model, token report, auto-reflect)
-4. **Creates project directories** — `docs/handoffs/`, `docs/designs/`, `docs/plans/`, `docs/scans/`
+4. **Creates project directories** — `docs/handoffs/`, `docs/designs/`, `docs/scans/`
 5. **Writes `.pasiv.yml`** — your backend + workflow configuration
 6. **Appends PASIV rules to `CLAUDE.md`** — session start behavior, rules, directory map
 7. **Configures a design system** (frontend projects) — discovers an existing doc, creates a starter from your codebase's tokens, or records the path you point it at
@@ -669,7 +669,6 @@ docs/
 │   ├── github-projects.md
 │   └── model-optimization.md
 ├── designs/                    # Design documents from /brainstorm
-├── plans/                      # Implementation plans
 └── scans/                      # Security scan reports
 ```
 

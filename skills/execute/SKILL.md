@@ -25,7 +25,9 @@ This is what keeps the whole session inside standard 200k context — no inline 
 
 Inputs from `/kick`: `$IDENTIFIER`, the `WORKFLOW_*` config, and the native tasks created by `plan`.
 
-## Step 0: Branch
+## Step 0: Baseline join + branch
+
+Join the background baseline started by kick Step 0.75 — if `/tmp/pasiv-baseline.log` exists (the parent flow joins it once up front and renames it, so this only fires in the single-task flow): read the tail. Pass → continue. Fail → handle per kick Step 0.75 (AskUserQuestion: Fix tests first [Recommended] / Proceed anyway / Cancel). No tests found → note it, continue. Then `mv /tmp/pasiv-baseline.log /tmp/pasiv-baseline.joined.log`.
 
 **Use Skill tool:** `git-ops` with args: `create-branch $IDENTIFIER`
 
@@ -138,12 +140,14 @@ Then typecheck if the project has one (`tsc --noEmit` / `npm run typecheck` / `m
 4. Make ONE minimal change.
 5. Re-run.
 
-**Three Strikes:** if 3 independent fix attempts fail, STOP and report the three hypotheses + results to the user — the failure likely signals a design problem, not a bug.
+**Three Strikes:** if 3 independent fix attempts fail, STOP — the failure likely signals a design problem, not a bug. Present the three hypotheses + results and ask how to proceed via `AskUserQuestion` (Debug together / Stop), not by ending the turn with a report. This applies to every escalate-to-the-user path above (plan wrong, frontier failure) too. If the answer ends the kick, disarm the Stop hook first: `bash "$(find ~/.claude -name "kick-state.sh" -path "*pasiv*/scripts/*" 2>/dev/null | head -1)" abort` — then stop and explain.
 
-## Return
+## Return — continue, don't stop
 
-End your response with the continuation marker the caller depends on:
+Print the marker, then **invoke the next skill in this same turn** — the marker is a progress line, not a sign-off; the Stop hook bounces an early turn-end:
 
 ```
->>> EXECUTE COMPLETE — proceed to the review skill <<<
+>>> EXECUTE COMPLETE — proceeding to review <<<
 ```
+
+Next action: **Skill:** `review`.

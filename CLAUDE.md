@@ -51,13 +51,17 @@ Present your implementation plan before coding. After 3 failed fix attempts, sto
 
 ```
 hooks/
-├── hooks.json                  # PreCompact + UserPromptSubmit hooks
+├── hooks.json                  # PreCompact + UserPromptSubmit + PreToolUse + PostToolUse + Stop
 ├── pre-compact.sh              # Reminds to write handoff
-└── kick-guard.sh               # Enforces step-skill invocation on /kick and /review
+├── kick-guard.sh               # Enforces step-skill invocation + arms kick state on /kick
+├── post-skill.sh               # Advances kick state on every step-skill invocation
+├── stop-guard.sh               # Bounces turn-end while a kick is mid-flight
+└── plan-approval-guard.sh      # Denies plan approval until the plan was displayed
 
 scripts/                        # Deterministic tooling (found via *pasiv*/scripts/ pattern)
 ├── init.sh                     # Project initializer
 ├── read-config.sh              # .pasiv.yml → KEY=VALUE (kick Step 0)
+├── kick-state.sh               # Kick turn-discipline state machine (hooks + skills)
 ├── verify-checks.sh            # Detect + run all checks concurrently (verification)
 └── token-report.sh             # Per-model token summary + history (finish)
 
@@ -96,7 +100,6 @@ extras/skills/                  # pasiv-extras plugin (ad hoc, not core workflow
 docs/
 ├── designs/                    # Design documents from /brainstorm
 ├── handoffs/                   # Session handoffs from /handoff
-├── plans/                      # Implementation plans
 ├── scans/                      # Security scan reports
 └── reference/                  # Detailed docs (loaded on demand)
 ```

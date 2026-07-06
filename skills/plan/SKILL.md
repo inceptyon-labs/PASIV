@@ -91,7 +91,7 @@ Then one block per task:
 
 **No placeholders** — these are *plan failures*, never write them: "TBD", "add error handling", "handle edge cases", "write tests for the above" (without the test code), "similar to Task N" (repeat it — tasks may be read out of order). Every code step shows the code.
 
-Save to `docs/plans/YYYY-MM-DD-<issue-slug>.md`.
+Do **not** write the plan to disk. Its durable home is the native tasks (Step 6, full blocks embedded); its user-facing copy is the terminal display at the approval gate (Step 5). A `docs/plans/` file is a third copy nobody reads.
 
 ## Step 5: Approval + review profile
 
@@ -105,17 +105,24 @@ SECURITY_PATTERNS="auth|crypto|password|payment|token|secret|credential|session|
 
 **If `PLAN_PREAPPROVED` is set** (autonomous parent flow) — skip every question, use the `REVIEW_PROFILE` the router already set, display the plan briefly, go to Step 6.
 
-**If `WORKFLOW_PLAN_APPROVAL` is true** — AskUserQuestion, two questions:
+**If `WORKFLOW_PLAN_APPROVAL` is true — display the plan before asking.** Paste the full plan into your response text, verbatim. **The terminal is the approval surface** and this is the only copy the user ever sees — nothing goes to disk, so there is no file to point at; firing the approval question over an unseen plan is a workflow failure. Then mark it displayed (a PreToolUse hook denies the approval question until this has run):
+
+```bash
+KS=$(find ~/.claude -name "kick-state.sh" -path "*pasiv*/scripts/*" 2>/dev/null | head -1)
+[ -n "$KS" ] && bash "$KS" plan-shown
+```
+
+Then AskUserQuestion, two questions:
 1. "Approve this implementation plan?" → Approve / Revise / Cancel
 2. "What review profile?" → the recommended one + alternatives (`quick`/`standard`/`deep`/`none` or a `.pasiv.yml` profile; mark the recommended "(Recommended)", flag "[security]" where applicable)
 
-Store `REVIEW_PROFILE`. Approve → Step 6. Revise → ask, update plan, re-ask. Cancel → stop, explain.
+Store `REVIEW_PROFILE`. Approve → Step 6. Revise → ask, update plan, re-display, re-ask. Cancel → run `bash "$KS" abort`, then stop and explain.
 
 **If `WORKFLOW_PLAN_APPROVAL` is false** — auto-approve, use the recommended profile, display it. If `WORKFLOW_REVIEW` is also false, set `REVIEW_PROFILE = "none"`. Continue.
 
 ## Step 6: Create native tasks
 
-For each plan task, `TaskCreate` with the **full** Goal/Files/Acceptance Criteria/Verify block in the description — not a summary. The implementer subagent reads this via `TaskGet`; the plan doc is not a fallback. End each description with an embedded metadata fence so it survives `TaskGet`:
+For each plan task, `TaskCreate` with the **full** Goal/Files/Acceptance Criteria/Verify block in the description — not a summary. The implementer subagent reads this via `TaskGet`; there is no plan file to fall back on. End each description with an embedded metadata fence so it survives `TaskGet`:
 
 ````
 ```json:metadata
@@ -138,10 +145,12 @@ Then create a **Review** task (`Review: [REVIEW_PROFILE]`) and a **Verification 
 
 Fix and move on. No re-review.
 
-## Return
+## Return — continue, don't stop
 
-End your response with the continuation marker the caller depends on:
+Print the marker, then **invoke the next skill in this same turn**. The marker is a progress line for the transcript, not a sign-off — ending your turn here strands the kick, and the Stop hook will bounce it:
 
 ```
->>> PLAN COMPLETE — proceed to the execute skill <<<
+>>> PLAN COMPLETE — proceeding to execute <<<
 ```
+
+Next action: **Skill:** `execute` (its Step 0 joins the background baseline). The only exit that ends the flow is Cancel at the approval gate — and that goes through `abort` above.

@@ -19,7 +19,14 @@ Thin router. Set up context, then sequence the step-skills: **plan → execute �
 
 > **Launch tip:** run the PASIV session with `CLAUDE_CODE_DISABLE_1M_CONTEXT=1` (alias or `.claude/settings.local.json`) so the Sonnet implementer subagents stay on your subscription instead of metered 1M. See `docs/reference/model-optimization.md`.
 
-Each step-skill shares this session's context (`IDENTIFIER`, `WORKFLOW_*`, `REVIEW_PROFILE`, `PARENT_IDENTIFIER`, …) — set those here, then invoke the skills in order, waiting for each one's `>>> … COMPLETE <<<` marker before the next.
+Each step-skill shares this session's context (`IDENTIFIER`, `WORKFLOW_*`, `REVIEW_PROFILE`, `PARENT_IDENTIFIER`, …) — set those here, then invoke the skills in order.
+
+**The whole kick is ONE continuous turn.** A step's `>>> … COMPLETE <<<` marker is a mid-turn progress line, not a sign-off: the moment a marker prints, invoke the next step's skill in the same turn. The turn ends only after `finish`'s report — a Stop hook bounces anything earlier. Mid-kick questions to the user go through `AskUserQuestion`, never by ending the turn (a pending question doesn't end the turn, so the Stop hook never fights a gate). If the user cancels at any gate or the kick must halt, disarm the hook first, then stop and explain:
+
+```bash
+KS=$(find ~/.claude -name "kick-state.sh" -path "*pasiv*/scripts/*" 2>/dev/null | head -1)
+[ -n "$KS" ] && bash "$KS" abort
+```
 
 **Never perform a step's work inline instead of invoking its skill** — even when it looks faster. Hand-rolling a step is how its opt-ins (token report, auto-reflect, parent cascade, project-board moves) silently drop. If a step-skill fails to load, say so — don't improvise it.
 
@@ -54,7 +61,7 @@ Start the baseline **in the background** — planning is read-only, so don't blo
 { npm test || pytest || go test ./... || cargo test || bun test; } > /tmp/pasiv-baseline.log 2>&1; echo "exit:$?" >> /tmp/pasiv-baseline.log
 ```
 
-The **baseline join** happens later (after plan, before execute — marked in both flows): read the log tail. Pass → continue. Fail → AskUserQuestion (Fix tests first [Recommended] / Proceed anyway / Cancel); on fix, use `systematic-debugging`, re-run via `test-runner`, commit `fix: repair baseline test failures`. No tests found → note it, continue (TDD will create them).
+The **baseline join** happens inside `execute` Step 0 (single-task flow) or once after approval (parent flow): read the log tail, then `mv` the log to `/tmp/pasiv-baseline.joined.log` so it isn't re-joined. Pass → continue. Fail → AskUserQuestion (Fix tests first [Recommended] / Proceed anyway / Cancel); on fix, use `systematic-debugging`, re-run via `test-runner`, commit `fix: repair baseline test failures`. No tests found → note it, continue (TDD will create them).
 
 ## Step 1–1.9: Position the work
 
@@ -71,13 +78,12 @@ The **baseline join** happens later (after plan, before execute — marked in bo
 
 Invoke the step-skills in order. Each reads the session context above.
 
-1. **Skill:** `plan` — produces the plan, sets `REVIEW_PROFILE`, creates native tasks. Wait for `>>> PLAN COMPLETE <<<`.
-2. **Baseline join** (Step 0.75): check the background baseline result before touching code.
-3. **Skill:** `execute` — you (Opus) write RED; a fresh Sonnet subagent does GREEN per task; format/lint; full suite. Wait for `>>> EXECUTE COMPLETE <<<`.
-4. **Skill:** `review` — runs `REVIEW_PROFILE` (skips itself if `WORKFLOW_REVIEW` false or profile `none`). Wait for `>>> REVIEW COMPLETE <<<`.
-5. **Verification gate:** if `WORKFLOW_VERIFICATION` true → mark the verification task `in_progress`; if `WORKFLOW_UI_VERIFY` true and `ISSUE_LABELS` has `area:frontend`/`area:mobile`, first drive the affected flow in the running app (launch, exercise the change, screenshot) and fix any regression you observe; then **Skill:** `verification` (Haiku→Opus escalation), mark `completed`. Else skip.
-6. **Skill:** `finish` — completion summary, handoff, merge, close, parent cascade, report. Wait for `>>> FINISH COMPLETE <<<`.
-7. **Wrap-up audit:** if `TOKEN_REPORT` is true and the final report above does **not** contain a "Token usage" table, run it now and print the table verbatim:
+1. **Skill:** `plan` — produces the plan, **displays it in the terminal**, gates approval, sets `REVIEW_PROFILE`, creates native tasks. Its marker `>>> PLAN COMPLETE <<<` flows straight into the next skill, same turn.
+2. **Skill:** `execute` — joins the baseline (Step 0.75) first, then you (Opus) write RED; a fresh Sonnet subagent does GREEN per task; format/lint; full suite. Marker: `>>> EXECUTE COMPLETE <<<`.
+3. **Skill:** `review` — runs `REVIEW_PROFILE` (skips itself if `WORKFLOW_REVIEW` false or profile `none`). Marker: `>>> REVIEW COMPLETE <<<`.
+4. **Verification gate:** if `WORKFLOW_VERIFICATION` true → mark the verification task `in_progress`; if `WORKFLOW_UI_VERIFY` true and `ISSUE_LABELS` has `area:frontend`/`area:mobile`, first drive the affected flow in the running app (launch, exercise the change, screenshot) and fix any regression you observe; then **Skill:** `verification` (Haiku→Opus escalation), mark `completed`. Else skip.
+5. **Skill:** `finish` — completion summary, handoff, merge, close, parent cascade, report. Marker: `>>> FINISH COMPLETE <<<`.
+6. **Wrap-up audit:** if `TOKEN_REPORT` is true and the final report above does **not** contain a "Token usage" table, run it now and print the table verbatim:
 
    ```bash
    TR_SCRIPT=$(find ~/.claude -name "token-report.sh" -path "*pasiv*/scripts/*" 2>/dev/null | head -1)
@@ -102,7 +108,14 @@ Per task: XS/S → `quick` · M → `standard` · L/XL → `deep`. Security sign
 
 ### Present + baseline (once) + approve
 
-Display the hierarchy with each Task's profile and the per-Task workflow. The baseline is already running in the background (Step 0.75) — **join it once** for the whole Epic/Feature after approval, before the first task (on failure, ask as in Step 0.75).
+Display the hierarchy with each Task's profile and the per-Task workflow. The baseline is already running in the background (Step 0.75) — **join it once** for the whole Epic/Feature after approval, before the first task (on failure, ask as in Step 0.75), then `mv /tmp/pasiv-baseline.log /tmp/pasiv-baseline.joined.log` so `execute` doesn't re-join it per task.
+
+After flattening, register the run length so the Stop hook holds the turn through every task:
+
+```bash
+KS=$(find ~/.claude -name "kick-state.sh" -path "*pasiv*/scripts/*" 2>/dev/null | head -1)
+[ -n "$KS" ] && bash "$KS" set-tasks <leaf task count>
+```
 
 - **`WORKFLOW_PLAN_APPROVAL` true** → AskUserQuestion: "Approve with these profiles?" → Yes (autonomous) / Customize profiles / Cancel. Store `REVIEW_PROFILES` map.
 - **false** → auto-approve with recommended profiles (all `none` if `WORKFLOW_REVIEW` also false). Store `REVIEW_PROFILES`.
@@ -122,7 +135,7 @@ For each Task: set `IDENTIFIER`/`PARENT_IDENTIFIER` and `REVIEW_PROFILE = REVIEW
 5. **Verification gate** (as in single-task flow).
 6. **Skill:** `finish` — writes the inter-task handoff and cascades parent closure; returns control here (no per-task "next up" report).
 
-**On error in any step:** STOP, ask "Debug together / Skip this Task / Stop".
+**On error in any step:** STOP and ask via `AskUserQuestion` (never by ending the turn): "Debug together / Skip this Task / Stop". On "Stop", run `bash "$KS" abort` before ending.
 
 ### After all tasks
 
