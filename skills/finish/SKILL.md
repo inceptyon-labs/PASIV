@@ -44,7 +44,7 @@ Date: <date> · Issue: $IDENTIFIER
 - [skills the next session should invoke, e.g. pasiv:kick, pasiv:plan]
 ```
 
-Apply the handoff discipline: **reference artifacts by path, don't duplicate them** (link the plan/diff/issue, don't paste them); **redact** any secrets/tokens/PII. Keep it to what the next session can't reconstruct from the repo.
+Apply the handoff discipline: **reference artifacts by path, don't duplicate them** (link the diff/issue/tasks, don't paste them); **redact** any secrets/tokens/PII. Keep it to what the next session can't reconstruct from the repo.
 
 ## Step 3: Merge + close
 
@@ -92,8 +92,10 @@ Token usage (session xxxxxxxx):                    [TOKEN_REPORT only — the
 Next up: [next priority issue, or "No open issues"] — run /kick next
 ```
 
-In the autonomous parent flow, return control to the router instead of reporting per task — the router reports once at the end. End your response with:
+End with:
 
 ```
 >>> FINISH COMPLETE <<<
 ```
+
+**Single-task flow:** this is the one marker that may end the turn — after kick's wrap-up audit runs. **Parent flow:** tasks remain — skip the per-task report, return control to the router, and start the next task **in this same turn**; the Stop hook holds the turn until the last task's finish.

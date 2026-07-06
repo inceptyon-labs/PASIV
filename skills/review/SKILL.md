@@ -108,10 +108,12 @@ Note nits, don't block on them. Push back (with evidence) if a finding is wrong.
 
 ## Return
 
-**From `/kick`:** mark the review task `completed`, check off the issue's acceptance criteria (**Skill:** `task-ops` `check-off-criteria $IDENTIFIER`), and end with:
+**From `/kick`:** mark the review task `completed`, check off the issue's acceptance criteria (**Skill:** `task-ops` `check-off-criteria $IDENTIFIER`), print the marker, and continue **in this same turn** — do not end the turn; the Stop hook bounces an early stop:
 
 ```
->>> REVIEW COMPLETE — proceed to the verification gate <<<
+>>> REVIEW COMPLETE — proceeding to the verification gate <<<
 ```
+
+Next action: kick's verification gate (UI verify if configured, then **Skill:** `verification`), then **Skill:** `finish`.
 
 **Standalone:** print a findings summary grouped by severity (blocker / important / nit) with `file:line`, and what was fixed vs noted.
