@@ -34,6 +34,15 @@ while [ $# -gt 0 ]; do
   fi
 done
 
+# Normalize the directory key to the git top-level so every caller collapses
+# to the same state file. Hooks (kick-guard/post-skill/stop-guard) key off the
+# session .cwd, but commands hand-run from skill markdown (plan-shown, abort)
+# default to $PWD — and when the coordinator's shell has cd'd into a subdir
+# (e.g. a repo whose build dir isn't the root), those writes would otherwise
+# land in a different state file than the one the Stop hook reads, leaving a
+# finished kick "in flight." Resolving to the repo root makes root and subdir
+# hash identically. Fall back to DIR when not in a git repo.
+DIR=$(git -C "$DIR" rev-parse --show-toplevel 2>/dev/null || printf '%s' "$DIR")
 KEY=$(printf '%s' "$DIR" | cksum | awk '{print $1}')
 STATE="/tmp/pasiv-kick-$KEY.state"
 
