@@ -74,7 +74,14 @@ Then ask **only** the questions that can't be inferred. Use `AskUserQuestion` wi
 
 **Question 1 — License:** MIT (most permissive, default for open source) | Apache-2.0 (permissive + patent grant) | AGPL-3.0 (copyleft, network use triggers) | Proprietary/None (no LICENSE file) | Other (user specifies)
 
-**Question 2 — Visibility:** Public | Private
+**Question 2 — Destination:** Where does this repo live?
+- **Public GitHub** — `gh repo create --public`
+- **Private GitHub** — `gh repo create --private`
+- **Personal (Unraid self-hosted)** — bare git over SSH on Jason's Unraid box (`root@192.168.2.222`, LAN-only), repos under `/mnt/user/backups/git/`. No GitHub involved.
+
+Only offer the Unraid option when `git config user.email` is one of Jason's (`jnew00@gmail.com` / `dollarbone@gmail.com`); otherwise show just Public / Private.
+
+The destination changes the rest of the flow. When **Unraid** is chosen, the repo has no GitHub Actions runner and no GitHub UI, so **skip** Question 6 (repo owner), Question 7 (CI starter), Question 8 (GitGuardian), and artifacts 4h (CI workflow) and 4l (gitleaks CI). Everything else — README, LICENSE, local gitleaks hook (4k), etc. — still applies. Phase 6 prints the bare-SSH setup instead of `gh repo create`.
 
 **Question 3 — Accept contributions?** (gates CONTRIBUTING.md + templates): Yes (include CONTRIBUTING.md, issue templates, PR template) | No (skip contribution scaffolding)
 
@@ -82,16 +89,16 @@ Then ask **only** the questions that can't be inferred. Use `AskUserQuestion` wi
 
 **Question 5 — Logo / banner:** Already have one (provide path) | Generate with nano-banana | Skip
 
-**Question 6 — Repo owner:**
+**Question 6 — Repo owner:** *(GitHub destinations only — skip for Unraid.)*
 Build `AskUserQuestion` options from the origin-hint scan — the personal login plus each org, one option each. Always a pick-list, never free text: hand-typed org slugs are the #1 cause of `CreateRepository` errors, and the failure surfaces as an unrelated-looking GraphQL permissions denial.
 
 If the user has zero orgs, skip the question and default silently to the personal login. If they have exactly one org AND it matches a signal in the repo (README mentions it, existing remotes, package.json author field), surface that org as the Recommended option; otherwise list personal first.
 
 The repo name defaults to the directory basename — confirm or override as a separate (simpler) question.
 
-**Question 7 — CI starter?** Only ask if no `.github/workflows/` exists AND the project has a detectable test command: Yes (basic CI workflow — test + build on PR) | No
+**Question 7 — CI starter?** *(GitHub destinations only — skip for Unraid, which has no Actions runner.)* Only ask if no `.github/workflows/` exists AND the project has a detectable test command: Yes (basic CI workflow — test + build on PR) | No
 
-**Question 8 — GitGuardian cloud scanning?** (optional; gitleaks hook + CI are installed automatically either way): Yes (print enrollment instructions in Phase 6) | No (gitleaks alone is enough for solo/small projects)
+**Question 8 — GitGuardian cloud scanning?** *(GitHub destinations only — skip for Unraid.)* Optional; gitleaks hook + CI are installed automatically either way: Yes (print enrollment instructions in Phase 6) | No (gitleaks alone is enough for solo/small projects)
 
 ## Phase 4: Generate Artifacts
 
@@ -212,9 +219,13 @@ Run a final check:
 git status --short
 ```
 
-## Phase 6: Print gh repo create Command
+## Phase 6: Print Destination Setup Command
 
-**Do NOT execute.** Print shared-state commands (`gh repo create`, `git push`, GitGuardian enrollment) for the user to review and run themselves — this skill only writes local files (plus the local-only TARS row in 4m) and never commits. If the user asks to commit + push after review, they do it themselves or invoke `/acp`.
+**Do NOT execute.** Print shared-state commands (`gh repo create`, `git init --bare`, `git push`, GitGuardian enrollment) for the user to review and run themselves — this skill only writes local files (plus the local-only TARS row in 4m) and never commits. If the user asks to commit + push after review, they do it themselves or invoke `/acp`.
+
+Which command block you print depends on the Question 2 destination.
+
+### GitHub destination (Public / Private)
 
 Build from the manifest:
 
@@ -233,7 +244,21 @@ If topics were inferred from the stack (e.g., `react`, `fastify`, `postgres`, `d
 gh repo edit <owner>/<name> --add-topic <t1>,<t2>,<t3>
 ```
 
-**If Question 8 was answered Yes (GitGuardian)**, append:
+### Unraid destination (personal self-hosted)
+
+Bare git over SSH on the Unraid box `192.168.2.222` (LAN-only), as **root**. Repos live under `/mnt/user/backups/git/` — the same convention as the existing `memex.git`. The remote repo doesn't exist yet, so the first command initializes it on the box, then wires the remote and pushes. Substitute `<name>`.
+
+```bash
+# 1. Create the bare repo on the box (idempotent — safe to re-run)
+ssh root@192.168.2.222 'git init --bare /mnt/user/backups/git/<name>.git'
+
+# 2. Wire origin and push
+git remote add origin ssh://root@192.168.2.222/mnt/user/backups/git/<name>.git
+git branch -M main
+git push -u origin main
+```
+
+**If Question 8 was answered Yes (GitGuardian)** (GitHub destinations only), append:
 
 ```
 GitGuardian enrollment (optional cloud scanning):
