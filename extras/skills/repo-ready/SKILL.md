@@ -16,7 +16,7 @@ user-invocable: true
 
 # Repo Ready
 
-Prepare the current project for its first push to a public or private git host. Scan the codebase for signals, propose a complete set of repo artifacts, confirm only the non-inferrable choices, then write the files and print (do NOT execute) the final `gh repo create` command.
+Prepare the current project for its first push to a public or private git host. Scan the codebase for signals, propose a complete set of repo artifacts, confirm only the non-inferrable choices, then write the files, print the final `gh repo create` command, and offer (via `AskUserQuestion`) to run it.
 
 **Input:** $ARGUMENTS (optional — pass `--dry-run` to print the plan without writing files)
 
@@ -98,6 +98,8 @@ The repo name defaults to the directory basename — confirm or override as a se
 
 **Question 7 — CI starter?** *(GitHub destinations only — skip for Unraid, which has no Actions runner.)* Only ask if no `.github/workflows/` exists AND the project has a detectable test command: Yes (basic CI workflow — test + build on PR) | No
 
+**Question 9 — Deploy to Uranus?** *(Jason only: `git config user.email` is `jnew00@gmail.com` / `dollarbone@gmail.com`.)* Ask when Phase 2 found a deployable service: a `Dockerfile`, a `docker-compose.yml`, or a server framework (Fastify/Express/Hono-on-Node/FastAPI/Flask/Go net/http/SvelteKit-node). Skip for libraries, CLIs, mobile apps, Cloudflare Workers, and static sites. Options: **Yes, self-host on Uranus** (generate 4n and hand off to the `uranus-deploy` skill in Phase 6) | **No** (deploys elsewhere or not at all). Independent of Question 2: a repo can live on GitHub and run on Uranus.
+
 **Question 8 — GitGuardian cloud scanning?** *(GitHub destinations only — skip for Unraid.)* Optional; gitleaks hook + CI are installed automatically either way: Yes (print enrollment instructions in Phase 6) | No (gitleaks alone is enough for solo/small projects)
 
 ## Phase 4: Generate Artifacts
@@ -177,11 +179,33 @@ Defense-in-depth. Phase 2's scan catches what's *already* committed; this hook p
 
 Copy `assets/pre-commit` to `.githooks/pre-commit` and `chmod +x` it. Copy `assets/gitleaks.toml` to `.gitleaks.toml` at the repo root. Both are generic — no substitutions needed; custom `[[rules]]` for new providers get appended later per the comments in the file.
 
-**Do NOT run `git config core.hooksPath .githooks` on behalf of the user.** It's a per-clone setting stored in `.git/config`, not versioned. The CONTRIBUTING.md / README setup step handles this for contributors.
+**Activate the hook in the current clone**: run `git config core.hooksPath .githooks`, then verify the gitleaks CLI is installed (`command -v gitleaks`) — if missing, say so and suggest `brew install gitleaks`. The setting is per-clone (`.git/config`, not versioned), so the CONTRIBUTING.md / README setup step still documents it for every other clone.
 
 ### 4l. Secret-scanning CI (backstop)
 
 Whenever any `.github/workflows/` directory is being created, copy `assets/gitleaks-workflow.yml` to `.github/workflows/gitleaks.yml` (no substitutions). This catches contributors who bypassed the local hook (`--no-verify`) or never ran the `hooksPath` setup. It installs the MIT-licensed gitleaks CLI directly — do not swap in `gitleaks/gitleaks-action@v2`, which now requires a paid `GITLEAKS_LICENSE` for all org repos.
+
+### 4n. Uranus deploy scaffolding (only if Question 9 = Yes)
+
+Follow the conventions in the `uranus-deploy` skill (`~/.claude/skills/uranus-deploy/SKILL.md`, "Onboard a new service"). Write only what is missing:
+
+- `docker-compose.yml` with `build: .`, `container_name: <name>`, `restart: unless-stopped`, host port `"${NAME_PORT:-<port>}:<port>"`, secrets as `${VAR:?set VAR in .env}`, Unraid labels `net.unraid.docker.webui` and `net.unraid.docker.icon`, bind mounts (never anonymous volumes), optional dependencies behind `profiles:`. If a `Dockerfile` is missing, write one appropriate to the stack.
+- `.env.example` listing every `${VAR}` the compose file reads.
+- `.deploy` containing `<name>` so `/acp` deploys after each push to `main`. Use the name the box already knows (`/mnt/user/appdata/<name>-src`, the compose `container_name`) when the service is already deployed — it is not always the repo directory basename.
+- `unraid-icon.png` (square, 512px) from the project logo if one exists (Question 5), else skip and say so.
+- `.gitignore` entries: `.env`, `docker-compose.override.yml`, `compose.override.yml`, `data/`.
+
+**Icon label URL — pick by destination.** `deploy.sh` seeds Unraid's icon cache from the repo-root `unraid-icon.png` on every deploy, so that file is the primary source either way; the label is the fallback Unraid uses when the cache misses. Point it somewhere that actually resolves:
+
+| Question 2 destination | `net.unraid.docker.icon` value |
+|---|---|
+| Public GitHub | `https://raw.githubusercontent.com/<owner>/<name>/main/unraid-icon.png` |
+| Private GitHub | app-served path (raw.githubusercontent 404s on private repos) |
+| Unraid (bare git) | app-served path — **never** a `raw.githubusercontent.com` URL, there is no GitHub repo |
+
+The app-served path is `http://[IP]:[PORT:<container-port>]/icon.png`, matching `~/Development/beacon/docker-compose.yml`. `[PORT:…]` takes the **container** port, not the published host port; Unraid resolves it. Copy the icon into whatever directory the framework serves at the web root (`static/` for SvelteKit, `public/` for Vite/Next/CRA) so the path exists, and confirm it lands in the build output the Dockerfile copies.
+
+Do not create anything on the box here; Phase 6 covers that.
 
 ### 4m. Register with TARS (optional)
 
@@ -219,9 +243,9 @@ Run a final check:
 git status --short
 ```
 
-## Phase 6: Print Destination Setup Command
+## Phase 6: Destination Setup Command
 
-**Do NOT execute.** Print shared-state commands (`gh repo create`, `git init --bare`, `git push`, GitGuardian enrollment) for the user to review and run themselves — this skill only writes local files (plus the local-only TARS row in 4m) and never commits. If the user asks to commit + push after review, they do it themselves or invoke `/acp`.
+**Print first, then ask.** Print the shared-state commands (`gh repo create`, `git init --bare`, `git push`, GitGuardian enrollment) so the user can review exactly what would run, then ask via `AskUserQuestion` whether to run them (see "Offer to run" below). Never run them unprompted — and this skill still never commits: the setup commands push only what is already committed. If the working tree is dirty, say so before asking; committing stays with the user (`/acp`).
 
 Which command block you print depends on the Question 2 destination.
 
@@ -271,7 +295,19 @@ Free tier covers public repos and private repos with ≤25 developers.
 Complements gitleaks — same detection philosophy, adds cloud history + alerts.
 ```
 
-End with: "Review the artifacts, then run the commands above when you're ready."
+### Offer to run
+
+### Uranus deploy hand-off (only if Question 9 = Yes)
+
+After the destination block, print the two remaining steps and offer to run them: create `/mnt/user/appdata/<name>-src/.env` on the box (values via heredoc over SSH, never echoed into chat; generate secrets with `openssl rand -hex 32`), then `deploy <name>` from the repo root once the scaffolding is committed. Both are described in the `uranus-deploy` skill; invoke it rather than re-deriving the steps.
+
+After printing the command block, ask with `AskUserQuestion`:
+
+**Question — Run setup commands?** "Run the commands above now?"
+- **Run them now** — execute the destination block (`gh repo create …` / the Unraid SSH block), then the topic edit if one was suggested. Report each command's output. GitGuardian enrollment is browser-based and always stays manual.
+- **I'll run them myself** — end with: "Review the artifacts, then run the commands above when you're ready."
+
+If the user picks "Run them now" and the working tree is dirty, remind them afterward that the push only included committed work and the new artifacts still need a commit (`/acp`).
 
 ## Principles
 

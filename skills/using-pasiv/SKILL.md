@@ -52,7 +52,7 @@ When to use EnterPlanMode: only for ad-hoc work that does not fit any PASIV skil
 | Skill | When to Use |
 |-------|-------------|
 | `/handoff` | End of session, before switching tasks, or when prompted by PreCompact |
-| `/reflect` | End of session, to persist durable facts, corrections, and reusable workflows to memory (deliberate; never auto-fires) |
+| `/reflect` | End of session, to persist durable facts, corrections, and reusable workflows to memory (user-triggered, or invoked by `finish`/`kick` when `auto_reflect` is on — never on your own initiative) |
 
 ### Setup
 | Skill | When to Use |
