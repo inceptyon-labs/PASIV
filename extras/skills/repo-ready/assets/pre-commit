@@ -25,4 +25,3 @@ pre-commit: secrets detected in staged changes (see output above).
 EOF
   exit 1
 }
-```

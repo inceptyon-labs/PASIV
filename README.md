@@ -128,7 +128,7 @@ No `.pasiv.yml` defaults to Local Markdown (zero-dependency). GitHub and Beans a
 | `/kick 42` | - | Full implementation flow for a specific task |
 | `/kick next` | - | Work on highest priority ready task |
 | `/handoff` | Handoff doc | Save session context for next session |
-| `/reflect` | Memory / feedback | Persist durable facts, corrections, and reusable workflows from the session |
+| `/reflect` | Memory / feedback | Persist durable facts, corrections, and reusable workflows from the session (also fires from `finish` when `auto_reflect` is on) |
 | `/review [profile]` | - | Review the diff at a depth — `quick`/`standard`/`fast`/`deep`/`codex` |
 
 **Standalone utilities** live in the separate **`pasiv-extras`** plugin (`/plugin install pasiv-extras@pasiv`) so they don't load into every session: `/repo-scan` (security vetting), `/repo-ready` (first-push prep), `/app-store-ready` (submission validator + ASO), `/de-vibe` (strip AI tells), `/nano-banana` (image generation), `/design-pipeline` (PRD → finished UI design workflow).

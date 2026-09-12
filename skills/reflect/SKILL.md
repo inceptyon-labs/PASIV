@@ -1,19 +1,35 @@
 ---
 name: reflect
-description: Reflect on the entire current conversation and persist what's worth keeping for future sessions — durable facts and preferences to memory, corrections as standing feedback, and any genuinely repeatable workflow as its own skill. User-invoked only via /reflect; never auto-fires.
-disable-model-invocation: true
+description: Reflect on the entire current conversation and persist what's worth keeping for future sessions — durable facts and preferences to memory, corrections as standing feedback, and any genuinely repeatable workflow as its own skill. Triggered by the user running /reflect, or by a PASIV workflow step that explicitly invokes it (finish/kick when auto_reflect is on).
 user-invocable: true
 ---
 
 # Reflect
 
-When the user runs `/reflect`, look back over the **entire current conversation**
-and pull out what is worth carrying into future sessions. Then **just do it** —
-save everything immediately. No review gate, no "want me to save this?" prompts.
-After saving, give a short report so the user can correct it later if they want.
+Look back over the **entire current conversation** and pull out what is worth
+carrying into future sessions. Then **just do it** — save everything immediately.
+No review gate, no "want me to save this?" prompts. After saving, give a short
+report so the user can correct it later if they want.
 
-The user has invoked this deliberately. Don't hedge, don't ask permission, don't
-stage the work for approval. Reflect, sort, persist, report.
+The invocation is deliberate. Don't hedge, don't ask permission, don't stage the
+work for approval. Reflect, sort, persist, report.
+
+## When this runs
+
+Two triggers, both explicit:
+
+1. The user runs `/reflect`.
+2. A PASIV workflow step invokes it by name — `finish` Step 5 or `kick`'s epic
+   wrap-up when `AUTO_REFLECT` is true and a reflection signal fired.
+
+**Never invoke this on your own initiative.** It is not a background habit at the
+end of a session, after a correction, or when the conversation feels
+learning-heavy. If nothing invoked it, don't run it — suggest `/reflect` instead.
+
+When a workflow step invokes it, scope the pass to what happened during that
+workflow run (escalations, corrections, review blockers) rather than re-mining
+conversation the user already reflected on, and keep the report to the compact
+form below so it doesn't drown the finish report.
 
 ## The bar: be selective, not exhaustive
 
