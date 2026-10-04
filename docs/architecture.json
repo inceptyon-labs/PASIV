@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PASIV Plugin Runtime Overview",
+    "output": ".archify/architecture-pasiv-overview-20261003-201214/pasiv-overview.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "git@github.com:inceptyon-labs/PASIV.git",
+      "link_mode": "local-only",
+      "revision": "cb3cd30b1f05121278d874ae0ccc875c08000ace"
+    }
+  },
+  "components": [
+    { "id": "developer", "type": "external", "label": "Developer", "sublabel": "types /kick 42", "pos": [40, 180], "size": [130, 60], "sources": [{ "path": "skills/kick/SKILL.md", "line": 3 }] },
+    { "id": "host", "type": "frontend", "label": "Claude Code host", "sublabel": "loads plugin, fires hooks", "pos": [280, 180], "size": [150, 60], "sources": [{ "path": ".claude-plugin/plugin.json", "line": 19, "end_line": 21 }, { "path": "hooks/hooks.json", "line": 1, "end_line": 56 }] },
+    { "id": "kick", "type": "backend", "label": "kick", "sublabel": "orchestrator skill", "pos": [520, 180], "size": [130, 60], "sources": [{ "path": "skills/kick/SKILL.md", "line": 18 }, { "path": "skills/kick/SKILL.md", "line": 79, "end_line": 85 }] },
+    { "id": "plan", "type": "backend", "label": "plan", "sublabel": "opus, approval gate", "pos": [760, 180], "size": [130, 60], "sources": [{ "path": "skills/plan/SKILL.md", "line": 4 }, { "path": "skills/plan/SKILL.md", "line": 123, "end_line": 138 }] },
+    { "id": "execute", "type": "backend", "label": "execute", "sublabel": "RED, Sonnet GREEN", "pos": [1000, 180], "size": [130, 60], "sources": [{ "path": "skills/execute/SKILL.md", "line": 34, "end_line": 61 }] },
+    { "id": "review", "type": "backend", "label": "review", "sublabel": "profile pass chain", "pos": [1240, 180], "size": [130, 60], "sources": [{ "path": "skills/review/SKILL.md", "line": 60, "end_line": 64 }] },
+    { "id": "hooks", "type": "security", "label": "Hook guards", "sublabel": "kick, stop, approval", "pos": [520, 340], "size": [130, 60], "tag": "enforcement", "sources": [{ "path": "hooks/kick-guard.sh", "line": 11, "end_line": 15 }, { "path": "hooks/stop-guard.sh", "line": 16, "end_line": 21 }, { "path": "hooks/post-skill.sh", "line": 13, "end_line": 17 }] },
+    { "id": "kickstate", "type": "database", "label": "Kick state", "sublabel": "/tmp state file", "pos": [760, 340], "size": [130, 60], "sources": [{ "path": "scripts/kick-state.sh", "line": 47 }, { "path": "scripts/kick-state.sh", "line": 63, "end_line": 68 }, { "path": "scripts/kick-state.sh", "line": 90, "end_line": 124 }] },
+    { "id": "taskops", "type": "backend", "label": "task-ops", "sublabel": "backend router", "pos": [1000, 340], "size": [130, 60], "sources": [{ "path": "skills/task-ops/SKILL.md", "line": 29, "end_line": 43 }] },
+    { "id": "finish", "type": "backend", "label": "finish", "sublabel": "merge, close, report", "pos": [1240, 340], "size": [130, 60], "sources": [{ "path": "skills/finish/SKILL.md", "line": 49, "end_line": 54 }] },
+    { "id": "codex", "type": "external", "label": "Codex", "sublabel": "MCP reviewer", "pos": [1240, 20], "size": [130, 60], "sources": [{ "path": "skills/review/SKILL.md", "line": 13 }, { "path": "skills/review/SKILL.md", "line": 64 }] },
+    { "id": "github", "type": "cloud", "label": "GitHub Issues", "sublabel": "gh CLI backend", "pos": [1000, 500], "size": [130, 60], "sources": [{ "path": "skills/issue-ops/SKILL.md", "line": 71 }, { "path": "skills/issue-ops/SKILL.md", "line": 124 }] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Developer machine", "wraps": ["developer", "host", "kick", "plan", "execute", "review", "hooks", "kickstate", "taskops", "finish"] },
+    { "kind": "security-group", "label": "PASIV plugin (skills, hooks, scripts)", "wraps": ["kick", "plan", "execute", "review", "hooks", "kickstate", "taskops", "finish"] }
+  ],
+  "connections": [
+    { "id": "dev-to-host", "from": "developer", "to": "host", "label": "/kick", "variant": "emphasis" },
+    { "id": "host-to-kick", "from": "host", "to": "kick", "label": "loads skill", "variant": "emphasis" },
+    { "id": "kick-to-plan", "from": "kick", "to": "plan", "label": "Skill call", "variant": "emphasis" },
+    { "id": "plan-to-execute", "from": "plan", "to": "execute", "label": "approved plan", "variant": "emphasis" },
+    { "id": "execute-to-review", "from": "execute", "to": "review", "label": "branch diff", "variant": "emphasis" },
+    { "id": "review-to-finish", "from": "review", "to": "finish", "variant": "emphasis" },
+    { "id": "finish-to-taskops", "from": "finish", "to": "taskops", "label": "close", "variant": "emphasis" },
+    { "id": "taskops-to-github", "from": "taskops", "to": "github", "label": "gh", "variant": "emphasis" },
+    { "id": "review-to-codex", "from": "review", "to": "codex", "label": "MCP review", "variant": "dashed" },
+    { "id": "host-to-hooks", "from": "host", "to": "hooks", "label": "hook events", "variant": "security" },
+    { "id": "hooks-to-state", "from": "hooks", "to": "kickstate", "label": "state cmds", "variant": "security" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Primary path", "items": ["/kick arms the state machine, then runs plan, execute, review, verification, finish as Skill calls in one turn", "Verification gate (haiku) sits between review and finish", "Execute dispatches a fresh Sonnet subagent per task for GREEN"] },
+    { "dot": "rose", "title": "Hook enforcement", "items": ["kick-guard arms state on /kick and injects the step-skill rule", "post-skill advances state on each step-skill call", "stop-guard bounces turn-ends mid-kick, capped at 2 blocks", "plan-approval-guard denies the approval question until the plan is shown"] },
+    { "dot": "amber", "title": "Task backends", "items": ["task-ops reads .pasiv.yml and routes to github, beans, or local", "beans-ops calls the beans CLI; local-ops writes docs/tasks/ markdown", "Default backend is local; github is opt-in"] },
+    { "dot": "slate", "title": "Trust boundaries", "items": ["Everything in the plugin runs inside the user's Claude Code session on their machine", "Codex review and GitHub are the only calls leaving it", "Review also supports a shell claude -p engine when hosted by Codex"] }
+  ]
+}

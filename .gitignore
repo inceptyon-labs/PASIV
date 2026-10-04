@@ -10,3 +10,6 @@ review-*.json
 
 # Upstream-tracking cache (scripts/superpowers-diff.sh)
 .cache/
+
+# Archify diagram output (local, regenerated on demand)
+.archify/
