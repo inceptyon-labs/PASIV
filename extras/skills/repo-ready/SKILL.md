@@ -243,6 +243,11 @@ Run a final check:
 git status --short
 ```
 
+Then add one line suggesting `repo-tidy` once the project's architecture has settled.
+That skill creates the Archify diagram (`docs/architecture.json`) and its agent-file note.
+Don't create the diagram here. A first-push project usually changes shape too fast for it to
+stay accurate.
+
 ## Phase 6: Destination Setup Command
 
 **Print first, then ask.** Print the shared-state commands (`gh repo create`, `git init --bare`, `git push`, GitGuardian enrollment) so the user can review exactly what would run, then ask via `AskUserQuestion` whether to run them (see "Offer to run" below). Never run them unprompted — and this skill still never commits: the setup commands push only what is already committed. If the working tree is dirty, say so before asking; committing stays with the user (`/acp`).

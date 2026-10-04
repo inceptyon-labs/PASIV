@@ -1,6 +1,6 @@
 ---
 name: repo-tidy
-description: Bring an existing project back in line - verify the README against disk, audit AGENTS.md, archive or fix stale docs, check the deployment against the house standard, put the logo everywhere, refresh the TARS project record, the memex wiki page and Claude's project memory, then commit. Use for "tidy repo", "repo tidy", "clean up this repo", "bring this project up to date", "housekeeping pass", "is this repo current".
+description: Bring an existing project back in line - verify the README against disk, audit AGENTS.md, archive or fix stale docs, check the deployment against the house standard, create or refresh the Archify architecture diagram, put the logo everywhere, refresh the TARS project record, the memex wiki page and Claude's project memory, then commit. Use for "tidy repo", "repo tidy", "clean up this repo", "bring this project up to date", "housekeeping pass", "is this repo current".
 model: sonnet
 user-invocable: true
 allowed-tools:
@@ -24,6 +24,7 @@ would touch something running.
 **Input:** $ARGUMENTS, optional flags:
 - `--report` scan and print the plan, change nothing
 - `--skip-deploy` skip Phase 5
+- `--skip-diagram` skip Phase 5b
 - `--skip-memory` skip Phase 9
 - `--no-commit` stop before the final `/acp`
 
@@ -142,6 +143,12 @@ distribution channel; nothing to change on disk.
 
 **No deployment**: say so and move on.
 
+## Phase 5b: Architecture diagram
+
+Read `references/architecture-diagram.md`. Use it to decide whether to create the
+`docs/architecture.json` spec, refresh it, or leave it alone. If you create it, also add
+the agent-file note it holds. Under `--report`, print the decision and its reason only.
+
 ## Phase 6: Logo and icon
 
 If the project has a logo (`assets/logo.*`, `static/logo.*`, `public/logo.*`, or similar):
@@ -220,6 +227,7 @@ TARS:       deploy_target, production_url, icon_path
 Wiki:       ~/memex/wiki/projects/<name>.md (dated note)
 Memory:     deleted audit-2026-08-21-findings (fixed, in AGENTS.md); kept 1
 Deployment: on standard  |  MIGRATION PLAN below, not run
+Diagram:    created  |  refreshed, re-pinned to <sha>  |  current  |  skipped (<why>)
 Follow-ups: no logo; CHANGELOG stopped at 1.2
 ```
 

@@ -106,6 +106,11 @@ implies.>
 Omit any empty section. Do not add sections for identity, style, commits,
 or stack — global config owns those.
 
+If `docs/architecture.json` exists, add its `## Architecture diagram` note
+verbatim from `../repo-tidy/references/architecture-diagram.md`. That note
+names `.archify/`, which is gitignored render output and may be absent on
+disk. It is not a dead reference.
+
 ## Mode 2: Audit (existing files)
 
 Run the checks in this order, then apply the fixes in the same pass —
@@ -128,7 +133,10 @@ and before editing.
    check: every audited repo with a file over 5KB had it.
 3. **Structure** — is CLAUDE.md a one-line `@AGENTS.md` pointer? If the two
    files both have content, diff the topics; parallel coverage means
-   divergence is already underway. Consolidate into AGENTS.md.
+   divergence is already underway. Consolidate into AGENTS.md. Exception:
+   a repo whose AGENTS.md is loaded globally (`~/memex/AGENTS.md`, which
+   `~/.claude/CLAUDE.md` imports and `~/.codex/AGENTS.md` symlinks to)
+   keeps its project-specific content in CLAUDE.md.
 4. **Redundancy** — flag any line that restates the README, the global
    config, a manifest, or a directory listing. The test: "would an agent
    without this line do anything differently?" If no, cut it. Process
