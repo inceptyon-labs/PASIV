@@ -38,8 +38,9 @@ Scan TARGET for package manager files to determine the ecosystem(s), stored as E
 - `package.json` / `yarn.lock` / `pnpm-lock.yaml` / `bun.lockb` → Node.js (npm / Yarn / pnpm / Bun)
 - `requirements.txt` / `setup.py` / `pyproject.toml` → Python
 - `Cargo.toml` → Rust; `go.mod` → Go; `Gemfile` → Ruby; `composer.json` → PHP
+- `Package.swift` / `Package.resolved` → Swift (SwiftPM)
 
-Detect primary languages by file extensions: `.js`, `.ts`, `.jsx`, `.tsx`, `.py`, `.rb`, `.rs`, `.go`, `.php`, `.sh`, `.java`, `.kt`. Store as LANGUAGES.
+Detect primary languages by file extensions: `.js`, `.ts`, `.jsx`, `.tsx`, `.py`, `.rb`, `.rs`, `.go`, `.php`, `.sh`, `.java`, `.kt`, `.swift`. Store as LANGUAGES.
 
 ---
 
@@ -67,10 +68,14 @@ Run the audit tool for each detected ecosystem:
 | Python | `pip audit --format=json 2>/dev/null \|\| pip-audit --format=json 2>/dev/null \|\| true` |
 | Rust | `cargo audit --json 2>/dev/null \|\| true` |
 | Go | `govulncheck ./... 2>/dev/null \|\| true` |
+| Swift | `osv-scanner scan source -L Package.resolved --format json 2>/dev/null \|\| true` |
+| Any other lockfile, or the tool above is missing | `osv-scanner scan source -r . --format json 2>/dev/null \|\| true` |
 
 For Node.js, also check for typosquatting — scan `package.json` dependencies for names one character off from popular packages (e.g., `lodassh`, `expresss`) or with suspicious scopes.
 
-If the audit tool is not installed, note it as "SKIPPED — tool not installed" and move on.
+`osv-scanner` reads most lockfiles (`package-lock.json`, `Cargo.lock`, `Gemfile.lock`, `composer.lock`, `pubspec.lock`, `Package.resolved`, …) against the OSV database, so it covers Ruby, PHP and Dart too. It exits non-zero when it finds a vulnerability, hence the `|| true`.
+
+If neither the ecosystem's tool nor `osv-scanner` is installed, note it as "SKIPPED — tool not installed" and move on.
 
 Record all findings with severity levels.
 

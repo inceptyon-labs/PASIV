@@ -429,7 +429,7 @@ Standalone utilities ship as a **separate plugin** so the core workflow stays le
 | Skill | What it does |
 |-------|--------------|
 | `/repo-scan` | Multi-ecosystem security vetting — CVEs, malware patterns, obfuscated code, secrets; PASS/CAUTION/FAIL report in `docs/scans/` |
-| `/repo-ready` | Prep for first GitHub push — README, LICENSE, community files, secret scan |
+| `/repo-ready` | Prep for first GitHub push — README, LICENSE, community files, Dependabot, secret scan |
 | `/app-store-ready` | Apple App Store submission validator + ASO/keyword optimizer |
 | `/de-vibe` | Strip AI tells — de-slop docs, drop restate-comments, scrub trailers |
 | `/nano-banana` | Image generation via Google Gemini (icons, logos, graphics) |

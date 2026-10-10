@@ -1,6 +1,6 @@
 ---
 name: repo-tidy
-description: Bring an existing project back in line - verify the README against disk, audit AGENTS.md, archive or fix stale docs, check the deployment against the house standard, create or refresh the Archify architecture diagram, put the logo everywhere, refresh the TARS project record, the memex wiki page and Claude's project memory, then commit. Use for "tidy repo", "repo tidy", "clean up this repo", "bring this project up to date", "housekeeping pass", "is this repo current".
+description: Bring an existing project back in line - verify the README against disk, audit AGENTS.md, archive or fix stale docs, check the deployment against the house standard, check Dependabot and secret scanning on GitHub repos, create or refresh the Archify architecture diagram, put the logo everywhere, refresh the TARS project record, the memex wiki page and Claude's project memory, then commit. Use for "tidy repo", "repo tidy", "clean up this repo", "bring this project up to date", "housekeeping pass", "is this repo current".
 model: sonnet
 user-invocable: true
 allowed-tools:
@@ -28,8 +28,9 @@ would touch something running.
 - `--skip-memory` skip Phase 9
 - `--no-commit` stop before the final `/acp`
 
-`references/` paths are relative to this skill's directory. The TARS builder lives in the
-sibling skill: `../repo-ready/references/tars-registration.md`.
+`references/` paths are relative to this skill's directory. The TARS builder and the GitHub
+security standard live in the sibling skill: `../repo-ready/references/tars-registration.md`
+and `../repo-ready/references/github-security.md`.
 
 ## Hard rules
 
@@ -149,6 +150,24 @@ Read `references/architecture-diagram.md`. Use it to decide whether to create th
 `docs/architecture.json` spec, refresh it, or leave it alone. If you create it, also add
 the agent-file note it holds. Under `--report`, print the decision and its reason only.
 
+## Phase 5c: Dependency and secret monitoring
+
+GitHub remotes only: `gh repo view --json nameWithOwner,visibility`. Skip silently for
+anything else.
+
+Read `../repo-ready/references/github-security.md` and compare the repo against it:
+- no `.github/dependabot.yml` and no Renovate config: write one
+- a `dependabot.yml` missing an ecosystem the repo now uses, or `github-actions` when
+  workflows exist: add the entry
+- Dependabot alerts or security updates off: enable them
+- public repo with secret scanning or push protection off: enable both
+
+All four are safe to apply. If a call is refused (no admin on the repo), list it as a
+follow-up. Under `--report`, print the gaps only.
+
+Open Dependabot alerts and secret-scanning alerts go in the summary as follow-ups. Don't
+resolve or fix them in this pass.
+
 ## Phase 6: Logo and icon
 
 If the project has a logo (`assets/logo.*`, `static/logo.*`, `public/logo.*`, or similar):
@@ -227,6 +246,7 @@ TARS:       deploy_target, production_url, icon_path
 Wiki:       ~/memex/wiki/projects/<name>.md (dated note)
 Memory:     deleted audit-2026-08-21-findings (fixed, in AGENTS.md); kept 1
 Deployment: on standard  |  MIGRATION PLAN below, not run
+Security:   dependabot.yml (npm, github-actions), secret scanning on  |  current  |  not GitHub
 Diagram:    created  |  refreshed, re-pinned to <sha>  |  current  |  skipped (<why>)
 Follow-ups: no logo; CHANGELOG stopped at 1.2
 ```

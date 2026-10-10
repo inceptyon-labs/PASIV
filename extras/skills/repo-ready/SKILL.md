@@ -1,6 +1,6 @@
 ---
 name: repo-ready
-description: Prep a project for first GitHub push - README, LICENSE, CONTRIBUTING, SECURITY, CHANGELOG, .github templates, secret scan. Use for "repo ready", "prep for github", "first push".
+description: Prep a project for first GitHub push - README, LICENSE, CONTRIBUTING, SECURITY, CHANGELOG, .github templates, Dependabot, secret scan. Use for "repo ready", "prep for github", "first push".
 model: sonnet
 allowed-tools:
   - Bash
@@ -81,7 +81,7 @@ Then ask **only** the questions that can't be inferred. Use `AskUserQuestion` wi
 
 Only offer the Unraid option when `git config user.email` is one of Jason's (`<email>` / `<email>`); otherwise show just Public / Private.
 
-The destination changes the rest of the flow. When **Unraid** is chosen, the repo has no GitHub Actions runner and no GitHub UI, so **skip** Question 6 (repo owner), Question 7 (CI starter), Question 8 (GitGuardian), and artifacts 4h (CI workflow) and 4l (gitleaks CI). Everything else — README, LICENSE, local gitleaks hook (4k), etc. — still applies. Phase 6 prints the bare-SSH setup instead of `gh repo create`.
+The destination changes the rest of the flow. When **Unraid** is chosen, the repo has no GitHub Actions runner and no GitHub UI, so **skip** Question 6 (repo owner), Question 7 (CI starter), Question 8 (GitGuardian), and artifacts 4h (CI workflow), 4l (gitleaks CI) and 4o (Dependabot config). Everything else — README, LICENSE, local gitleaks hook (4k), etc. — still applies. Phase 6 prints the bare-SSH setup instead of `gh repo create`.
 
 **Question 3 — Accept contributions?** (gates CONTRIBUTING.md + templates): Yes (include CONTRIBUTING.md, issue templates, PR template) | No (skip contribution scaffolding)
 
@@ -185,6 +185,10 @@ Copy `assets/pre-commit` to `.githooks/pre-commit` and `chmod +x` it. Copy `asse
 
 Whenever any `.github/workflows/` directory is being created, copy `assets/gitleaks-workflow.yml` to `.github/workflows/gitleaks.yml` (no substitutions). This catches contributors who bypassed the local hook (`--no-verify`) or never ran the `hooksPath` setup. It installs the MIT-licensed gitleaks CLI directly — do not swap in `gitleaks/gitleaks-action@v2`, which now requires a paid `GITLEAKS_LICENSE` for all org repos.
 
+### 4o. Dependabot config (GitHub destinations, always)
+
+No question needed. Read `references/github-security.md` and write `.github/dependabot.yml` per its section 1, using the manifests the Phase 2 scan found. Skip for Unraid. The repository settings in its section 2 need the repo to exist, so they run in Phase 6.
+
 ### 4n. Uranus deploy scaffolding (only if Question 9 = Yes)
 
 Follow the conventions in the `uranus-deploy` skill (`~/.claude/skills/uranus-deploy/SKILL.md`, "Onboard a new service"). Write only what is missing:
@@ -226,6 +230,7 @@ Wrote:
   .github/PULL_REQUEST_TEMPLATE.md
   .github/workflows/ci.yml
   .github/workflows/gitleaks.yml
+  .github/dependabot.yml (npm, github-actions)
   .githooks/pre-commit (+x)
   .gitleaks.toml
 Modified:
@@ -250,7 +255,7 @@ stay accurate.
 
 ## Phase 6: Destination Setup Command
 
-**Print first, then ask.** Print the shared-state commands (`gh repo create`, `git init --bare`, `git push`, GitGuardian enrollment) so the user can review exactly what would run, then ask via `AskUserQuestion` whether to run them (see "Offer to run" below). Never run them unprompted — and this skill still never commits: the setup commands push only what is already committed. If the working tree is dirty, say so before asking; committing stays with the user (`/acp`).
+**Print first, then ask.** Print the shared-state commands (`gh repo create`, the GitHub security settings, `git init --bare`, `git push`, GitGuardian enrollment) so the user can review exactly what would run, then ask via `AskUserQuestion` whether to run them (see "Offer to run" below). Never run them unprompted — and this skill still never commits: the setup commands push only what is already committed. If the working tree is dirty, say so before asking; committing stays with the user (`/acp`).
 
 Which command block you print depends on the Question 2 destination.
 
@@ -272,6 +277,8 @@ If topics were inferred from the stack (e.g., `react`, `fastify`, `postgres`, `d
 ```bash
 gh repo edit <owner>/<name> --add-topic <t1>,<t2>,<t3>
 ```
+
+Then print the security settings from `references/github-security.md` section 2 for `<owner>/<name>`: Dependabot alerts and security updates for every repo, secret scanning and push protection for **Public** only. If Phase 1 found an existing `origin` and `gh repo create` is skipped, still print them for that repo.
 
 ### Unraid destination (personal self-hosted)
 
@@ -309,7 +316,7 @@ After the destination block, print the two remaining steps and offer to run them
 After printing the command block, ask with `AskUserQuestion`:
 
 **Question — Run setup commands?** "Run the commands above now?"
-- **Run them now** — execute the destination block (`gh repo create …` / the Unraid SSH block), then the topic edit if one was suggested. Report each command's output. GitGuardian enrollment is browser-based and always stays manual.
+- **Run them now** — execute the destination block (`gh repo create …` / the Unraid SSH block), then the topic edit if one was suggested, then the GitHub security settings. Report each command's output. GitGuardian enrollment is browser-based and always stays manual.
 - **I'll run them myself** — end with: "Review the artifacts, then run the commands above when you're ready."
 
 If the user picks "Run them now" and the working tree is dirty, remind them afterward that the push only included committed work and the new artifacts still need a commit (`/acp`).
