@@ -1,6 +1,6 @@
 # Labels
 
-Canonical label definitions. `skills/issue-ops/SKILL.md` carries the runtime copy of the color table — keep in sync.
+Canonical label definitions. `skills/issue-ops/SKILL.md` carries the runtime copy of the color table; keep the two in sync.
 
 ## Categories
 
@@ -12,7 +12,7 @@ Canonical label definitions. `skills/issue-ops/SKILL.md` carries the runtime cop
 
 Issue types (Epic, Feature, Task) are set via GitHub's native `--type` flag, not labels.
 
-## Label Colors
+## Label colors
 
 | Label | Color | Description |
 |-------|-------|-------------|

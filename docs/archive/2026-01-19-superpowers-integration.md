@@ -1,3 +1,5 @@
+> Archived 2026-11-21: superseded by docs/archive/2026-06-24-streamline-architecture.md and the shipped skills (no `tdd` or `start` skill exists now).
+
 # Superpowers Integration Plan
 
 **Goal**: Integrate TDD methodology, verification gates, and systematic debugging from [obra/superpowers](https://github.com/obra/superpowers) into github-automation.

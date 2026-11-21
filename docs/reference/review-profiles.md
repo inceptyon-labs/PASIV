@@ -1,31 +1,31 @@
-# Review Profiles
+# Review profiles
 
-A review **profile** is an ordered list of passes; each pass is an `engine` plus (for claude) a `model`. The `review` skill resolves a profile name to a pass chain and runs the passes **cascading** — each pass sees prior fixes.
+A review **profile** is an ordered list of passes; each pass is an `engine` plus (for claude) a `model`. The `review` skill resolves a profile name to a pass chain and runs the passes **cascading**, so each pass sees prior fixes.
 
 ## Built-in profiles
 
 | Profile | Passes | When |
 |---------|--------|------|
-| `none` | — | skip review |
+| `none` | - | skip review |
 | `quick` | claude:sonnet | trivial changes |
 | `standard` | claude:opus → codex | most changes (default) |
-| `fast` | claude:opus ∥ codex (concurrent) | same reviewer diversity in one round of wall-clock — no cascade; findings merged and deduped, fixed once |
-| `deep` | claude:opus → codex → claude:opus | security-critical / large refactors — final pass re-checks cumulative fixes |
+| `fast` | claude:opus ∥ codex (concurrent) | same reviewer diversity in one round of wall-clock, no cascade; findings merged and deduped, fixed once |
+| `deep` | claude:opus → codex → claude:opus | security-critical or large refactors; the final pass re-checks cumulative fixes |
 | `codex` | codex | codex-only |
 
-Sonnet is never paired with another pass — same-family findings are a subset of opus; diversity comes from crossing engines.
+Sonnet is never paired with another pass: same-family findings are a subset of opus, and diversity comes from crossing engines.
 
 ## Recommendation rule (size + security)
 
 `plan` (and `kick`'s parent flow) recommend: XS/S → `quick` · M → `standard` · L/XL → `deep`. A security-pattern match bumps one level (`quick`→`standard`, `standard`→`deep`) and tags `[security]`.
 
-Security patterns (canonical — `plan` Step 5 and `kick`'s parent flow carry runtime copies, keep in sync):
+Security patterns (canonical; `plan` Step 5 and `kick`'s parent flow carry runtime copies, so keep them in sync):
 
 ```
 auth|crypto|password|payment|token|secret|credential|session|login|oauth|jwt|apikey|private|key
 ```
 
-## `.pasiv.yml` override (optional — built-ins cover the common cases)
+## `.pasiv.yml` override (optional; built-ins cover the common cases)
 
 ```yaml
 review:
@@ -37,7 +37,7 @@ review:
     deep:     [{ engine: claude, model: opus }, { engine: codex }, { engine: claude, model: opus }]
 ```
 
-## Engines — host-aware
+## Engines (host-aware)
 
 | `engine` | under Claude Code | under Codex |
 |----------|-------------------|-------------|
@@ -48,4 +48,4 @@ So the same profile runs both directions. Host detected via `$CLAUDECODE` / `$CO
 
 ## Standalone
 
-`/review [profile]` — e.g. `/review deep`, `/review codex`. Default profile from `.pasiv.yml` `review.default`, else `standard`.
+`/review [profile]`, e.g. `/review deep` or `/review codex`. Default profile from `.pasiv.yml` `review.default`, else `standard`.

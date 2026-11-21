@@ -1,4 +1,4 @@
-# Design System Integration
+# Design system integration
 
 PASIV loads the project's design system whenever a `/kick` task is labeled `area:frontend` or `area:mobile`, so implementation references established tokens and patterns instead of inventing new ones.
 
@@ -16,8 +16,8 @@ PASIV loads the project's design system whenever a `/kick` task is labeled `area
 
 ## What the doc should contain
 
-- **Tokens** — colors, spacing scale, typography, radii/shadows
-- **Patterns** — buttons, forms, cards, lists: the documented way to build each
+- **Tokens**: colors, spacing scale, typography, radii/shadows
+- **Patterns**: the documented way to build buttons, forms, cards and lists
 
 Any format works; it's read as context, not parsed.
 
@@ -30,7 +30,7 @@ Any format works; it's read as context, not parsed.
 
 ## Setup
 
-`/pasiv init` (frontend = yes) discovers an existing doc and records its path, or offers to create a starter `docs/design-system.md` with token values pulled from the codebase (Tailwind theme, CSS variables, theme files) — or lets you point at any path.
+`/pasiv init` (frontend = yes) discovers an existing doc and records its path, or offers to create a starter `docs/design-system.md` with token values pulled from the codebase (Tailwind theme, CSS variables, theme files), or lets you point at any path.
 
 ## Optional provider: interface-design
 

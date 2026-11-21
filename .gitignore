@@ -13,3 +13,6 @@ review-*.json
 
 # Archify diagram output (local, regenerated on demand)
 .archify/
+
+# Beans task files (local, per-machine)
+.beans/

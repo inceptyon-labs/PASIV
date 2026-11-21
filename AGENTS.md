@@ -2,20 +2,16 @@
 
 > Tool-agnostic project guidance. Read by any AGENTS.md-compatible agent.
 
-## Issue Type Hierarchy
+## Invariants
 
-| Level | Type | Scope | Example |
-|-------|------|-------|---------|
-| Epic | Strategic | Multiple features, spans weeks/months | "User Authentication System" |
-| Feature | Tactical | Single capability, spans days/week | "OAuth Login" |
-| Task | Execution | Single work item, hours | "Create OAuth callback endpoint" |
+- Skills find their scripts at runtime with `find ~/.claude -name <script> -path "*pasiv*/scripts/*"`, so the install directory name must contain `pasiv`. Never hardcode an absolute script path in a skill.
+- `extras/skills/` ships in a public repo. Private hosts, IPs and service details stay out of it; `uranus-deploy` keeps its private values in a gitignored `.env` next to its SKILL.md.
+- New workflow gates or steps ship as an opt-in `.pasiv.yml` toggle (default off) plus a `/pasiv init` question, like `workflow.ui_verify` and `verify.command`.
+- `docs/reference/labels.md` and `docs/reference/review-profiles.md` are canonical, but skills carry runtime copies: the label color table in `skills/issue-ops/SKILL.md`, the security patterns in `skills/plan/SKILL.md` and `skills/kick/SKILL.md`. Change them together.
 
-## Task Backend
+## Workflows
 
-
-- **github** — GitHub Issues + Project boards. Best for team collaboration.
-- **beans** — Flat-file `.beans/` directory. Agent-native, version-controlled. Requires `beans` CLI.
-- **local** — Markdown files in `docs/tasks/`. Zero external dependencies.
+- Don't bump versions by hand. `.github/workflows/version-bump.yml` bumps the patch in `.claude-plugin/plugin.json` and `marketplace.json` on every push to `main` and pushes its own commit, so `git pull --rebase` before the next push. It bumps only the core `pasiv` entry; `pasiv-extras` is versioned by hand.
 
 ## Architecture diagram
 

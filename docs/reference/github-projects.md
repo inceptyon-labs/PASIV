@@ -1,12 +1,12 @@
-# GitHub Projects Integration
+# GitHub Projects integration
 
 Issues are automatically added to a GitHub Project board.
 
-## Auto-Created Project
+## Auto-created project
 
 Named after your repository. Created on first `/issue`, `/parent`, or `/backlog`.
 
-## Auto-Prioritization
+## Auto-prioritization
 
 `/backlog` outputs suggested implementation order based on:
 
@@ -14,7 +14,7 @@ Named after your repository. Created on first `/issue`, `/parent`, or `/backlog`
 2. Parent/sub-issue relationships: parents before children
 3. Explicit dependencies: `Depends on #N` in issue body
 
-## Required Token Scope
+## Required token scope
 
 ```bash
 gh auth refresh -s project

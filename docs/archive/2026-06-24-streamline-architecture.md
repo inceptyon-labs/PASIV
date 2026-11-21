@@ -1,8 +1,10 @@
+> Archived 2026-11-21: shipped from v2.0.55 on, except §5 (`issue-ops` and `project-ops` were kept for the GitHub backend). Current behavior is in README.md and docs/reference/.
+
 # PASIV Streamline — CC-Native, Lean-Context, Pluggable Reviews
 
 > Design doc. Status: **proposed**. Author trigger: comparison against the community
 > `pcvelz/superpowers` fork. Supersedes the direction in
-> `docs/plans/2025-01-19-superpowers-integration.md` where they overlap.
+> `docs/archive/2026-01-19-superpowers-integration.md` where they overlap.
 
 ## Goals
 

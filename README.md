@@ -6,25 +6,25 @@
 
 > *"The PASIV device enables shared dreaming."*
 >
-> In Inception, the PASIV (Portable Automated Somnacin IntraVenous) device connects the team, enabling them to enter dreams together and extract what matters most. This tool does the same for your codebase - connecting your team of AI agents to extract working, tested, reviewed implementations from the seeds of ideas.
+> In Inception, the PASIV (Portable Automated Somnacin IntraVenous) device connects the team, enabling them to enter dreams together and extract what matters most. This tool does the same for your codebase: it connects a team of AI agents to extract working, tested, reviewed implementations from the seeds of ideas.
 
-**Solo dev workflow: specs → issues → TDD implementation → review → merge.**
+**Solo dev workflow from spec to issues, TDD implementation, review and merge.**
 
 ---
 
-## The Team
+## The team
 
 Every extraction needs a team. PASIV connects them:
 
 | Role | What They Do | In PASIV |
 |------|--------------|----------|
-| **Dreamer** | Explores possibilities, refines the vision | `/brainstorm` - Socratic design refinement |
-| **Extractor** | Leads the operation, pulls value from the target | `/kick` - orchestrates the full flow |
-| **Architect** | Designs the dream levels | `/backlog` - structures specs into issues |
-| **Forger** | Transforms and adapts | `/issue`, `/parent` - shapes ideas into trackable work |
-| **Point Man** | Handles the details | `task-ops`, `git-ops`, `project-ops` - the helpers |
-| **Chemist** | Enables deep dreaming | TDD, verification, systematic debugging - the methodology |
-| **Fischer** | Carries context between dreams | `/handoff` - structured session memory |
+| **Dreamer** | Explores possibilities, refines the vision | `/brainstorm`: Socratic design refinement |
+| **Extractor** | Leads the operation, pulls value from the target | `/kick` orchestrates the full flow |
+| **Architect** | Designs the dream levels | `/backlog` structures specs into issues |
+| **Forger** | Transforms and adapts | `/issue` and `/parent` shape ideas into trackable work |
+| **Point Man** | Handles the details | The helpers: `task-ops`, `git-ops`, `project-ops` |
+| **Chemist** | Enables deep dreaming | The methodology: TDD, verification, systematic debugging |
+| **Fischer** | Carries context between dreams | `/handoff`: structured session memory |
 
 ---
 
@@ -40,9 +40,9 @@ Every extraction needs a team. PASIV connects them:
 /plugin install pasiv@pasiv
 ```
 
-### TARS (Visual Plugin Manager)
+### TARS (visual plugin manager)
 
-Prefer a UI? Use [**TARS**](https://github.com/inceptyon-labs/TARS) - a visual plugin manager for Claude Code:
+Prefer a UI? Use [**TARS**](https://github.com/inceptyon-labs/TARS), a visual plugin manager for Claude Code:
 
 - Browse and install plugins from a curated library
 - Automatic update notifications
@@ -54,7 +54,7 @@ Prefer a UI? Use [**TARS**](https://github.com/inceptyon-labs/TARS) - a visual p
   </a>
 </p>
 
-## Quick Start
+## Quick start
 
 ```bash
 # Initialize PASIV in your project (interactive setup)
@@ -85,17 +85,17 @@ Prefer a UI? Use [**TARS**](https://github.com/inceptyon-labs/TARS) - a visual p
 
 Run `/pasiv init` to configure PASIV for your project. The interactive wizard:
 
-1. **Chooses your task backend** — GitHub Issues, Beans, or local markdown
+1. **Chooses your task backend**: GitHub Issues, Beans, or local markdown
 2. **Configures project board** (GitHub) or hooks (Beans)
-3. **Sets workflow toggles** — plan approval, TDD, review, verification, plus opt-in extras (UI verify, smoke command, coordinator model, token report, auto-reflect)
-4. **Creates project directories** — `docs/handoffs/`, `docs/designs/`, `docs/scans/`
-5. **Writes `.pasiv.yml`** — your backend + workflow configuration
-6. **Appends PASIV rules to `CLAUDE.md`** — session start behavior, rules, directory map
-7. **Configures a design system** (frontend projects) — discovers an existing doc, creates a starter from your codebase's tokens, or records the path you point it at
+3. **Sets workflow toggles**: plan approval, TDD, review, verification, plus opt-in extras (UI verify, smoke command, coordinator model, token report, auto-reflect)
+4. **Creates project directories**: `docs/handoffs/`, `docs/designs/`, `docs/scans/`
+5. **Writes `.pasiv.yml`** with your backend and workflow configuration
+6. **Appends PASIV rules to `CLAUDE.md`**: session start behavior, rules, directory map
+7. **Configures a design system** (frontend projects): discovers an existing doc, creates a starter from your codebase's tokens, or records the path you point it at
 
-**Already configured?** Re-running `/pasiv init` offers **Update** mode: it asks only about settings missing from your current `.pasiv.yml` (new features since your last init) and patches them in — custom keys like `model_routing` and `review.profiles` are untouched.
+**Already configured?** Re-running `/pasiv init` offers **Update** mode: it asks only about settings missing from your current `.pasiv.yml` (new features since your last init) and patches them in. Custom keys like `model_routing` and `review.profiles` are untouched.
 
-### Task Backends
+### Task backends
 
 PASIV supports pluggable task backends. Choose the one that fits your workflow:
 
@@ -107,7 +107,7 @@ PASIV supports pluggable task backends. Choose the one that fits your workflow:
 
 No `.pasiv.yml` defaults to Local Markdown (zero-dependency). GitHub and Beans are opt-in via `/pasiv init` or `.pasiv.yml`.
 
-## Issue Type Hierarchy
+## Issue type hierarchy
 
 | Level | Type | Scope | Example |
 |-------|------|-------|---------|
@@ -129,11 +129,11 @@ No `.pasiv.yml` defaults to Local Markdown (zero-dependency). GitHub and Beans a
 | `/kick next` | - | Work on highest priority ready task |
 | `/handoff` | Handoff doc | Save session context for next session |
 | `/reflect` | Memory / feedback | Persist durable facts, corrections, and reusable workflows from the session (also fires from `finish` when `auto_reflect` is on) |
-| `/review [profile]` | - | Review the diff at a depth — `quick`/`standard`/`fast`/`deep`/`codex` |
+| `/review [profile]` | - | Review the diff at a chosen depth: `quick`/`standard`/`fast`/`deep`/`codex` |
 
-**Standalone utilities** live in the separate **`pasiv-extras`** plugin (`/plugin install pasiv-extras@pasiv`) so they don't load into every session: `/repo-scan` (security vetting), `/repo-ready` (first-push prep), `/app-store-ready` (submission validator + ASO), `/de-vibe` (strip AI tells), `/codex-image` (image generation via Codex CLI), `/design-pipeline` (PRD → finished UI design workflow).
+**Standalone utilities** live in the separate **`pasiv-extras`** plugin (`/plugin install pasiv-extras@pasiv`) so they don't load into every session: `/repo-scan` (security vetting), `/repo-ready` (first-push prep), `/app-store-ready` (submission validator + ASO), `/repo-tidy` (maintenance pass), `/de-vibe` (strip AI tells), `/humanizer` (de-slop a document), `/fable-audit` (deep risk audit), `/agents-md` (AGENTS.md scaffold/audit), `/codex-image` (image generation via Codex CLI), `/design-pipeline` (PRD to finished UI design workflow), plus personal helpers (`/acp`, `/acpd`, `/uranus-deploy`).
 
-## Workflow Patterns
+## Workflow patterns
 
 > *"An idea is like a virus. Resilient. Highly contagious."*
 
@@ -149,7 +149,7 @@ Choose your entry point based on what you have:
 | New project | `/pasiv init` | → configured and ready |
 | End of session | `/handoff` | → context preserved |
 
-## Flow Diagram
+## Flow diagram
 
 ```mermaid
 flowchart LR
@@ -183,11 +183,11 @@ flowchart LR
 
 ---
 
-## The `/brainstorm` Flow
+## The `/brainstorm` flow
 
 > *"What's the most resilient parasite? An idea."*
 
-Socratic design refinement - turn vague ideas into validated designs before writing code.
+Socratic design refinement: turn vague ideas into validated designs before writing code.
 
 ```
 /brainstorm                  # Start from a vague idea
@@ -205,7 +205,7 @@ Socratic design refinement - turn vague ideas into validated designs before writ
 | **5. Document** | Save to `docs/designs/YYYY-MM-DD-feature.md` |
 | **6. Next Steps** | Offer `/backlog`, `/parent`, or `/issue` |
 
-### Question Types
+### Question types
 
 - **Clarifying**: "Who will use this?" "What triggers this flow?"
 - **Challenging**: "What if this fails?" "How does this scale?"
@@ -215,7 +215,7 @@ Socratic design refinement - turn vague ideas into validated designs before writ
 
 ---
 
-## The `/kick` Flow
+## The `/kick` flow
 
 > *"You mustn't be afraid to dream a little bigger, darling."*
 
@@ -228,21 +228,21 @@ Socratic design refinement - turn vague ideas into validated designs before writ
 
 1. **Detect backend** (read `.pasiv.yml`)
 2. **Load session handoff** (if one exists in `docs/handoffs/`)
-3. **Fetch task context** — one `task-ops get-context` call returns issue, parent, sub-issues, and sibling context (parent → autonomous flow)
-4. **Start baseline tests in the background** — planning is read-only, so nothing waits on the suite
+3. **Fetch task context**: one `task-ops get-context` call returns the issue, parent, sub-issues and sibling context (a parent issue switches to the autonomous flow)
+4. **Start baseline tests in the background**; planning is read-only, so nothing waits on the suite
 5. Move to **In Progress**
 6. **Load design system** (if `area:frontend` or `area:mobile`)
-7. Create plan → **select review depth** → wait for approval (large surfaces fan out parallel read-only scouts)
-8. **Join the baseline** — fix / proceed / cancel if it failed
-9. **Implementation** (Opus writes RED tests in-context; a fresh Sonnet implementer subagent does GREEN — keeps the coordinator lean; the next independent task's RED gets written while the current implementer runs, and fully independent tasks can run in parallel worktrees)
+7. Create the plan, **select review depth** and wait for approval (large surfaces fan out parallel read-only scouts)
+8. **Join the baseline**: fix, proceed or cancel if it failed
+9. **Implementation** (Opus writes RED tests in-context; a fresh Sonnet implementer subagent does GREEN, which keeps the coordinator lean; the next independent task's RED gets written while the current implementer runs, and fully independent tasks can run in parallel worktrees)
 10. Run tests (systematic debugging if failures)
 11. **Code review** (review profile, based on selection)
 12. **Verification gate** (checks run concurrently; Haiku fixes simple issues, escalates complex to Opus)
 13. Check off acceptance criteria
 14. **Write handoff** (if parent issue with remaining tasks)
-15. Merge to main, move to **Done**, close task — plus opt-in per-model token report and auto-reflect
+15. Merge to main, move to **Done**, close the task, then the opt-in per-model token report and auto-reflect
 
-### Review Profile Selection
+### Review profile selection
 
 During plan approval, select a review profile with smart recommendations based on size and security:
 
@@ -250,16 +250,16 @@ During plan approval, select a review profile with smart recommendations based o
 |---------|--------|------------------|
 | `quick` | Sonnet | `size:XS`/`size:S`, trivial |
 | `standard` | Opus → Codex | most changes (default) |
-| `fast` | Opus ∥ Codex (concurrent) | same reviewer diversity, one round of wall-clock — no cascade |
-| `deep` | Opus → Codex → Opus | `size:L`/`size:XL`, security-critical — final pass re-checks cumulative fixes |
+| `fast` | Opus ∥ Codex (concurrent) | same reviewer diversity in one round of wall-clock, no cascade |
+| `deep` | Opus → Codex → Opus | `size:L`/`size:XL`, security-critical; the final pass re-checks cumulative fixes |
 
 Configurable in `.pasiv.yml`. See `docs/reference/review-profiles.md`.
 
-### Split-Model TDD
+### Split-model TDD
 
 > *"The dreamer can always remember the genesis of the idea."*
 
-PASIV enforces split-model TDD — the stronger model writes the spec, the cheaper model writes the code:
+PASIV enforces split-model TDD. The stronger model writes the spec and the cheaper model writes the code:
 
 ```
 RED (Opus) → GREEN (Sonnet) → REFACTOR (Sonnet) → COMMIT → repeat
@@ -267,29 +267,29 @@ RED (Opus) → GREEN (Sonnet) → REFACTOR (Sonnet) → COMMIT → repeat
 
 | Phase | Model | Why |
 |-------|-------|-----|
-| **RED** (write test) | Opus | Tests ARE the specification. Stronger model writes better specs. |
+| **RED** (write test) | Opus | Tests are the specification, and a stronger model writes better specs. |
 | **GREEN** (write code) | Sonnet | Code is constrained by the test. Cheaper model follows the spec. |
 | **REFACTOR** | Sonnet | Clean up while tests stay green. |
 
 This is enforced by context isolation: the `execute` coordinator (Opus) writes the RED tests in-context, then dispatches a fresh Sonnet implementer subagent for GREEN/REFACTOR/COMMIT. The noisy edit-test-iterate loop runs in the subagent's window, so the coordinator stays lean (standard 200k) and the Sonnet workers stay on subscription.
 
-Every dispatch carries an explicit contract — goal, in-bounds files (anything else returns BLOCKED instead of expanding scope), done-condition, and a ≤15-line report format. Failures climb an **escalation ladder**: one same-tier retry only when context was missing, then one tier up with both failure reports attached so the next model never rediscovers dead ends. Never a third attempt at the same tier, never a silent step down.
+Every dispatch carries an explicit contract: goal, in-bounds files (anything else returns BLOCKED instead of expanding scope), done-condition, and a ≤15-line report format. Failures climb an **escalation ladder**: one same-tier retry only when context was missing, then one tier up with both failure reports attached so the next model never rediscovers dead ends. There is no third attempt at the same tier and no silent step down to a cheaper model.
 
-### Baseline Test Run
+### Baseline test run
 
 > *"Every dream has a foundation."*
 
-Before touching code, PASIV establishes a clean baseline — **in the background**:
+Before touching code, PASIV establishes a clean baseline **in the background**:
 
 - The suite starts when `/kick` begins and runs while planning happens (planning is read-only)
 - The result is **joined after plan approval, before implementation**
 - **If tests pass**: continue. **If tests fail**: ask how to proceed (fix first, proceed anyway, or cancel)
 
-This ensures you're not blamed for pre-existing failures, without paying the suite's wall-clock up front.
+Pre-existing failures surface before your change lands, and the suite's run time overlaps with planning.
 
-### Verification Gate
+### Verification gate
 
-Before merge, fresh evidence is required. All applicable checks run **concurrently** first (wall-clock = slowest check, not the sum); anything that fails is then fixed serially with **smart escalation**:
+Before merge, fresh evidence is required. All applicable checks run **concurrently** first, so wall-clock time is that of the slowest check; anything that fails is then fixed serially with **smart escalation**:
 
 **Haiku handles:**
 - Running all checks (tests, build, lint, typecheck)
@@ -301,17 +301,17 @@ Before merge, fresh evidence is required. All applicable checks run **concurrent
 - Logic errors detected
 - Complex debugging needed
 
-**The gate loops until all checks pass** — no "should work" claims.
+**The gate loops until all checks pass.**
 
 | Check | How It Works |
 |-------|--------------|
 | Tests | Haiku runs → tries simple fixes → escalates to Opus if needed |
-| Build | Same strategy - simple first, escalate if complex |
+| Build | Same strategy: simple fixes first, escalate if complex |
 | Lint | Haiku auto-fixes (usually works) |
 | TypeCheck | Simple types first, escalate if complex |
 | Smoke | Opt-in: runs `verify.command` from `.pasiv.yml` if configured |
 
-**UI verification (opt-in):** with `workflow.ui_verify: true`, frontend/mobile tasks get driven in the running app — launch, exercise the change, screenshot — before the gate. Enable per project in `/pasiv init`.
+**UI verification (opt-in):** with `workflow.ui_verify: true`, frontend and mobile tasks get driven in the running app (launch, exercise the change, screenshot) before the gate. Enable per project in `/pasiv init`.
 
 ### Parallelism
 
@@ -322,19 +322,19 @@ Nothing in the flow waits when it doesn't have to:
 | Stage | What runs in parallel |
 |-------|----------------------|
 | **Baseline** | Test suite runs in the background while you plan; joined before code |
-| **Context fetch** | Issue + parent + sub-issues + sibling context — one fork, not four |
+| **Context fetch** | Issue, parent, sub-issues and sibling context in one fork |
 | **Planning** | Large surfaces fan out parallel read-only scout subagents |
 | **Implementation** | RED for the next independent task is written while the current implementer runs GREEN; fully independent tasks dispatch concurrently in isolated worktrees |
-| **Verification** | Tests, build, lint, typecheck, smoke all run concurrently — wall-clock is the slowest check, not the sum |
+| **Verification** | Tests, build, lint, typecheck and smoke run concurrently; wall-clock time is the slowest check |
 | **Review** | `fast` profile runs both reviewers concurrently on the same diff |
 
-The rules: read-only work fans out; anything that writes is serialized — never two writers on one file. Parallelism is the optimization, not the baseline: uncertain overlap means serial.
+Read-only work fans out. Anything that writes is serialized, so two writers never touch one file, and uncertain overlap means serial.
 
-### Epic & Feature Support (Autonomous)
+### Epic and feature support (autonomous)
 
 > *"We need to go deeper."*
 
-**Reviews always happen at the Task level** — Epics and Features are containers.
+**Reviews always happen at the Task level.** Epics and Features are containers.
 
 | `/kick` on | Behavior |
 |-------------|----------|
@@ -360,30 +360,29 @@ Total: 5 Tasks across 2 Features
 Approve and start autonomous run? [Yes/Customize/Cancel]
 ```
 
-- **Approve once, walk away** — implements all Tasks autonomously
-- **Stops only on error** — asks how to proceed
-- **Auto-closes Features** when all their Tasks complete
-- **Auto-closes Epic** when all Features complete
-- **Writes handoffs** between tasks to preserve context
+- One approval implements all Tasks autonomously
+- Stops only on error and asks how to proceed
+- Closes each Feature when all its Tasks complete, and the Epic when all Features complete
+- Writes handoffs between tasks to preserve context
 
 **Task priority order:**
 - `area:db` → `area:infra` → `area:backend` → `area:frontend`
 - Within same area: `priority:high` → `priority:medium` → `priority:low`
 
-### Systematic Debugging
+### Systematic debugging
 
 When tests fail, root cause analysis is enforced:
 
-1. **Investigate** — Read full error, find root cause
-2. **Hypothesize** — Form specific theory
-3. **Test** — Make ONE minimal change
-4. **Verify** — Run tests again
+1. **Investigate**: read the full error, find the root cause
+2. **Hypothesize**: form a specific theory
+3. **Test**: make one minimal change
+4. **Verify**: run the tests again
 
 **Three Strikes Rule**: After 3 failed fix attempts, stop and reassess.
 
 ---
 
-## Session Handoffs
+## Session handoffs
 
 > *"An idea is like a virus. Resilient. Highly contagious. And even the smallest seed of an idea can grow."*
 
@@ -393,7 +392,7 @@ PASIV preserves session context through structured handoff files, inspired by th
 /handoff                    # Write handoff before ending session
 ```
 
-### When Handoffs Happen
+### When handoffs happen
 
 | Trigger | What Happens |
 |---------|--------------|
@@ -402,7 +401,7 @@ PASIV preserves session context through structured handoff files, inspired by th
 | Parent issue mid-flow | `/kick` auto-writes handoff between tasks |
 | Next session start | `/kick` loads latest handoff, archives it |
 
-### What's Captured
+### What's captured
 
 - What was done (completed work)
 - Exact numbers and metrics
@@ -416,11 +415,11 @@ Handoffs live at `docs/handoffs/handoff-YYYY-MM-DD-{topic}.md` and are archived 
 
 ---
 
-## Extras Plugin
+## Extras plugin
 
 > *"You're asking me for inception."*
 
-Standalone utilities ship as a **separate plugin** so the core workflow stays lean — their descriptions aren't loaded into sessions that don't need them:
+Standalone utilities ship as a **separate plugin** so the core workflow stays lean and their descriptions stay out of sessions that don't need them:
 
 ```bash
 /plugin install pasiv-extras@pasiv
@@ -428,49 +427,54 @@ Standalone utilities ship as a **separate plugin** so the core workflow stays le
 
 | Skill | What it does |
 |-------|--------------|
-| `/repo-scan` | Multi-ecosystem security vetting — CVEs, malware patterns, obfuscated code, secrets; PASS/CAUTION/FAIL report in `docs/scans/` |
-| `/repo-ready` | Prep for first GitHub push — README, LICENSE, community files, Dependabot, secret scan |
+| `/repo-scan` | Multi-ecosystem security vetting: CVEs, malware patterns, obfuscated code, secrets; PASS/CAUTION/FAIL report in `docs/scans/` |
+| `/repo-ready` | Prep for first GitHub push: README, LICENSE, community files, Dependabot, secret scan |
 | `/app-store-ready` | Apple App Store submission validator + ASO/keyword optimizer |
-| `/de-vibe` | Strip AI tells — de-slop docs, drop restate-comments, scrub trailers |
+| `/repo-tidy` | Maintenance pass on a shipping repo: README vs disk, stale docs, deploy standard, GitHub security settings, diagram, TARS/memory refresh |
+| `/de-vibe` | Strip AI tells: invisible characters and chat residue, de-slop docs, drop restate-comments, scrub trailers |
+| `/humanizer` | De-slop a single document and rewrite it in the author's voice |
+| `/fable-audit` | Judgment-led deep audit of auth, data isolation, money movement, key exposure, shared state |
+| `/agents-md` | Scaffold or audit a project's AGENTS.md / CLAUDE.md |
 | `/codex-image` | Image generation via the Codex CLI (icons, logos, graphics, transparent PNGs) |
-| `/design-pipeline` | Guided end-to-end design workflow — PRD/spec → brief → visual options → design system → build → anti-slop gate |
+| `/design-pipeline` | Guided end-to-end design workflow from PRD or spec through brief, visual options, design system and build to an anti-slop gate |
+| `/acp`, `/acpd`, `/uranus-deploy` | Personal helpers: commit-and-push, merge-and-delete-branch, deploy to a home server |
 
-Enable/disable per project or on demand — the core `pasiv` plugin never depends on them.
+Enable or disable them per project or on demand; the core `pasiv` plugin never depends on them.
 
 ---
 
-## Review Profiles
+## Review profiles
 
-Reviews run as **profiles** — an ordered chain of passes resolved by the `review` skill:
+Reviews run as **profiles**, each an ordered chain of passes resolved by the `review` skill:
 
 | Profile | Passes | When |
 |---------|--------|------|
-| `none` | — | skip |
+| `none` | - | skip |
 | `quick` | Sonnet | trivial |
 | `standard` | Opus → Codex | most changes (default) |
-| `fast` | Opus ∥ Codex (concurrent) | speed over the second look — findings merged, fixed once |
-| `deep` | Opus → Codex → Opus | security-critical / large — final pass re-checks cumulative fixes |
+| `fast` | Opus ∥ Codex (concurrent) | speed over the second look; findings merged, fixed once |
+| `deep` | Opus → Codex → Opus | security-critical or large; the final pass re-checks cumulative fixes |
 
-Passes are **cascading** (each sees prior fixes; `fast` trades this for wall-clock) and **host-aware** — a Claude subagent or the Codex MCP under Claude Code; `claude -p` (Claude-as-reviewer) or native under a Codex host. Configurable in `.pasiv.yml`. Standalone: `/review [profile]`. Full rule, schema, and adapters: `docs/reference/review-profiles.md`.
+Passes are **cascading** (each sees prior fixes; `fast` trades this for wall-clock) and **host-aware**: a Claude subagent or the Codex MCP under Claude Code; `claude -p` (Claude-as-reviewer) or native under a Codex host. Configurable in `.pasiv.yml`. Standalone: `/review [profile]`. Full rule, schema, and adapters: `docs/reference/review-profiles.md`.
 
 ---
 
-## Design System Integration
+## Design system integration
 
 When `/kick` processes an issue labeled `area:frontend` or `area:mobile`, it loads **your project's design system** so implementation references established tokens (spacing, colors, typography) and patterns (buttons, cards, forms) instead of inventing new ones.
 
 **Resolution order:**
 
-1. `.pasiv.yml` `design.system: <path>` — points at any markdown doc
+1. `.pasiv.yml` `design.system: <path>`, pointing at any markdown doc
 2. Common locations: `docs/design-system.md`, `design-system.md`, `DESIGN.md`, `.interface-design/system.md`
 
-**Setup:** `/pasiv init` (frontend = yes) discovers an existing doc and records its path — or offers to **create a starter** `docs/design-system.md` with token values pulled from your codebase (Tailwind theme, CSS variables, theme files), or lets you **point to a path**.
+**Setup:** `/pasiv init` (frontend = yes) discovers an existing doc and records its path, or offers to **create a starter** `docs/design-system.md` with token values pulled from your codebase (Tailwind theme, CSS variables, theme files), or lets you **point to a path**.
 
-The [interface-design](https://github.com/Dammyjay93/interface-design) plugin is supported as an optional provider — if installed, its `init`/`audit` commands are offered — but PASIV no longer requires it. See `docs/reference/design-system.md`.
+The [interface-design](https://github.com/Dammyjay93/interface-design) plugin is supported as an optional provider: if it is installed, PASIV offers its `init` and `audit` commands, but PASIV no longer requires it. See `docs/reference/design-system.md`.
 
 ---
 
-## Per-Project Configuration
+## Per-project configuration
 
 `/pasiv init` writes two things to your project:
 
@@ -527,15 +531,15 @@ design:
 
 Operational behavior appended to your project's `CLAUDE.md`:
 
-- **Session Start** — Load latest handoff, state understanding before starting
-- **Rules** — Use PASIV skills, write state to disk, TDD enforced, verification gate
-- **Where Things Live** — Directory map for handoffs, designs, plans, scans
+- **Session start**: load the latest handoff, state understanding before starting
+- **Rules**: use PASIV skills, write state to disk, TDD enforced, verification gate
+- **Where things live**: directory map for handoffs, designs, plans, scans
 
 This keeps PASIV context per-project. Projects without the PASIV section in `CLAUDE.md` are unaffected.
 
 ---
 
-## Model Optimization
+## Model optimization
 
 > *"I bought the airline."*
 
@@ -543,7 +547,7 @@ The flow runs on **Opus** as a lean coordinator that dispatches **Sonnet** subag
 
 | Skill | Model | Operations |
 |-------|-------|------------|
-| `kick` | Opus | orchestrator/router — setup + sequence the flow |
+| `kick` | Opus | orchestrator/router: setup, then sequences the flow |
 | `plan` | Opus | plan + native tasks (writing-plans rigor, ladder, gap check) |
 | `execute` | Opus (coord) | writes RED in-context; dispatches a Sonnet implementer subagent for GREEN |
 | `review` | Opus (coord) | per-pass reviewer-subagent / codex dispatch by profile |
@@ -558,15 +562,15 @@ The flow runs on **Opus** as a lean coordinator that dispatches **Sonnet** subag
 | `handoff-ops` | Haiku | read/archive handoff files |
 | `verification` | Haiku → Opus | simple fixes (Haiku), complex debugging (Opus) |
 
-**Split-model TDD**: the `execute` coordinator (Opus) writes RED tests; a fresh Sonnet implementer subagent does GREEN in an isolated context — so the whole session stays in standard 200k.
+**Split-model TDD**: the `execute` coordinator (Opus) writes RED tests; a fresh Sonnet implementer subagent does GREEN in an isolated context, so the whole session stays in the standard 200k context.
 
-**Optional tier routing**: `plan` tags tasks `mechanical`/`standard`/`frontier`; map them to per-host models in `.pasiv.yml` `model_routing` (e.g. mechanical → Haiku) and `execute` picks the cheapest-capable model per task. Dormant by default. See `docs/reference/model-optimization.md`.
+**Optional tier routing**: `plan` tags tasks `mechanical`/`standard`/`frontier`; map them to per-host models in `.pasiv.yml` `model_routing` (e.g. mechanical to Haiku) and `execute` picks the cheapest-capable model per task. Dormant by default. See `docs/reference/model-optimization.md`.
 
-**Optional coordinator override**: when your plan exposes a frontier model above Opus, `models.coordinator` routes frontier-tier escalations and the built-in review passes to it — delete the key when the model goes away and everything reverts.
+**Optional coordinator override**: when your plan exposes a frontier model above Opus, `models.coordinator` routes frontier-tier escalations and the built-in review passes to it. Delete the key when the model goes away and everything reverts.
 
 **Smart escalation**: Verification starts with Haiku for simple fixes, escalates to Opus only when needed. Implementer failures climb the model ladder with their failure evidence attached.
 
-**Token accounting (opt-in)**: `metrics.tokens: true` prints a per-model in/out/cache summary at finish and appends history to `docs/metrics/tokens.jsonl` — parsed deterministically from session transcripts, zero model tokens spent.
+**Token accounting (opt-in)**: `metrics.tokens: true` prints a per-model in/out/cache summary at finish and appends history to `docs/metrics/tokens.jsonl`. It parses session transcripts directly and spends no model tokens.
 
 ---
 
@@ -580,7 +584,7 @@ The flow runs on **Opus** as a lean coordinator that dispatches **Sonnet** subag
 
 **Note:** Issue types (Epic, Feature, Task) use GitHub's native `--type` flag (GitHub backend) or the `type` field (Beans/local backends).
 
-## GitHub Projects Integration
+## GitHub Projects integration
 
 Issues are **automatically added** to a GitHub Project board (when using the GitHub backend).
 
@@ -589,7 +593,7 @@ Issues are **automatically added** to a GitHub Project board (when using the Git
 - **Status updates**: Issues move to In Progress/Done automatically
 - **Prioritization**: `/backlog` outputs suggested implementation order
 
-### Required Token Scope
+### Required token scope
 
 ```bash
 gh auth refresh -s project
@@ -601,7 +605,7 @@ gh auth refresh -s project
 |---------|-------------|
 | **All** | Claude Code with plugin support |
 | **GitHub** | `gh` CLI, `jq` |
-| **Beans** | `beans` CLI (`npm install -g @beans-lang/cli`), `jq` |
+| **Beans** | `beans` CLI (`brew install hmans/beans/beans`), `jq` |
 | **Local** | None |
 | **Codex reviews** | Codex CLI |
 
@@ -609,19 +613,27 @@ gh auth refresh -s project
 
 ```bash
 rm -rf ~/.claude/plugins/cache
-claude plugin update PASIV
+claude plugin update pasiv@pasiv
 ```
 
-## Plugin Structure
+## Plugin structure
 
 ```
 hooks/
-├── hooks.json                  # PreCompact hook config
-└── pre-compact.sh              # Reminds to write handoff before compaction
+├── hooks.json                  # Hook config
+├── pre-compact.sh              # PreCompact: reminds to write handoff before compaction
+├── kick-guard.sh               # UserPromptSubmit: makes /kick invoke its step-skills
+├── plan-approval-guard.sh      # PreToolUse: blocks plan approval until the plan is shown
+├── post-skill.sh               # PostToolUse: advances the /kick state machine
+└── stop-guard.sh               # Stop: refuses to end the turn mid-/kick
 
 scripts/
 ├── init.sh                     # Project initializer (called by /pasiv init)
-└── token-report.sh             # Per-model token summary + history (called by finish)
+├── read-config.sh              # .pasiv.yml reader with defaults (kick Step 0)
+├── kick-state.sh               # /kick turn-discipline state
+├── verify-checks.sh            # Runs verification checks concurrently
+├── token-report.sh             # Per-model token summary + history (called by finish)
+└── superpowers-diff.sh         # Shows upstream superpowers changes since last look
 
 skills/
 ├── pasiv-init/SKILL.md         # /pasiv init (setup wizard)
@@ -658,12 +670,18 @@ extras/                         # pasiv-extras plugin — ad hoc utilities
 └── skills/
     ├── repo-scan/              # /repo-scan (security vetting)
     ├── repo-ready/             # /repo-ready (first-push prep)
+    ├── repo-tidy/              # /repo-tidy (maintenance pass)
     ├── app-store-ready/        # /app-store-ready (submission + ASO)
     ├── de-vibe/                # /de-vibe (strip AI tells)
+    ├── humanizer/              # /humanizer (de-slop one document)
+    ├── fable-audit/            # /fable-audit (deep risk audit)
+    ├── agents-md/              # /agents-md (AGENTS.md scaffold/audit)
     ├── codex-image/            # /codex-image (image generation)
-    └── design-pipeline/        # /design-pipeline (PRD → finished UI)
+    ├── design-pipeline/        # /design-pipeline (PRD → finished UI)
+    └── acp/, acpd/, uranus-deploy/  # personal helpers
 
 docs/
+├── architecture.json           # Archify system diagram spec
 ├── reference/                  # On-demand reference docs (loaded by skills)
 │   ├── review-profiles.md
 │   ├── design-system.md
@@ -671,6 +689,7 @@ docs/
 │   ├── github-projects.md
 │   └── model-optimization.md
 ├── designs/                    # Design documents from /brainstorm
+├── archive/                    # Superseded plans and designs
 └── scans/                      # Security scan reports
 ```
 
