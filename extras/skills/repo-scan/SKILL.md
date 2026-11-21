@@ -2,6 +2,8 @@
 name: repo-scan
 description: Security-vet a repo for vulnerabilities, obfuscated code, malware, supply-chain risk. Use for "repo scan", "security scan", "audit repo", or vetting a forked/cloned repo.
 model: opus
+context: fork
+agent: general-purpose
 user-invocable: true
 allowed-tools:
   - Bash
@@ -81,7 +83,7 @@ Then create one task per step (if the task tools are available):
 - **Step 8b Auto-Execution Surface** — Editor, agent, CI and git config that runs without being asked
 - **Step 9 File System Anomalies** — Binaries, symlinks, odd permissions
 
-Steps 4–7, 8b and 9 read different sections of the same output and don't depend on each other. On a large repo, review them in parallel with subagents: hand each one its section verbatim plus the ground rules, and ask for classified findings with file:line and evidence.
+Steps 4–7, 8b and 9 read different sections of the same output and don't depend on each other. On a large repo, and only if you are able to start subagents (this skill normally runs as one, which cannot), review them in parallel: hand each one its section verbatim plus the ground rules, and ask for classified findings with file:line and evidence. Otherwise work through them in order.
 
 ---
 
@@ -319,7 +321,7 @@ Save report to `docs/scans/YYYY-MM-DD-<repo-name>.md` under the **directory the 
 
 ## Step 11: Present Results
 
-Display the Executive Summary and any CRITICAL/HIGH findings directly to the user, then the verdict message:
+This skill runs in its own subagent, so your final message is all the user sees of the scan: nothing you printed along the way reaches them. Make it complete on its own. Give the report's absolute path, the Executive Summary, every CRITICAL and HIGH finding with file:line and one line of why, the checks that were SKIPPED, then the verdict message:
 
 - **FAIL** — "This repository has critical security findings. Review the full report before using this code."
 - **CAUTION** — "This repository has HIGH findings that survived context review. Review the flagged items."

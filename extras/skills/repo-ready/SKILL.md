@@ -1,7 +1,7 @@
 ---
 name: repo-ready
 description: Prep a project for first GitHub push - README, LICENSE, CONTRIBUTING, SECURITY, CHANGELOG, .github templates, Dependabot, secret scan. Use for "repo ready", "prep for github", "first push".
-model: sonnet
+model: opus
 allowed-tools:
   - Bash
   - Read

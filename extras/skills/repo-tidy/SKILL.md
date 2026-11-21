@@ -1,7 +1,7 @@
 ---
 name: repo-tidy
 description: Bring an existing project back in line - verify the README against disk, audit AGENTS.md, archive or fix stale docs, check the deployment against the house standard, check Dependabot, secret scanning, workflows and the OpenSSF Scorecard on GitHub repos, create or refresh the Archify architecture diagram, put the logo everywhere, refresh the TARS project record, the memex wiki page and Claude's project memory, then commit. Use for "tidy repo", "repo tidy", "clean up this repo", "bring this project up to date", "housekeeping pass", "is this repo current".
-model: sonnet
+model: opus
 user-invocable: true
 allowed-tools:
   - Bash
