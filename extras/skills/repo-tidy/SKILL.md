@@ -1,6 +1,6 @@
 ---
 name: repo-tidy
-description: Bring an existing project back in line - verify the README against disk, audit AGENTS.md, archive or fix stale docs, check the deployment against the house standard, check Dependabot and secret scanning on GitHub repos, create or refresh the Archify architecture diagram, put the logo everywhere, refresh the TARS project record, the memex wiki page and Claude's project memory, then commit. Use for "tidy repo", "repo tidy", "clean up this repo", "bring this project up to date", "housekeeping pass", "is this repo current".
+description: Bring an existing project back in line - verify the README against disk, audit AGENTS.md, archive or fix stale docs, check the deployment against the house standard, check Dependabot, secret scanning, workflows and the OpenSSF Scorecard on GitHub repos, create or refresh the Archify architecture diagram, put the logo everywhere, refresh the TARS project record, the memex wiki page and Claude's project memory, then commit. Use for "tidy repo", "repo tidy", "clean up this repo", "bring this project up to date", "housekeeping pass", "is this repo current".
 model: sonnet
 user-invocable: true
 allowed-tools:
@@ -200,6 +200,28 @@ the summary. A missing tool is listed as SKIPPED. A public repo with no `LICENSE
 Open Dependabot alerts and secret-scanning alerts go in the summary as follow-ups. Don't
 resolve or fix them in this pass.
 
+**Scorecard**, public GitHub repos only, after the settings above are applied:
+
+```bash
+bash "$SKILL_DIR/scripts/scorecard.sh" <owner>/<name>
+```
+
+It prints the OpenSSF Scorecard total and every check, lowest first (`?` means not
+applicable). Exit 2 means no score: say SKIPPED (`brew install scorecard`). Put the total in
+the summary and sort the low checks into three piles:
+
+- **This pass already handles it**: Branch-Protection (ruleset), Dependency-Update-Tool
+  (`dependabot.yml`), SAST (CodeQL default setup), Token-Permissions, Pinned-Dependencies
+  (pinact), Vulnerabilities (Dependabot alerts), License. Settings count immediately; file
+  changes count once the commit is pushed, so say the score will move after `/acp` and
+  don't list these as follow-ups.
+- **Follow-up**: Dangerous-Workflow (the zizmor findings above), Security-Policy (no
+  `SECURITY.md`), Binary-Artifacts, Maintained.
+- **Expected low for a solo project, mention once and move on**: Code-Review, Contributors,
+  CII-Best-Practices, Fuzzing, Signed-Releases, Packaging, CI-Tests.
+
+Under `--report`, print the score and the piles only.
+
 ## Phase 6: Logo and icon
 
 If the project has a logo (`assets/logo.*`, `static/logo.*`, `public/logo.*`, or similar):
@@ -287,6 +309,7 @@ Wiki:       ~/memex/wiki/projects/<name>.md (dated note)
 Memory:     deleted audit-2026-08-21-findings (fixed, in AGENTS.md); kept 1
 Deployment: on standard  |  MIGRATION PLAN below, not run
 Security:   dependabot.yml (npm, github-actions), secret scanning on, ruleset, 3 actions pinned, zizmor 1 High, gate clean  |  current  |  not GitHub
+Scorecard:  2.5/10 before this pass (rerun after the push)  |  skipped (private, not GitHub, no CLI)
 Diagram:    created  |  refreshed, re-pinned to <sha>  |  current  |  skipped (<why>)
 Follow-ups: no logo; CHANGELOG stopped at 1.2
 ```
