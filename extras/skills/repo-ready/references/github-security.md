@@ -53,6 +53,10 @@ Current state:
 gh api -i repos/$R/vulnerability-alerts 2>/dev/null | head -1   # 204 = alerts on, 404 = off
 gh api repos/$R/automated-security-fixes --jq .enabled
 gh api repos/$R --jq '{visibility, security_and_analysis}'
+gh api repos/$R/private-vulnerability-reporting --jq .enabled
+gh api repos/$R/rulesets --jq '.[].name'
+gh api repos/$R/code-scanning/default-setup --jq .state        # configured | not-configured
+gh api repos/$R/actions/permissions/workflow --jq .default_workflow_permissions
 ```
 
 Enable. Every call is idempotent:
@@ -67,6 +71,33 @@ gh api -X PATCH repos/$R --input - <<'JSON'
 {"security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"}}}
 JSON
 ```
+
+Public repos also get these. Private repos on a free plan can't use rulesets or CodeQL, so list them as not applicable there:
+
+```bash
+# Private vulnerability reporting, so SECURITY.md can point at a form and not an email address
+gh api -X PUT repos/$R/private-vulnerability-reporting
+
+# Default branch: no force-push, no deletion. Skip if a ruleset named protect-default-branch exists.
+gh api -X POST repos/$R/rulesets --input - <<'JSON'
+{"name":"protect-default-branch","target":"branch","enforcement":"active",
+ "conditions":{"ref_name":{"include":["~DEFAULT_BRANCH"],"exclude":[]}},
+ "rules":[{"type":"deletion"},{"type":"non_fast_forward"}]}
+JSON
+
+# CodeQL default setup: no workflow file to maintain. A 4xx means no supported language; skip it.
+gh api -X PATCH repos/$R/code-scanning/default-setup -f state=configured
+```
+
+The ruleset has no bypass, so a deliberate history rewrite (`de-vibe --git`, a secret purge) means disabling it first: `gh api -X PUT repos/$R/rulesets/<id> -f enforcement=disabled`, then back to `active`.
+
+Read-only default `GITHUB_TOKEN`, public and private:
+
+```bash
+gh api -X PUT repos/$R/actions/permissions/workflow -f default_workflow_permissions=read
+```
+
+On a new repo apply it straight away. On an existing repo apply it only when every workflow has its own `permissions:` block (`grep -LE '^permissions:' .github/workflows/*.y*ml` prints nothing); a workflow that relies on the write default breaks otherwise. If any lack one, list the files as a follow-up and leave the setting alone.
 
 Secret scanning is free on public repos. On private repos it is the paid GitHub Secret Protection add-on, so skip that call there; the gitleaks hook and workflow cover private repos.
 

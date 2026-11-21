@@ -62,10 +62,12 @@ Find:
 - **Over-formatting:** bold-label bullet lists (`- **Thing:** ...`) used where flowing sentences belong; suspiciously symmetric section trees
 
 ```bash
-grep -rnE $'\xe2\x80\x94|\xe2\x80\xa6' --include='*.md' . 2>/dev/null | grep -v node_modules | head -100   # em-dash, ellipsis (-E: BSD grep has no \| alternation)
-grep -rn $'\xc2\xa0' --include='*.md' . 2>/dev/null | grep -v node_modules | head -50   # NBSP (UTF-8 C2 A0)
-grep -rniE 'delve|leverage|utiliz|seamless|robust|comprehensive|streamline|cutting.?edge|state.?of.?the.?art|next.?generation|best practices|it'"'"'s worth noting|dive in|in conclusion|furthermore|moreover|game.?changer|supercharge' --include='*.md' . 2>/dev/null | grep -v node_modules | head -100
-find . -name '*.md' -not -path '*/node_modules/*' -exec perl -CSD -ne 'print "$ARGV:$.:$_" if /[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/' {} + 2>/dev/null | head -50   # emoji in docs (perl: BSD grep has no -P)
+# git grep searches tracked files only, so vendored, generated and ignored trees are skipped for free.
+# Outside a git repo, swap `git grep -n` for `grep -rn --include='*.md' --exclude-dir=node_modules`.
+git grep -nE $'\xe2\x80\x94|\xe2\x80\xa6' -- '*.md' | head -100   # em-dash, ellipsis
+git grep -n $'\xc2\xa0' -- '*.md' | head -50   # NBSP (UTF-8 C2 A0)
+git grep -niE 'delve|leverage|utiliz|seamless|robust|comprehensive|streamline|cutting.?edge|state.?of.?the.?art|next.?generation|best practices|it'"'"'s worth noting|dive in|in conclusion|furthermore|moreover|game.?changer|supercharge' -- '*.md' | head -100
+git ls-files -z '*.md' | xargs -0 perl -CSD -ne 'print "$ARGV:$.:$_" if /[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/' 2>/dev/null | head -50   # emoji in docs (perl: BSD grep has no -P)
 ```
 
 ### Code comments
@@ -102,13 +104,14 @@ Also check whether `.gitignore` already covers each. Report only what's tracked 
 ### Git trailers
 
 ```bash
-# Full message body (%B) — trailers live in the body, not the subject (%s)
-git log --format='%H %B' -n 300 2>/dev/null | grep -iE '🤖|generated with claude|co-authored-by:[[:space:]]*claude' | head -100
-# Count of affected commits
-git log --grep='Co-Authored-By: Claude' --grep='Generated with Claude' -i --oneline -n 300 2>/dev/null | wc -l
+AI_TRAILER='^(Co-Authored-By:[[:space:]]*(Claude|Codex|Cursor|Copilot|Gemini|aider|Devin|Windsurf)|Claude-Session:|Generated (with|by) \[?(Claude|Codex|Cursor|Copilot)|🤖)'
+# Which trailer kinds are present (%B: trailers live in the body, not the subject)
+git log --all --format='%B' 2>/dev/null | grep -iE "$AI_TRAILER" | sed -E 's/(session_|<)[^ >]*.*//' | sort | uniq -c | sort -rn | head -20
+# Count of affected commits, whole history (the rewrite touches all of it, so count all of it)
+git log --all -i -E --grep="$AI_TRAILER" --oneline 2>/dev/null | wc -l
 ```
 
-Count commits carrying `Co-Authored-By: Claude` / `🤖 Generated with Claude Code` and emoji-prefixed subjects.
+Count commits carrying an AI co-author line, a `Claude-Session:` line (it holds a private session URL), a `🤖 Generated with …` line, and emoji-prefixed subjects.
 
 ---
 
@@ -167,20 +170,30 @@ Only for files actually tracked. Report what to commit; don't commit unless aske
 ### Git (history rewrite — destructive)
 **Only if explicitly chosen.** Confirm again with a clear warning: this rewrites SHAs and requires a force-push; collaborators must re-clone/rebase.
 
+Before rewriting:
+- **Back up**: `git bundle create ../<name>-pre-devibe.bundle --all`. It is the only undo.
+- **Commit or stash everything.** `git filter-repo` refuses to run in a clone that isn't fresh; with a clean tree and the bundle made, pass `--force`.
+- **Note the remote**: `git remote get-url origin`. `filter-repo` deletes `origin` on purpose; re-add it afterwards with `git remote add origin <url>`.
+- **Check for a ruleset or branch protection** that blocks force-pushes (`gh api repos/<owner>/<name>/rulesets --jq '.[] | {id,name,enforcement}'`). The push fails until the user disables it; say so now, not after the rewrite.
+
 Prefer `git filter-repo` if available; fall back to `git filter-branch`. Check first:
 
 ```bash
 command -v git-filter-repo >/dev/null 2>&1 && echo "filter-repo available" || echo "missing — install: pip install git-filter-repo (or use filter-branch fallback)"
 ```
 
-Strip trailer lines matching `Co-Authored-By: Claude` and `🤖 Generated with Claude Code` from commit messages. The callback body runs with `message` (bytes) in scope:
+Strip every line the scan's `AI_TRAILER` pattern matches from commit messages. The callback body runs with `message` (bytes) in scope:
 
 ```bash
-git filter-repo --message-callback '
-  return b"\n".join(l for l in message.split(b"\n")
-    if b"Co-Authored-By: Claude" not in l and b"Generated with Claude Code" not in l)
+git filter-repo --force --message-callback '
+  import re
+  pat = re.compile(rb"^(Co-Authored-By:\s*(Claude|Codex|Cursor|Copilot|Gemini|aider|Devin|Windsurf)|Claude-Session:|Generated (with|by) \[?(Claude|Codex|Cursor|Copilot)|\xf0\x9f\xa4\x96)", re.I)
+  kept = [l for l in message.split(b"\n") if not pat.match(l.strip())]
+  return b"\n".join(kept).rstrip() + b"\n"
 '
 ```
+
+Re-run the scan's count afterwards; it has to be 0.
 
 Print the `git push --force-with-lease` command — **do not run it.** The user pushes.
 

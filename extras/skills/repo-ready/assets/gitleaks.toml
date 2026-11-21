@@ -16,7 +16,7 @@ keywords = ["sk_"]
 id = "fal-ai-api-key"
 description = "FAL.ai API key (UUID:hex32)"
 regex = '''\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[0-9a-f]{32}\b'''
-keywords = ["fal"]
+# No keywords: the key format has no fixed prefix, so a keyword pre-filter would skip it.
 
 [[rules]]
 id = "google-api-key"
@@ -41,17 +41,17 @@ secretGroup = 2
 entropy = 3.5
 keywords = ["key", "secret", "token", "auth", "password", "passwd"]
 
-[allowlist]
-description = "Known-safe paths and placeholder values"
-
-paths = [
-  '''(^|/)\.env\.example$''',
-  '''(^|/)README\.md$''',
-  '''(^|/)docs/''',
-]
-
+# Placeholder values are fine anywhere, for every rule. The regexes are tested
+# against the detected secret, not the line. There is no path allowlist on
+# purpose: README.md, docs/ and .env.example get the same scan as source,
+# because real keys get pasted into all three.
+[[allowlists]]
+description = "Placeholder values"
 regexes = [
   '''YOUR_[A-Z_]+_KEY''',
   '''YOUR_[A-Z_]+_API_KEY''',
   '''AIza[A-Za-z0-9_-]{0,5}EXAMPLE''',
+  '''(?i)^(your|my|some|example|sample|dummy|fake|placeholder|change[-_]?me|replace[-_]?me|insert|todo)[-_a-z0-9]*$''',
+  '''(?i)(x{6,}|\*{4,}|\.{4,}|0{10,}|1234567890|abcdefgh)''',
+  '''^(<[^>]+>|\$\{[^}]+\}|\{\{[^}]+\}\}|%[A-Z_]+%)$''',
 ]

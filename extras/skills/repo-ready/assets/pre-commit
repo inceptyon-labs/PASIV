@@ -15,7 +15,7 @@ EOF
   exit 1
 fi
 
-gitleaks protect --staged --redact --verbose --config "$(git rev-parse --show-toplevel)/.gitleaks.toml" || {
+gitleaks git --pre-commit --staged --redact --verbose --no-banner --config "$(git rev-parse --show-toplevel)/.gitleaks.toml" "$(git rev-parse --show-toplevel)" || {
   cat >&2 <<'EOF'
 
 pre-commit: secrets detected in staged changes (see output above).

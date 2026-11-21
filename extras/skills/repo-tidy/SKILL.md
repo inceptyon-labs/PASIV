@@ -40,8 +40,11 @@ and `../repo-ready/references/github-security.md`.
   separate, deliberate session.
 - **Never delete a document you did not create** unless it is obvious junk (empty, `.DS_Store`,
   an exact duplicate). Everything else that is stale gets archived or corrected.
-- **Every change and every archive lands in the final summary.** Git makes this reversible;
-  the summary makes it reviewable.
+- **Every change and every archive lands in the final summary.** Git makes repo changes
+  reversible; the summary makes them reviewable. Claude memory and the TARS database are
+  outside git, so nothing there is removed without a copy (Phase 9) or overwritten without
+  being listed.
+- **Never commit past a failed secret gate.** Phase 11 runs it before `/acp`.
 - **Match the project's voice.** Terse README stays terse. Do not add sections the project
   never had for the sake of completeness.
 
@@ -161,9 +164,31 @@ Read `../repo-ready/references/github-security.md` and compare the repo against 
   workflows exist: add the entry
 - Dependabot alerts or security updates off: enable them
 - public repo with secret scanning or push protection off: enable both
+- public repo with private vulnerability reporting off, no `protect-default-branch` ruleset,
+  or CodeQL default setup `not-configured`: enable each
+- default `GITHUB_TOKEN` permission is `write`: set it to `read` only if every workflow has
+  its own `permissions:` block; otherwise list the workflows that lack one as a follow-up
 
-All four are safe to apply. If a call is refused (no admin on the repo), list it as a
-follow-up. Under `--report`, print the gaps only.
+All of these are safe to apply. If a call is refused (no admin on the repo, plan doesn't
+include it), list it as a follow-up. Under `--report`, print the gaps only.
+
+Public repos also get the workflow checks from `../repo-ready/references/going-public.md`
+section 4 (`pull_request_target`, event data in `run:`, self-hosted runners). Report hits as
+follow-ups; don't rewrite workflows in this pass. A public repo with no `LICENSE` or no
+`SECURITY.md` is a follow-up too.
+
+**Local secret scanning**, every git repo, GitHub or not:
+- `.gitleaks.toml` missing: copy `../repo-ready/assets/gitleaks.toml`
+- `.gitleaks.toml` allowlists `README.md`, `docs/` or another whole directory by path (the
+  older template did): replace its allowlist section with the one in the asset, keeping any
+  custom `[[rules]]`
+- no pre-commit secret hook: install `../repo-ready/assets/pre-commit` as
+  `.githooks/pre-commit` and run `git config core.hooksPath .githooks`, unless the repo uses
+  husky, lefthook or pre-commit, in which case add the gitleaks line to that manager
+- hook file present but `git config --get core.hooksPath` is empty in this clone: set it
+- GitHub repo with workflows but no `.github/workflows/gitleaks.yml`, or one that still calls
+  `gitleaks detect`, has no `permissions:` block, or downloads the binary with no checksum:
+  replace it with `../repo-ready/assets/gitleaks-workflow.yml`
 
 Open Dependabot alerts and secret-scanning alerts go in the summary as follow-ups. Don't
 resolve or fix them in this pass.
@@ -207,6 +232,11 @@ is the absolute repo path with every `/` replaced by `-` (`/Users/x/Development/
 `-Users-x-Development-foo`). `MEMORY.md` is the index; each other file is one fact with a
 `type:` of user, feedback, project, or reference. Skip silently if the directory is absent.
 
+Before removing or rewriting anything, copy the directory:
+`cp -R ~/.claude/projects/<slug>/memory ~/.claude/projects/<slug>/memory-backup-<YYYY-MM-DD>`.
+Memory is not in git; the copy is the only undo. Name the backup path in the summary. Under
+`--report`, list what would be deleted and change nothing.
+
 For each memory file:
 - **The repo now records it** (README, AGENTS.md, a runbook, a comment): delete it. Memory
   is for what the repo can't say; a duplicate drifts the moment the repo changes.
@@ -225,7 +255,10 @@ content. List every deletion in the summary under its own heading.
 - `.gitignore`: add the usual misses if the stack uses them and they're absent
   (`node_modules/`, `.DS_Store`, `.env`, `.beans/`, `dist/`, `build/`, `.svelte-kit/`,
   `target/`, `data/*.db*`)
-- tracked files that should be ignored: `git ls-files | grep -E '\.DS_Store|\.env$|\.beans/'`
+- tracked files that should be ignored: `git ls-files -ci --exclude-standard` lists every
+  tracked file an ignore rule matches. `git rm --cached <file>` each one (the working copy
+  stays). If one of them ever held a credential (`.env`, a key file), untracking is not
+  enough: it is still in history, so list it as a follow-up to rotate and purge
 - dead scripts: for each file in `scripts/`, `grep -rn <basename> --exclude-dir=node_modules .`
   and list the ones nothing references (README, AGENTS.md, crontab, compose, package.json,
   other scripts). Archive them like documents; don't delete.
@@ -246,10 +279,22 @@ TARS:       deploy_target, production_url, icon_path
 Wiki:       ~/memex/wiki/projects/<name>.md (dated note)
 Memory:     deleted audit-2026-08-21-findings (fixed, in AGENTS.md); kept 1
 Deployment: on standard  |  MIGRATION PLAN below, not run
-Security:   dependabot.yml (npm, github-actions), secret scanning on  |  current  |  not GitHub
+Security:   dependabot.yml (npm, github-actions), secret scanning on, ruleset, gate clean  |  current  |  not GitHub
 Diagram:    created  |  refreshed, re-pinned to <sha>  |  current  |  skipped (<why>)
 Follow-ups: no logo; CHANGELOG stopped at 1.2
 ```
+
+Then run the secret gate over everything about to be committed and everything already in
+history:
+
+```bash
+bash ../repo-ready/scripts/secret-gate.sh "$PWD"      # public GitHub repo: prefix SECRET_GATE_BUILTIN=1 (strict mode)
+```
+
+Exit 1 (secrets found): **stop, do not invoke `acp`**. Print the locations; for a GitHub repo
+that is public, say the key is already exposed and has to be rotated. Exit 3: read each listed
+file and resolve it (untrack, or confirm it is clean) before committing. Exit 2 (gitleaks
+missing): say so, and continue only for a repo with no public remote.
 
 Then, unless `--report` or `--no-commit`: invoke `acp`. It commits everything and, on
 `main` with a `.deploy` marker, deploys. Say so in the line before you invoke it, so a deploy
