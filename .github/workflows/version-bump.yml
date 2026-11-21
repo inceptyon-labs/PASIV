@@ -5,11 +5,13 @@ on:
     branches: [main]
 
 permissions:
-  contents: write  # pushes the bump commit
+  contents: read
 
 jobs:
   bump:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # pushes the bump commit
     # Skip if commit is already a version bump
     if: "!contains(github.event.head_commit.message, 'chore: bump version')"
 
