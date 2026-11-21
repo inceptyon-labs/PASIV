@@ -28,6 +28,19 @@ Comprehensive security scan of a repository. Designed for vetting forked/cloned 
 
 **Task bookkeeping:** If the task tools (TaskCreate/TaskUpdate) are available, wrap every scan step (3–9, including 8b) in TaskUpdate — mark its task in_progress at the start and completed at the end. Without them, skip the bookkeeping. Not repeated per step below.
 
+**Run report:** every check also goes in a ledger, and its report becomes the Scan Coverage section, so the user sees what ran, what couldn't, and what never did. `RUNLOG` below is shorthand for `bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh"`: expand it in every command (shell variables don't carry between calls) and run it from the directory the skill was invoked from, which keys the ledger. It writes under `$TMPDIR`, never into TARGET, and runs no git. Start it in Step 0, once TARGET checks out:
+
+```bash
+bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh" start repo-scan scan osv-scanner typosquat install-scripts obfuscation network malware secret-gate autoexec zizmor files --tools rg perl osv-scanner gitleaks zizmor
+```
+
+Record each check when it finishes:
+
+- **A tool ran** (`scan` in Step 2, `osv-scanner` in Step 3, `secret-gate` in Step 8): take the exit code straight after the tool, before any `echo … exit=$?`, and record it on the same command line: `<tool command>; rc=$?; echo "exit=$rc"; RUNLOG ran <check> $rc`. The ledger reads the code as ok, findings or couldn't run
+- **A review step finished** (`typosquat` in Step 3, `install-scripts` 4, `obfuscation` 5, `network` 6, `malware` 7, `autoexec` 8b, `files` 9): `RUNLOG done <check> "<n> findings (<severities>)"`, or `"0 findings"`. `zizmor` runs inside the pattern pass: record `done zizmor "<n> findings"` from its line in `== AUTOEXEC ==`, or `skip zizmor "<reason>"` when that line says SKIPPED or the repo has no workflows
+- **Step 8 used the `gitleaks dir` fallback**: record its exit code as `ran secret-gate $rc "gitleaks dir fallback, history unchecked"`
+- **Deliberately not run**: `RUNLOG skip <check> "<reason>"`
+
 ---
 
 ## Ground rules (read before any command)
@@ -41,7 +54,7 @@ Comprehensive security scan of a repository. Designed for vetting forked/cloned 
 
 ## Step 0: Set Target
 
-TARGET = $ARGUMENTS or current working directory, as an absolute path. Verify TARGET exists and is a directory; if not, stop with error. Every command below takes TARGET explicitly or runs as `(cd "$TARGET" && …)`; a check that runs in the wrong directory reports on the wrong repo.
+TARGET = $ARGUMENTS or current working directory, as an absolute path. Verify TARGET exists and is a directory; if not, stop with error. Every command below takes TARGET explicitly or runs as `(cd "$TARGET" && …)`; a check that runs in the wrong directory reports on the wrong repo. Then start the run ledger (**Run report** above).
 
 ---
 
@@ -186,7 +199,7 @@ Strict mode also ignores the target's `.gitleaksignore` and inline `gitleaks:all
 If Step 2 reported `GIT: untrusted config`, or TARGET is not a git repo, scan the files without git:
 
 ```bash
-gitleaks dir --config "$SKILL_DIR/../repo-ready/assets/gitleaks.toml" --ignore-gitleaks-allow --gitleaks-ignore-path "$(mktemp -d)" --redact --verbose --no-banner "$TARGET" 2>&1 | grep -E '^(RuleID|File|Line):'
+OUT=$(mktemp); gitleaks dir --config "$SKILL_DIR/../repo-ready/assets/gitleaks.toml" --ignore-gitleaks-allow --gitleaks-ignore-path "$(mktemp -d)" --redact --verbose --no-banner "$TARGET" > "$OUT" 2>&1; rc=$?; grep -E '^(RuleID|File|Line):' "$OUT"; echo "gitleaks exit=$rc"
 ```
 
 `gitleaks dir` always honors a `.gitleaksignore` in the scanned directory. If TARGET has one, every fingerprint in it is a finding the scan was told to skip: report the file as HIGH and read each listed location by hand.
@@ -270,16 +283,9 @@ Compile all findings into a structured report.
 
 ## Scan Coverage
 
-| Check | Status | Findings |
-|-------|--------|----------|
-| Dependency Audit | [DONE/SKIPPED] | [count] |
-| Install and Build Scripts | DONE | [count] |
-| Obfuscated Code | DONE | [count] |
-| Network Calls | DONE | [count] |
-| Malware Patterns | DONE | [count] |
-| Secrets (tree + history) | [DONE/SKIPPED] | [count] |
-| Auto-Execution Surface | DONE | [count] |
-| File Anomalies | DONE | [count] |
+```
+[output of `runlog.sh report`, verbatim]
+```
 
 ---
 
@@ -290,7 +296,7 @@ Compile all findings into a structured report.
 
 ### Verdict Logic
 
-Count only findings that remain after the context-review pass (false positives removed). One finding is one distinct issue at one location: a file that shows up under four pattern groups for the same line is one finding, and each separate trigger that runs it (an install script, an editor task, an agent hook) is its own. Fold these into one: adjacent lines of the same routine (decode on one line, send on the next); a host or IP from Step 6 that is already part of a Step 7 finding; a workflow's dangerous trigger and the checkout that makes it exploitable; a typosquat and its git source on the same manifest line. In the coverage table a row can be both SKIPPED and non-zero (the CVE audit could not run, a typosquat was still found): write both.
+Count only findings that remain after the context-review pass (false positives removed). One finding is one distinct issue at one location: a file that shows up under four pattern groups for the same line is one finding, and each separate trigger that runs it (an install script, an editor task, an agent hook) is its own. Fold these into one: adjacent lines of the same routine (decode on one line, send on the next); a host or IP from Step 6 that is already part of a Step 7 finding; a workflow's dangerous trigger and the checkout that makes it exploitable; a typosquat and its git source on the same manifest line.
 
 Code that nothing can reach is rated by reach, not by content: a gitignored file with a decode-and-eval that no script, manifest or workflow references is MEDIUM until you find what loads it, then it takes the Step 5 rating.
 
@@ -304,12 +310,22 @@ Where a step gives no severity, use these defaults:
 | Dependency from git, a URL or a non-default registry; likely typosquat; binary or mismatched file; instructions aimed at an agent; symlink leaving the repo | HIGH |
 | Known CVE in a dependency | the advisory's own severity |
 | Unpinned third-party action; network call to an unexpected host; ignored file on disk that nothing references | MEDIUM |
-| A check that could not run | INFO, and listed as SKIPPED in the coverage table |
+| A check that could not run | INFO, and shown as couldn't run or skipped in Scan Coverage |
 
 
 - **FAIL**: ≥1 CRITICAL finding remains, or ≥3 HIGH findings remain
 - **CAUTION**: Zero CRITICAL, 1–2 HIGH findings remain
 - **PASS**: Zero CRITICAL and zero HIGH findings remain
+
+### Coverage
+
+Before writing the report, print the ledger:
+
+```bash
+bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh" report
+```
+
+Exit 1 means a check has no record: go back and run that step, or record a skip with the reason, and print it again. The final output goes in the Scan Coverage section unchanged.
 
 ### Output Location
 
@@ -321,7 +337,7 @@ Save report to `docs/scans/YYYY-MM-DD-<repo-name>.md` under the **directory the 
 
 ## Step 11: Present Results
 
-This skill runs in its own subagent, so your final message is all the user sees of the scan: nothing you printed along the way reaches them. Make it complete on its own. Give the report's absolute path, the Executive Summary, every CRITICAL and HIGH finding with file:line and one line of why, the checks that were SKIPPED, then the verdict message:
+This skill runs in its own subagent, so your final message is all the user sees of the scan: nothing you printed along the way reaches them. Make it complete on its own. Give the report's absolute path, the Executive Summary, every CRITICAL and HIGH finding with file:line and one line of why, the run report verbatim in a code block, then the verdict message:
 
 - **FAIL** — "This repository has critical security findings. Review the full report before using this code."
 - **CAUTION** — "This repository has HIGH findings that survived context review. Review the flagged items."

@@ -36,6 +36,33 @@ would touch something running.
 secret gate and the gitleaks assets live in the sibling skill, under
 `"$SKILL_DIR/../repo-ready/"`: every `../repo-ready/…` path below starts there.
 
+## Run report
+
+Every check goes in a ledger, and the pass ends by printing it, so the user sees what ran,
+what was skipped and why, and what never ran. `RUNLOG` below is shorthand for
+`bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh"`: expand it in every command (shell
+variables don't carry between calls) and run it from the project root, which keys the ledger.
+It lives outside the repo, so it runs under `--report` too. Start it before Phase 1:
+
+```bash
+bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh" start repo-tidy inventory readme agents-md stale-docs deploy hadolint diagram github-settings zizmor pinact gitleaks-setup scorecard logo tars wiki memory hygiene de-vibe secret-gate live-check --tools gitleaks trufflehog zizmor pinact hadolint scorecard gh sqlite3
+```
+
+Checks by phase: 1 `inventory` · 2 `readme` · 3 `agents-md` · 4 `stale-docs` · 5 `deploy`,
+`hadolint` · 5b `diagram` · 5c `github-settings`, `zizmor`, `pinact`, `gitleaks-setup`,
+`scorecard` · 6 `logo` · 7 `tars` · 8 `wiki` · 9 `memory` · 10 `hygiene`, `de-vibe` ·
+11 `secret-gate`, `live-check`. Record each one when it finishes:
+
+- **A tool ran** (`hadolint`, `zizmor`, `pinact`, `scorecard`, `secret-gate`, `live-check`):
+  take the exit code straight after the tool, before any `echo … exit=$?`, and record it on
+  the same command line: `<tool command>; rc=$?; echo "exit=$rc"; RUNLOG ran <check> $rc`.
+  The ledger reads the code as ok, findings or couldn't run. Several Dockerfiles: one `ran`
+  per file, with the file as the detail
+- **A step with no tool finished** (a phase, an invoked skill):
+  `RUNLOG done <check> "<what changed, or current>"`
+- **Deliberately not run** (a `--skip-*` flag, not a GitHub repo, no Dockerfile, no
+  workflows, gate passed so no `live-check`): `RUNLOG skip <check> "<reason>"`
+
 ## Hard rules
 
 - **Never edit** secrets, `.env*`, signing keys, risk caps, trading or billing config, or
@@ -338,6 +365,16 @@ candidate with its provider) and say which are still live. For a GitHub repo tha
 say the key is already exposed and has to be rotated. Exit 3: read each listed
 file and resolve it (untrack, or confirm it is clean) before committing. Exit 2 (gitleaks
 missing): say so, and continue only for a repo with no public remote.
+
+Then print the run report, also when the gate stopped the pass:
+
+```bash
+bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh" report
+```
+
+Exit 1 means a listed check has no record: run it, or record a skip with the reason, and
+print the report again. Never invoke `acp` past a `NOT RUN` line. Put the report in your
+final message verbatim, in a code block; tool output doesn't reach the user on its own.
 
 Then, unless `--report` or `--no-commit`: invoke `acp`. It commits everything and, on
 `main` with a `.deploy` marker, deploys. Say so in the line before you invoke it, so a deploy

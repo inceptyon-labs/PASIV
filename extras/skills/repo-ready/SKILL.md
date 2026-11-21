@@ -22,6 +22,20 @@ Prepare the current project for its first push to a public or private git host. 
 
 `SKILL_DIR` is this skill's own directory: the one that holds this SKILL.md, shown as the skill's base directory when it loads. Scripts and assets live there, not in the project, so always call them by absolute path (`"$SKILL_DIR/scripts/…"`). If you don't know it: `SKILL_DIR=$(ls -d ~/.claude/skills/repo-ready 2>/dev/null || find ~/.claude/plugins -maxdepth 8 -type d -path '*skills/repo-ready' 2>/dev/null | sort | tail -1)`. Every `assets/`, `references/` and `scripts/` path below is relative to it.
 
+## Run report
+
+Every check goes in a ledger, and the run ends by printing it (Phase 7), so the user sees what ran, what was skipped and why, and what never ran. `RUNLOG` below is shorthand for `bash "$SKILL_DIR/scripts/runlog.sh"`: expand it in every command (shell variables don't carry between calls) and run it from the project root, which keys the ledger. It lives outside the repo, so it runs under `--dry-run` too. Start it before Phase 1:
+
+```bash
+bash "$SKILL_DIR/scripts/runlog.sh" start repo-ready preflight secret-gate live-check going-public osv-scanner zizmor pinact gitignore gitleaks-hook hadolint tars secret-gate-final github-settings --tools gitleaks trufflehog zizmor pinact osv-scanner hadolint gh
+```
+
+Where each is recorded: `preflight` Phase 1 · `secret-gate`, `live-check` Phase 2 (or `references/going-public.md` section 1 for Public) · `going-public`, `osv-scanner` going-public sections 2–3 · `zizmor`, `pinact` going-public section 4 or 4h · `gitignore` 4i · `gitleaks-hook` 4k · `hadolint` 4n · `tars` 4m · `secret-gate-final`, `github-settings` Phase 6. Record each one when it finishes:
+
+- **A tool ran** (`secret-gate`, `live-check`, `osv-scanner`, `zizmor`, `pinact`, `hadolint`, `secret-gate-final`): take the exit code straight after the tool, before any `echo … exit=$?`, and record it on the same command line: `<tool command>; rc=$?; echo "exit=$rc"; RUNLOG ran <check> $rc`. The ledger reads the code as ok, findings or couldn't run. A strict-mode gate gets the detail `strict`
+- **A step with no tool finished**: `RUNLOG done <check> "<what was written or found>"`
+- **Deliberately not run** (private destination so no going-public, gate clean so no `live-check`, no workflows, Question 9 = No, no TARS db, the user runs Phase 6 themselves): `RUNLOG skip <check> "<reason>"`
+
 ## Phase 1: Preflight
 
 ```bash
@@ -277,7 +291,7 @@ Skipped:
   (none)
 ```
 
-Tools this skill leans on: `gitleaks` (required for the gate), and `trufflehog`, `zizmor`, `pinact`, `osv-scanner`, `hadolint` for the checks that name them (`brew install gitleaks trufflehog zizmor pinact osv-scanner hadolint`). Add a `Skipped checks:` line to the summary for every one that was missing; a check that did not run is never reported as a pass.
+Tools this skill leans on: `gitleaks` (required for the gate), and `trufflehog`, `zizmor`, `pinact`, `osv-scanner`, `hadolint` for the checks that name them (`brew install gitleaks trufflehog zizmor pinact osv-scanner hadolint`). A missing one shows as MISSING on the run report's Tools line and as couldn't run on its check; a check that did not run is never reported as a pass.
 
 Run a final check:
 ```bash
@@ -362,6 +376,16 @@ After printing the command block, ask with `AskUserQuestion`:
 - **I'll run them myself** — end with: "Review the artifacts, then run the commands above when you're ready."
 
 If the user picks "Run them now" and the working tree is dirty, remind them afterward that the push only included committed work and the new artifacts still need a commit (`/acp`).
+
+## Phase 7: Run report
+
+The last step of every run, including one the gate stopped early:
+
+```bash
+bash "$SKILL_DIR/scripts/runlog.sh" report
+```
+
+Exit 1 means a listed check has no record: run it, or record a skip with the reason, and print the report again. Put the report in your final message verbatim, in a code block; tool output doesn't reach the user on its own.
 
 ## Principles
 

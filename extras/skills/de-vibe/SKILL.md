@@ -1,6 +1,6 @@
 ---
 name: de-vibe
-description: Strip AI "tells" from a project so it reads like a human wrote it - de-slop public docs (em-dashes, filler), gitignore AI config files, remove restate-the-code comments, scrub AI commit trailers. Use for "de-vibe", "devibe", "de-vibe-codify", "de-slop", "remove AI tells", "humanize docs".
+description: Strip AI "tells" from a project so it reads like a human wrote it - strip invisible watermark characters and chatbot residue, de-slop public docs with the humanizer's tell catalog, gitignore AI config files, remove restate-the-code comments, scrub AI commit trailers. Use for "de-vibe", "devibe", "de-vibe-codify", "de-slop", "remove AI tells", "humanize docs", "de-watermark the repo".
 model: opus
 user-invocable: true
 allowed-tools:
@@ -15,14 +15,16 @@ allowed-tools:
 
 # De-Vibe
 
-Make a project stop looking machine-generated. Find the tells AI leaves behind — purple prose, smart punctuation, redundant comments, tracked agent-config files, AI commit trailers — then report them by category and apply the fixes after one confirmation gate.
+Make a project stop looking machine-generated. Find the tells AI leaves behind — invisible characters and chatbot residue, machine-cadence prose, redundant comments, tracked agent-config files, AI commit trailers — then report them by category and apply the fixes after one confirmation gate.
 
 **Input:** $ARGUMENTS — optional flags:
 - `--report` — scan and report only, change nothing
-- `--prose` / `--code` / `--gitignore` / `--git` — limit to one category (default: all four)
+- `--marks` / `--prose` / `--code` / `--gitignore` / `--git` — limit to one category (default: all five)
 - `--path <dir>` — scope to a subtree
 
 **Default flow:** scan → categorized report → confirm → apply. Never apply before showing the report.
+
+**The humanizer is the source of truth for prose tells and marks.** `SKILL_DIR` is this skill's own directory (the one holding this SKILL.md); the humanizer is its sibling at `"$SKILL_DIR/../humanizer/"`. If you don't know it: `SKILL_DIR=$(ls -d ~/.claude/skills/de-vibe 2>/dev/null || find ~/.claude/plugins -maxdepth 8 -type d -path '*skills/de-vibe' 2>/dev/null | sort | tail -1)`. The marks pass runs its `scripts/strip_marks.py`. The prose pass applies its **Ground rules** and **Pass 1: De-slop**: read both sections of `"$SKILL_DIR/../humanizer/SKILL.md"` before the prose scan. Don't keep a word list here; the humanizer's lists are the maintained ones. Its Pass 2 (voice) is not part of de-vibe; for one doc in Jason's voice, run `humanizer` on it.
 
 ---
 
@@ -48,25 +50,37 @@ Build an exclusion set from the start. **Never scan or modify:** `node_modules/`
 
 Run categories in parallel where possible. Collect counts + file:line locations. Do **not** edit yet.
 
+### Marks (invisible characters and chatbot residue)
+
+Every tracked text file, docs and code alike: zero-width and other invisible characters, tag characters (ASCII smuggling), stray variation selectors, bidi controls, exotic spaces, and chat-UI residue (`oaicite`, `turn0search0`, `【4†source】`, Gemini `[cite: 1]`, `utm_source=chatgpt.com` link parameters). You can't see most of these, so run the script; don't eyeball it. The `git grep` pre-filter keeps the Python pass to files with any non-ASCII byte or a residue token:
+
+```bash
+LC_ALL=C git grep -lI -e $'[\x80-\xff]' -e oaicite -e cite_start -e 'turn[0-9][0-9]*search' -e 'utm_source=chatgpt' -e 'utm_source=openai' -e 'utm_source=copilot' -e 'referrer=grok' -- . ':!*.lock' ':!*-lock.*' ':!*.min.*' ':!vendor/' ':!dist/' ':!build/' ':!node_modules/' \
+  | while IFS= read -r f; do
+      case "$f" in *.md|*.mdx|*.txt|*.rst) q=--straight-quotes ;; *) q= ;; esac   # curly quotes count in docs only
+      python3 "$SKILL_DIR/../humanizer/scripts/strip_marks.py" "$f" --report $q 2>/dev/null | sed "s|^|$f:|"
+    done
+```
+
+Each line is `file:line:col <tab> kind <tab> character`. Outside a git repo, list files with `LC_ALL=C grep -rlI --exclude-dir={node_modules,vendor,dist,build,.git}` and the same `-e` patterns. Statistical watermarks (SynthID-Text and similar) live in word choice and no public detector exists: the prose pass weakens one as a side effect, but never report one as found or removed.
+
+For each file, note whether any hit sits in a fenced code block, inline code, a string literal, or a passage that discusses the character itself (a Unicode test fixture, a doc listing these tokens). Those hits are deliberate; Phase 4 leaves them.
+
 ### Prose (public-facing docs)
 
 Target: `README*`, `docs/**`, `CONTRIBUTING*`, `*.md` that ships to users, site copy, package descriptions. **Skip** internal agent files (`CLAUDE.md`, `AGENTS.md`) — those get gitignored, not rewritten.
 
 Inside markdown, **never touch fenced code blocks or inline `code`** — em-dashes and "utilize" in a code sample are real.
 
-Find:
-- **Smart punctuation:** em-dash `—`, en-dash `–` used as em-dash, curly quotes `" " ' '`, ellipsis char `…`, non-breaking space (U+00A0)
-- **Filler / LLM tics:** "it's worth noting", "it's important to note", "it is worth", "delve", "leverage", "utilize", "robust", "comprehensive", "seamless(ly)", "elevate", "boasts", "in today's world", "in the world of", "let's dive in", "dive into", "in conclusion", "furthermore", "moreover", "that being said", "navigating the", "at the end of the day", "game-changer", "unlock", "supercharge", "effortless"
-- **Rule-of-three cadence:** "X, Y, and Z" adjective triplets in marketing position (flag, don't auto-rewrite — needs judgment)
-- **Emoji in headings** and decorative emoji in prose
-- **Over-formatting:** bold-label bullet lists (`- **Thing:** ...`) used where flowing sentences belong; suspiciously symmetric section trees
+Read each target doc in full and mark every tell from the humanizer's Pass 1, groups A to E (staging, rhythm, inflation, formatting, chat leftovers), plus its "Not tells" exceptions. Groups F (replies) and G (essays and stories) don't apply to docs. Weigh the structural groups A and B first; word habits change with each model release. Respect the humanizer's *weak alone* markers: one dash or one "robust" in a long README is not a finding.
+
+The greps below find hot spots in a large docs tree. They are not the catalog, and a clean grep doesn't mean a clean doc:
 
 ```bash
 # git grep searches tracked files only, so vendored, generated and ignored trees are skipped for free.
 # Outside a git repo, swap `git grep -n` for `grep -rn --include='*.md' --exclude-dir=node_modules`.
-git grep -nE $'\xe2\x80\x94|\xe2\x80\xa6' -- '*.md' | head -100   # em-dash, ellipsis
-git grep -n $'\xc2\xa0' -- '*.md' | head -50   # NBSP (UTF-8 C2 A0)
-git grep -niE 'delve|leverage|utiliz|seamless|robust|comprehensive|streamline|cutting.?edge|state.?of.?the.?art|next.?generation|best practices|it'"'"'s worth noting|dive in|in conclusion|furthermore|moreover|game.?changer|supercharge' -- '*.md' | head -100
+git grep -nE $'\xe2\x80\x94|\xe2\x80\x93| -- ' -- '*.md' | head -100   # em/en dashes, spaced double hyphen
+git grep -niE "not (just|only|merely)|it'?s not .{1,40}, it'?s|here'?s (the thing|what)|let'?s (dive|break)|the real (question|win)|at its core|to be clear|in (summary|conclusion)|delve|leverage|utiliz|seamless|robust|tapestry|testament|pivotal|underscore|showcase|streamline|holistic|meticulous|genuinely|truly|quietly|game.?changer|supercharge" -- '*.md' | head -100
 git ls-files -z '*.md' | xargs -0 perl -CSD -ne 'print "$ARGV:$.:$_" if /[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/' 2>/dev/null | head -50   # emoji in docs (perl: BSD grep has no -P)
 ```
 
@@ -122,12 +136,13 @@ Print one compact, categorized report. Counts up top, locations available on req
 ```
 de-vibe scan — <project>
 ─────────────────────────────────────
-PROSE      <n> em-dashes, <n> smart-quotes, <n> filler  →  README.md, docs/
+MARKS      <n> zero-width, <n> exotic spaces, <n> residue, <n> curly  →  <files>  (<n> deliberate, kept)
+PROSE      <n> staging, <n> rhythm, <n> inflation, <n> formatting, <n> leftovers  →  README.md, docs/
 CODE       <n> restate comments, <n> banner comments    →  src/…
 GITIGNORE  <files> tracked, not ignored
 GIT        <n> commits with AI trailers
 ─────────────────────────────────────
-Apply which? [prose / code / gitignore / git / all / none]
+Apply which? [marks / prose / code / gitignore / git / all / none]
 ```
 
 If `--report`, stop here.
@@ -138,15 +153,20 @@ Otherwise ask with **AskUserQuestion** which categories to apply (multiSelect). 
 
 ## Phase 4: Apply
 
-Only the confirmed categories. Show a diff summary after each.
+Only the confirmed categories. Show a diff summary after each. Run marks before prose, so the prose pass works on clean text.
+
+### Marks
+A file whose hits are all removable gets the script in place:
+
+```bash
+python3 "$SKILL_DIR/../humanizer/scripts/strip_marks.py" <file> --in-place --straight-quotes   # docs (drop the flag for a doc typeset with curly quotes on purpose)
+python3 "$SKILL_DIR/../humanizer/scripts/strip_marks.py" <file> --in-place                     # code: quotes in code stay as written
+```
+
+A file with any deliberate hit (Phase 2) is left whole: the script can't skip one hit, and you can't see what you'd be editing by hand. List it in the wrap-up with its kept hits. After the pass, `git diff --stat` and re-run the Phase 2 scan; only the kept hits should remain.
 
 ### Prose
-Rewrite for meaning, don't blind-replace. Em-dash → comma, parentheses, period, or "to"/"is" depending on the sentence. Smart quotes → straight. Ellipsis char → `...`. NBSP → space. Delete filler phrases and tighten the sentence; convert bold-label bullets to sentences where it reads better. Preserve the author's facts and structure — you're de-slopping, not rewriting from scratch. Leave code blocks untouched.
-
-Examples (keep the fact, drop the slop):
-- `It's worth noting that the API is robust and comprehensive.` → `The API covers the full surface.`
-- `Leverage this seamless tool to supercharge your workflow.` → `Use this tool in your workflow.`
-- `We built a fast, reliable, and scalable system.` → `The system is fast and handles load.`
+Apply the humanizer's Pass 1 to each marked tell: rewrite the point directly, don't patch phrases one at a time. Its Ground rules bind here: keep every fact (names, numbers, links, claims), don't invent a specific to replace a generic one, and leave code blocks, inline code, commands, paths and link targets alone. No em or en dashes in the result. Preserve the doc's structure; you're de-slopping, not rewriting from scratch. Then do its Process step 5 check against the original: every fact still there, and none of the common survivors (not-X-but-Y, one-line closers, triads, dashes, bold labels, same-length sentences) reintroduced.
 
 ### Code
 Remove only the comments classified for removal in Phase 2. Delete the whole comment line (and a now-orphaned blank line); never alter the code itself. After editing a file, re-read the touched region to confirm code is intact.
@@ -215,3 +235,4 @@ Summarize what changed per category, list anything skipped and why (e.g. comment
 - **Never force-push.** Print the command; the user runs it.
 - **Don't delete AI config files** — gitignore + untrack only. The user still uses them locally.
 - **Don't invent content.** De-slopping removes and tightens; it never adds claims, badges, or features.
+- **Never claim a statistical watermark was found or removed.** The marks pass removes characters; word-choice watermarks have no public detector.
