@@ -4,7 +4,7 @@ The standard for every repo hosted on GitHub. `repo-ready` applies it on first p
 
 ## 1. `.github/dependabot.yml`
 
-Skip if a Renovate config exists (`renovate.json`, `.renovaterc*`, `.github/renovate.json*`).
+Skip if a Renovate config exists: `git ls-files | grep -E '(^|/)(renovate\.json5?|\.renovaterc(\.json5?)?)$'` prints something.
 
 One `updates` entry per manifest in the repo, on a weekly schedule, plus `github-actions` whenever `.github/workflows/` exists or is being created:
 
@@ -32,12 +32,18 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
 ```
+
+The `cooldown` block makes Dependabot wait a week before proposing a new release, which is the window in which a hijacked package is usually caught and pulled. Security updates ignore it. zizmor flags an entry without one.
 
 If the file already exists, add only the missing entries. Leave its schedules, groups and ignores as they are.
 
@@ -110,4 +116,4 @@ gh api "repos/$R/secret-scanning/alerts?state=open" --jq '.[] | {number, secret_
 gh api "repos/$R/dependabot/alerts?state=open" --jq length
 ```
 
-Report what these return. Don't resolve an alert without reading the flagged line.
+Report what these return. A 404 from the secret-scanning call means scanning is disabled on the repo, not that there are no alerts. Don't resolve an alert without reading the flagged line.

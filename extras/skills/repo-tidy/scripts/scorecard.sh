@@ -10,7 +10,7 @@
 set -u
 R="${1:-}"
 case "$R" in */*) ;; *) echo "usage: scorecard.sh <owner>/<name>" >&2; exit 2 ;; esac
-command -v perl >/dev/null 2>&1 || { echo "scorecard: perl not installed" >&2; exit 2; }
+perl -MJSON::PP -e 1 2>/dev/null || { echo "scorecard: perl with JSON::PP is required" >&2; exit 2; }
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 
 src=""

@@ -52,6 +52,8 @@ regexes = [
   '''YOUR_[A-Z_]+_API_KEY''',
   '''AIza[A-Za-z0-9_-]{0,5}EXAMPLE''',
   '''(?i)^(your|my|some|example|sample|dummy|fake|placeholder|change[-_]?me|replace[-_]?me|insert|todo)[-_a-z0-9]*$''',
-  '''(?i)(x{6,}|\*{4,}|\.{4,}|0{10,}|1234567890|abcdefgh)''',
+  # a short prefix followed by nothing but filler: sk_test_xxxxxxxxxxxx, ********, ........
+  # Anchored on purpose: a real key that merely contains "xxxxxx" must still be reported.
+  '''(?i)^[a-z0-9_-]{0,12}(x{6,}|\*{4,}|\.{4,})[x*._-]*$''',
   '''^(<[^>]+>|\$\{[^}]+\}|\{\{[^}]+\}\}|%[A-Z_]+%)$''',
 ]

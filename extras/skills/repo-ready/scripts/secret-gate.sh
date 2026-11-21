@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Secret gate for a git repo. Scans everything that could be pushed:
 #   1. every commit on the chosen refs, merge commits included (gitleaks)
-#   2. commit messages on those refs
+#   2. commit messages and annotated-tag messages
 #   3. what is staged, and everything else uncommitted that isn't gitignored
-#   4. sensitive filenames, in the tree now or anywhere in history (gitleaks
-#      cannot read binary files, so key stores and database dumps show up here)
-#   5. tracked files that .gitignore says should not be tracked
+#   4. the files gitleaks never opens: paths on its built-in skip list
+#      (lockfiles, *.svg, go.mod, node_modules/, ...) and binary files
+#   5. sensitive filenames, in the tree now or anywhere in history
+#   6. tracked files that .gitignore says should not be tracked
 # Gitignored files that were never committed are out of scope: they don't ship.
 # Secret values are never printed, and nothing is written into the repo.
 #
@@ -16,7 +17,7 @@
 #                                inline "gitleaks:allow") are not honored
 #        SECRET_GATE_REFS=main   scan only these refs' history (default: every
 #                                ref except the stash). Use it when only one
-#                                branch will be pushed.
+#                                branch will be pushed; tags are then skipped.
 # Exit:  0 clean
 #        1 gitleaks found secrets            -> hard stop
 #        2 cannot scan (no gitleaks, not git, shallow clone)
@@ -32,6 +33,9 @@ command -v gitleaks >/dev/null 2>&1 || { echo "secret-gate: gitleaks not install
 if [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = true ]; then
   echo "secret-gate: shallow clone, history is incomplete (git fetch --unshallow)" >&2; exit 2
 fi
+
+# A push sends the real objects, so scan those, not their refs/replace stand-ins.
+export GIT_NO_REPLACE_OBJECTS=1
 
 TOP=$(pwd)
 GITDIR=$(git rev-parse --absolute-git-dir)
@@ -68,10 +72,14 @@ if [ -n "${SECRET_GATE_BUILTIN:-}" ]; then
 elif [ ! -f "$CONFIG" ]; then
   CONFIG="$BUILTIN"
 fi
+case "$CONFIG" in /*) ;; *) CONFIG="$TOP/$CONFIG" ;; esac
 COMMON=(--config "$CONFIG" --redact --verbose --no-banner --no-color ${STRICT[@]+"${STRICT[@]}"})
 
 leaks=0
 review=0
+HAS_HEAD=0; git rev-parse --verify -q HEAD >/dev/null && HAS_HEAD=1
+
+fail() { echo "secret-gate: gitleaks failed:" >&2; printf '%s\n' "$1" | tail -5 >&2; }
 
 # Prints one "<commit>:<file>:<rule>:<line>" per finding. Fingerprints carry no secret.
 # Extra VAR=value arguments before "--" are added to gitleaks' environment.
@@ -80,24 +88,27 @@ scan_git() {
   while [ "$1" != "--" ]; do extra+=("$1"); shift; done; shift
   out=$(env "${ENVV[@]}" ${extra[@]+"${extra[@]}"} gitleaks git "${COMMON[@]}" "$@" "$SRC" 2>&1)
   rc=$?
-  if [ $rc -ne 0 ] && ! printf '%s\n' "$out" | grep -q '^Fingerprint:'; then
-    echo "secret-gate: gitleaks failed:" >&2; printf '%s\n' "$out" | tail -5 >&2; return 2
-  fi
+  if [ $rc -ne 0 ] && ! printf '%s\n' "$out" | grep -q '^Fingerprint:'; then fail "$out"; return 2; fi
   printf '%s\n' "$out" | sed -n 's/^Fingerprint: *//p' | sort -u
 }
 
 echo "== HISTORY ($REFS) =="
-if git rev-parse --verify -q HEAD >/dev/null; then
+if [ $HAS_HEAD -eq 1 ]; then
   # -m: diff merge commits against each parent, or a secret added while
   # resolving a merge is never shown.
   hist=$(scan_git -- --log-opts="$REFS --full-history -m") || exit 2
   if [ -n "$hist" ]; then echo "$hist"; leaks=1; else echo "clean"; fi
 
-  echo "== COMMIT MESSAGES =="
+  echo "== COMMIT AND TAG MESSAGES =="
   # shellcheck disable=SC2086
-  msgs=$(git log $REFS --format=%B 2>/dev/null | gitleaks stdin "${COMMON[@]}" 2>&1 | sed -n 's/^RuleID: *//p' | sort | uniq -c)
+  { git log $REFS --format=%B 2>/dev/null
+    [ -n "${SECRET_GATE_REFS:-}" ] || git for-each-ref refs/tags --format='%(contents)' 2>/dev/null
+  } > "$tmp/messages"
+  out=$(gitleaks stdin "${COMMON[@]}" < "$tmp/messages" 2>&1); rc=$?
+  if [ $rc -ne 0 ] && ! printf '%s\n' "$out" | grep -q '^RuleID:'; then fail "$out"; exit 2; fi
+  msgs=$(printf '%s\n' "$out" | sed -n 's/^RuleID: *//p' | sort | uniq -c)
   if [ -n "$msgs" ]; then
-    echo "$msgs"; echo "(rule and count; find the commit with: git log $REFS --format='%h %s%n%b')"; leaks=1
+    echo "$msgs"; echo "(rule and count; find it with: git log $REFS --format='%h %s%n%b', and git tag -n99 for tag messages)"; leaks=1
   else echo "clean"; fi
 else
   echo "no commits yet"
@@ -113,6 +124,12 @@ real_index=$(git rev-parse --git-path index)
 [ -f "$real_index" ] && cp "$real_index" "$tmp/index"
 mkdir "$tmp/objects"
 ISO=("GIT_INDEX_FILE=$tmp/index" "GIT_OBJECT_DIRECTORY=$tmp/objects" "GIT_ALTERNATE_OBJECT_DIRECTORIES=$OBJECTS")
+# Files flagged assume-unchanged or skip-worktree are passed over by "git add";
+# clear the flags in the copy so an edited one is scanned like any other file.
+if [ -f "$tmp/index" ]; then
+  env "${ISO[@]}" git ls-files -v -z 2>/dev/null | tr '\0' '\n' | sed -n 's/^[a-zS] //p' | tr '\n' '\0' \
+    | env "${ISO[@]}" git update-index --no-assume-unchanged --no-skip-worktree -z --stdin 2>/dev/null
+fi
 if ! err=$(env "${ISO[@]}" git add -A 2>&1); then
   echo "secret-gate: could not stage the working tree for scanning:" >&2; printf '%s\n' "$err" | tail -3 >&2; exit 2
 fi
@@ -120,39 +137,79 @@ work=$(scan_git "${ISO[@]}" -- --pre-commit --staged) || exit 2
 unc=$(printf '%s\n%s\n' "$staged" "$work" | grep -v '^$' | sort -u)
 if [ -n "$unc" ]; then echo "$unc"; leaks=1; else echo "clean"; fi
 
-echo "== PATHS GITLEAKS SKIPS BY DEFAULT (lockfiles, *.svg, go.mod, node_modules/, vendor/, ...) =="
-# gitleaks' built-in allowlist never looks inside these paths, in any mode, so
-# a token in package-lock.json or a text file named logo.svg passes the scans
-# above. Their added lines are written out under neutral names and scanned as
-# plain files; the map turns each result back into "<commit>:<file>:<rule>".
-SKIPPED='gitleaks\.toml|\.(bmp|gif|jpe?g|png|svg|tiff?|eot|[ot]tf|woff2?|docx?|xlsx?|pdf|bin|gem)$|go\.(mod|sum|work(\.sum)?)$|(^|/)(node_modules|bower_components|vendor)/|(^|/)(deno\.lock|npm-shrinkwrap\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|pipfile\.lock|poetry\.lock|gradle\.lockfile|gradlew(\.bat)?|mvnw(\.cmd)?|javascript\.json)$|verification-metadata\.xml|(^|/)(v?env|virtualenv)/lib|\.dist-info/|\.min\.js(\.map)?$'
-mkdir "$tmp/skip"; : > "$tmp/skip.map"
+echo "== FILES GITLEAKS DOES NOT OPEN (its built-in skip list, and binary files) =="
+# gitleaks' default config never looks inside the paths below, in any mode, and
+# it skips binary diffs. A token in package-lock.json, in a text file named
+# logo.svg, or inside a committed binary or zip passes every scan above. Those
+# files are copied out under neutral names and scanned as plain files.
+# Keep SKIPPED in step with the allowlist in gitleaks' default config (checked
+# against v8.30.1); a superset is fine. assets/pre-commit and
+# assets/gitleaks-workflow.yml carry the same list.
+SKIPPED='gitleaks\.toml|\.(bmp|gif|jpe?g|png|svg|tiff?|eot|[ot]tf|woff2?|docx?|xlsx?|pdf|bin|socket|vsidx|v2|suo|wsuo|dll|pdb|exe|gltf|gem)$|go\.(mod|sum|work(\.sum)?)$|(^|/)(node_modules|bower_components|vendor)/|(^|/)(deno\.lock|npm-shrinkwrap\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|pipfile\.lock|poetry\.lock|gradle\.lockfile|gradlew(\.bat)?|mvnw(\.cmd)?|javascript\.json)$|(^|/)\.mvn/wrapper/|(^|/)(angular|bootstrap|jquery(-?ui)?|plotly|swagger-?ui)[a-z0-9.-]*\.js(\.map)?$|verification-metadata\.xml|database\.refactorlog|(^|/)(v?env|virtualenv)/lib|(^|/)(lib(64)?/python[23]|python/[23])|\.dist-info(/|$)|\.min\.js(\.map)?$'
+# Binary formats with nothing to grep; anything else binary is scanned.
+MEDIA='\.(png|jpe?g|gif|bmp|tiff?|ico|icns|webp|heic|pdf|woff2?|ttf|otf|eot|mp[34]|m4[av]|mov|avi|mkv|webm|wav|flac|ogg|psd|sketch|fig)$'
+mkdir "$tmp/skip"; : > "$tmp/skip.map"; : > "$tmp/binpaths"
+
+# (a) text on the skip list: added lines, taken from the patch. The path comes
+# from the "+++ b/<path>" header line, which is only read between "diff --git"
+# and the first hunk, so a content line that starts with "++ " stays content.
 collect() {   # stdin: patch text; $1: label when the stream has no commit lines; $2: file-name prefix
   awk -v re="$SKIPPED" -v dir="$tmp/skip" -v map="$tmp/skip.map" -v c="$1" -v p="$2" '
     /^commit [0-9a-f]+$/ { c = substr($2, 1, 12); keep = 0; next }
-    /^diff --git / { f = $0; sub(/^diff --git a\/.* b\//, "", f); keep = (tolower(f) ~ re)
-                     if (keep) { if (out) close(out); n++; out = dir "/" p n ".txt"; print p n ".txt\t" c ":" f >> map }; next }
-    keep && /^\+/ && !/^\+\+\+ / { print substr($0, 2) > out }'
+    /^diff --git /  { hdr = 1; keep = 0; next }
+    hdr && /^\+\+\+ / { f = substr($0, 5); sub(/\t$/, "", f); gsub(/^"|"$/, "", f); sub(/^b\//, "", f)
+                        keep = (f != "/dev/null" && tolower(f) ~ re)
+                        if (keep) { if (out) close(out); n++; out = dir "/" p n ".txt"; print p n ".txt\t" c ":" f >> map }
+                        next }
+    hdr && /^@@ /   { hdr = 0; next }
+    hdr             { next }
+    keep && /^\+/   { print substr($0, 2) > out }'
 }
 DIFF=(-U0 --no-renames --no-color --no-ext-diff)
-if git rev-parse --verify -q HEAD >/dev/null; then
+if [ $HAS_HEAD -eq 1 ]; then
   # shellcheck disable=SC2086
-  env "${ENVV[@]}" git log $REFS -p -m --full-history "${DIFF[@]}" --format='commit %H' 2>/dev/null | collect history h
+  env "${ENVV[@]}" $GIT log $REFS -p -m --full-history "${DIFF[@]}" --format='commit %H' 2>/dev/null | collect history h
+  # shellcheck disable=SC2086
+  env "${ENVV[@]}" $GIT log $REFS -m --full-history --no-renames --numstat --format= 2>/dev/null | sed -n 's/^-	-	//p' >> "$tmp/binpaths"
 fi
-env "${ENVV[@]}" git diff --cached "${DIFF[@]}" 2>/dev/null | collect staged s
-env "${ENVV[@]}" "${ISO[@]}" git diff --cached "${DIFF[@]}" 2>/dev/null | collect uncommitted u
+env "${ENVV[@]}" $GIT diff --cached "${DIFF[@]}" 2>/dev/null | collect staged s
+env "${ENVV[@]}" "${ISO[@]}" $GIT diff --cached "${DIFF[@]}" 2>/dev/null | collect uncommitted u
+env "${ENVV[@]}" "${ISO[@]}" $GIT diff --cached --no-renames --numstat 2>/dev/null | sed -n 's/^-	-	//p' >> "$tmp/binpaths"
+
+# (b) binary files that are not plain media: every version of each, as a file.
+# Archives keep their extension so gitleaks can look inside them.
+sort -u "$tmp/binpaths" | grep -viE "$MEDIA" > "$tmp/bin.want"
+toobig=""
+if [ -s "$tmp/bin.want" ]; then
+  { [ $HAS_HEAD -eq 1 ] && env "${ENVV[@]}" $GIT rev-list --objects $REFS 2>/dev/null
+    env "${ISO[@]}" $GIT ls-files -s 2>/dev/null | awk '{ sha = $2; sub(/^[^\t]*\t/, ""); print sha " " $0 }'
+  } | awk 'NR == FNR { want[$0] = 1; next } { sha = $1; path = substr($0, length(sha) + 2) } path in want && !seen[sha]++ { print sha "\t" path }' "$tmp/bin.want" - > "$tmp/bin.blobs"
+  n=0
+  while IFS='	' read -r sha path; do
+    size=$(env "${ISO[@]}" git cat-file -s "$sha" 2>/dev/null) || continue
+    if [ "$size" -gt 52428800 ]; then toobig="$toobig$path ($((size / 1048576)) MB)"$'\n'; continue; fi
+    n=$((n + 1)); ext=dat
+    case "$(printf '%s' "$path" | tr 'A-Z' 'a-z')" in
+      *.tar.gz|*.tgz) ext=tar.gz ;; *.zip|*.jar|*.war|*.ear|*.apk|*.ipa|*.aar|*.whl|*.nupkg|*.xpi|*.vsix) ext=zip ;;
+      *.tar) ext=tar ;; *.gz) ext=gz ;; *.bz2) ext=bz2 ;; *.xz) ext=xz ;; *.7z) ext=7z ;;
+    esac
+    env "${ISO[@]}" git cat-file blob "$sha" > "$tmp/skip/b$n.$ext" 2>/dev/null
+    printf 'b%s.%s\tbinary:%s\n' "$n" "$ext" "$path" >> "$tmp/skip.map"
+  done < "$tmp/bin.blobs"
+fi
+
 skip=""
 if [ -s "$tmp/skip.map" ]; then
-  out=$(gitleaks dir "${COMMON[@]}" "$tmp/skip" 2>&1); rc=$?
-  if [ $rc -ne 0 ] && ! printf '%s\n' "$out" | grep -q '^RuleID:'; then
-    echo "secret-gate: gitleaks failed:" >&2; printf '%s\n' "$out" | tail -5 >&2; exit 2
-  fi
+  out=$(gitleaks dir "${COMMON[@]}" --max-archive-depth 3 "$tmp/skip" 2>&1); rc=$?
+  if [ $rc -ne 0 ] && ! printf '%s\n' "$out" | grep -q '^RuleID:'; then fail "$out"; exit 2; fi
   skip=$(printf '%s\n' "$out" | awk -v map="$tmp/skip.map" '
     BEGIN { while ((getline l < map) > 0) { split(l, a, "\t"); m[a[1]] = a[2] } }
     /^RuleID:/ { r = $2 }
-    /^File:/   { n = split($2, a, "/"); print m[a[n]] ":" r }' | sort -u)
+    /^File:/   { f = $2; inner = ""; i = index(f, "!"); if (i) { inner = " (inside: " substr(f, i + 1) ")"; f = substr(f, 1, i - 1) }
+                 sub(/^.*\//, "", f); print m[f] ":" r inner }' | sort -u)
 fi
 if [ -n "$skip" ]; then echo "$skip"; leaks=1; else echo "clean"; fi
+if [ -n "$toobig" ]; then echo "not scanned, over 50 MB:"; printf '%s' "$toobig"; review=1; fi
 
 SENSITIVE='(^|/)(\.env(\.[^/]*)?|\.npmrc|\.pypirc|\.netrc|\.htpasswd|id_(rsa|dsa|ecdsa|ed25519)|[^/]*\.(pem|key|p12|pfx|jks|keystore|mobileprovision|tfstate|tfvars|kdbx|ovpn|har|sqlite3?|db|sql|dump)|[^/]*\.tfstate\.backup|[^/]*credentials?[^/]*\.(json|ya?ml|xml|plist|csv)|[^/]*secrets?\.[^/]+|service[-_]?account[^/]*\.json|google-services\.json|GoogleService-Info\.plist)$'
 PLACEHOLDER='(^|/)\.env\.(example|sample|template|dist|defaults)$'
@@ -176,8 +233,13 @@ if grep -qE "$ATTR_RE" "$GITDIR/info/attributes" 2>/dev/null; then
   echo ".git/info/attributes marks files as binary; the scans above could not read them:"
   grep -E "$ATTR_RE" "$GITDIR/info/attributes"; review=1
 fi
+if [ -n "$(git for-each-ref refs/replace 2>/dev/null)" ]; then
+  echo "== REPLACE REFS =="
+  echo "refs/replace exists. The scans above read the real objects, which is what a push sends; what you see in git log may differ."
+  review=1
+fi
 
 echo "== RESULT =="
-if [ $leaks -eq 1 ]; then echo "SECRETS FOUND - stop"; exit 1; fi
+if [ $leaks -eq 1 ]; then echo "SECRETS FOUND (the sections above list where; a REVIEW section may also need reading)"; exit 1; fi
 if [ $review -eq 1 ]; then echo "no secrets detected; review the files listed above"; exit 3; fi
 echo "clean"

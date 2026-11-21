@@ -22,7 +22,10 @@ Prefer archiving to deleting, corrections to rewrites, and reporting to acting w
 would touch something running.
 
 **Input:** $ARGUMENTS, optional flags:
-- `--report` scan and print the plan, change nothing
+- `--report` scan and print the plan, change nothing. Under `--report` every phase still runs
+  its read-only checks (the gate, zizmor, `pinact run --fix=false`, hadolint, the Scorecard,
+  `gh api` GETs) and lists what it would change; it writes no file, changes no setting, and
+  where a phase says to invoke another skill it prints "would invoke <skill>" and moves on
 - `--skip-deploy` skip Phase 5
 - `--skip-diagram` skip Phase 5b
 - `--skip-memory` skip Phase 9
@@ -53,8 +56,9 @@ secret gate and the gitleaks assets live in the sibling skill, under
 
 ```bash
 pwd && git rev-parse --is-inside-work-tree && git status --short && git log --oneline -5
-ls README* AGENTS.md CLAUDE.md docs specs NOTES* CHANGELOG* HANDOFF* handoffs 2>/dev/null
-ls docker-compose.yml compose.yml Dockerfile .deploy unraid-icon.png wrangler.toml fly.toml vercel.json 2>/dev/null
+# no shell globs: zsh aborts the whole line when one pattern matches nothing
+git ls-files -co --exclude-standard | grep -iE '^(README|AGENTS|CLAUDE|NOTES|CHANGELOG|HANDOFF|TODO|PLAN)[^/]*$|^[^/]+\.md$|^(docs|specs|handoffs)/' | head -80
+for f in docker-compose.yml compose.yml Dockerfile .deploy unraid-icon.png wrangler.toml fly.toml vercel.json; do [ -e "$f" ] && echo "$f"; done
 ls scripts 2>/dev/null; find . -maxdepth 3 -name '*.plist' -not -path '*/node_modules/*' 2>/dev/null
 find . -maxdepth 3 \( -iname 'logo.*' -o -iname 'icon.*' -o -iname 'favicon.*' \) -not -path '*/node_modules/*' -not -path '*/build/*' 2>/dev/null
 ```
@@ -181,7 +185,8 @@ Every GitHub repo with workflows gets the checks from
 greps. Report zizmor findings as follow-ups with severity; don't rewrite workflow logic in
 this pass. Pinning is the one exception, because it does not change what runs:
 `GITHUB_TOKEN="$(gh auth token)" pinact run` is safe to apply, and each pinned action goes in
-the summary. A missing tool is listed as SKIPPED. A public repo with no `LICENSE` or no
+the summary. An action on a branch ref (`@main`, `@beta`) cannot be pinned to a version: list
+it as a follow-up. A missing tool is listed as SKIPPED. A public repo with no `LICENSE` or no
 `SECURITY.md` is a follow-up too.
 
 **Local secret scanning**, every git repo, GitHub or not:
@@ -190,12 +195,17 @@ the summary. A missing tool is listed as SKIPPED. A public repo with no `LICENSE
   older template did): replace its allowlist section with the one in the asset, keeping any
   custom `[[rules]]`
 - no pre-commit secret hook: install `../repo-ready/assets/pre-commit` as
-  `.githooks/pre-commit` and run `git config core.hooksPath .githooks`, unless the repo uses
-  husky, lefthook or pre-commit, in which case add the gitleaks line to that manager
+  `.githooks/pre-commit` and run `git config core.hooksPath .githooks`. If the repo uses
+  husky, lefthook or pre-commit, leave `core.hooksPath` alone: install the asset as
+  `.githooks/gitleaks-staged` and add the line `.githooks/gitleaks-staged` to that manager's
+  pre-commit step
+- a hook from an older template (it has no `SKIPPED=` line, so a token in a lockfile or an
+  `.svg` passes it): replace it with the asset
 - hook file present but `git config --get core.hooksPath` is empty in this clone: set it
 - GitHub repo with workflows but no `.github/workflows/gitleaks.yml`, or one that still calls
-  `gitleaks detect`, has no `permissions:` block, or downloads the binary with no checksum:
-  replace it with `../repo-ready/assets/gitleaks-workflow.yml`
+  `gitleaks detect`, has no `permissions:` block, downloads the binary with no checksum, or
+  has no "Scan files gitleaks skips by default" step: replace it with
+  `../repo-ready/assets/gitleaks-workflow.yml`
 
 Open Dependabot alerts and secret-scanning alerts go in the summary as follow-ups. Don't
 resolve or fix them in this pass.
@@ -208,7 +218,8 @@ bash "$SKILL_DIR/scripts/scorecard.sh" <owner>/<name>
 
 It prints the OpenSSF Scorecard total and every check, lowest first (`?` means not
 applicable). Exit 2 means no score: say SKIPPED (`brew install scorecard`). Put the total in
-the summary and sort the low checks into three piles:
+the summary and sort the checks that scored below 7 into three piles (a check at 7 or above
+needs no mention):
 
 - **This pass already handles it**: Branch-Protection (ruleset), Dependency-Update-Tool
   (`dependabot.yml`), SAST (CodeQL default setup), Token-Permissions, Pinned-Dependencies
@@ -244,7 +255,7 @@ in place: correct fields the manifest contradicts (deploy target and command, pr
 start command, framework, database, icon path, description), refresh custom fields whose
 values are stale, keep everything else. Never write `project_secrets`.
 
-Warn if the desktop app is running (`pgrep -fl tars-app`); it rereads the row on restart or
+Warn if the desktop app is running (`pgrep -fl tars-app || true`; no output means it is not); it rereads the row on restart or
 on reopening the project.
 
 ## Phase 8: Memex wiki page

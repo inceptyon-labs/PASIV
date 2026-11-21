@@ -22,11 +22,13 @@ cd "$REPO" 2>/dev/null || { echo "live-check: no such directory: $REPO" >&2; exi
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "live-check: not a git repo" >&2; exit 2; }
 TOP=$(git rev-parse --show-toplevel)
 command -v trufflehog >/dev/null 2>&1 || { echo "live-check: trufflehog not installed (brew install trufflehog)" >&2; exit 2; }
-command -v perl >/dev/null 2>&1 || { echo "live-check: perl not installed" >&2; exit 2; }
+perl -MJSON::PP -e 1 2>/dev/null || { echo "live-check: perl with JSON::PP is required" >&2; exit 2; }
 git -C "$TOP" rev-parse --verify -q HEAD >/dev/null || { echo "no commits yet"; exit 0; }
 
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-trufflehog git "file://$TOP" --results=verified,unknown --json --no-update > "$tmp/out" 2> "$tmp/err"
+# --no-ignore-tag: a "trufflehog:ignore" comment in the repo must not hide a live key.
+# --fail-on-scan-errors: a partial scan must not read as "nothing found".
+trufflehog git "file://$TOP" --results=verified,unknown --json --no-update --no-ignore-tag --fail-on-scan-errors > "$tmp/out" 2> "$tmp/err"
 rc=$?
 if [ $rc -ne 0 ]; then
   echo "live-check: trufflehog failed (exit $rc):" >&2; tail -3 "$tmp/err" >&2; exit 2
@@ -39,7 +41,8 @@ perl -MJSON::PP -ne '
   my $g = $d->{SourceMetadata}{Data}{Git} || {};
   printf "%s\t%s\t%s:%s\t%s\n", ($d->{Verified} ? "LIVE" : "UNVERIFIED (provider unreachable)"),
     $d->{DetectorName}, $g->{file} // "?", $g->{line} // "?", substr($g->{commit} // "?", 0, 12);
-' "$tmp/out" | sort -u > "$tmp/found"
+' "$tmp/out" > "$tmp/parsed" || { echo "live-check: could not read trufflehog's output" >&2; exit 2; }
+sort -u "$tmp/parsed" > "$tmp/found"
 
 if [ ! -s "$tmp/found" ]; then echo "no live credentials found in committed history"; exit 0; fi
 cat "$tmp/found"

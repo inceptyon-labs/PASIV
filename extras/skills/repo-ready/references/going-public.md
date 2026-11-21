@@ -84,13 +84,15 @@ A public repo runs workflows for strangers' pull requests.
 Run zizmor first if it is installed (`brew install zizmor`). It audits workflows, composite actions and `dependabot.yml` for far more than the greps below: template injection, credentials left on disk by `actions/checkout`, cache poisoning, writes to `GITHUB_ENV`, spoofable bot checks, over-broad secrets and permissions. With a token it also checks actions against known-vulnerable versions and impostor commits:
 
 ```bash
-GH_TOKEN="$(gh auth token 2>/dev/null)" zizmor --no-progress . ; echo "zizmor exit=$?"     # no token: add --offline
-pinact run --fix=false --no-api; echo "pinact exit=$?"                                       # non-zero: lists every action not pinned to a full SHA
+T="$(gh auth token 2>/dev/null)"
+if [ -n "$T" ]; then GH_TOKEN="$T" zizmor --no-progress .; else zizmor --offline --no-progress .; fi; echo "zizmor exit=$?"
+pinact run --fix=false --no-api; echo "pinact exit=$?"
 ```
 
-- zizmor **High** findings block a public push until fixed or accepted; show Medium and Low, and let the user decide. A fix it marks "unsafe" changes behavior: describe it, don't apply it blind.
-- Unpinned actions: `GITHUB_TOKEN="$(gh auth token)" pinact run` rewrites each `uses:` to its commit SHA with the version in a comment. That is the same code the workflow runs today, so it is safe to apply to workflows this skill wrote; for the project's existing workflows show the diff and apply on a yes.
+- zizmor exit codes: 0 = nothing found; 3 = no workflows or actions to audit, which is not applicable, not a failure; 14 = at least one **High**; 13, 12, 11 = worst finding Medium, Low, informational. High findings block a public push until fixed or accepted; show Medium and Low, and let the user decide. A fix it marks "unsafe" changes behavior: describe it, don't apply it blind.
+- pinact exits non-zero and prints one "can't be pinned" line per action that is not pinned to a full SHA (offline it cannot say more). `GITHUB_TOKEN="$T" pinact run` rewrites each `uses:` to its commit SHA with the version in a comment. That is the same code the workflow runs today, so it is safe to apply to workflows this skill wrote; for the project's existing workflows show the diff and apply on a yes. An action on a branch ref (`@main`, `@beta`) has no version to pin and stays as it is: list it as a follow-up. pinact honors a `.pinact.yaml` in the repo, so an action excluded there is not reported.
 - Neither installed: say SKIPPED for each and fall back to the greps.
+- If this runs before the skill has written `.github/` (Phase 3 of repo-ready), run it again after Phase 4: the workflows and `dependabot.yml` it writes are audited too.
 
 The greps work without either tool. Each command prints under its own heading; a heading with nothing under it is a pass.
 
@@ -100,7 +102,7 @@ echo "## fork-triggered with secrets"; grep -rnE 'pull_request_target|workflow_r
 echo "## event text outside env:"; grep -rnE '\$\{\{[^}]*github\.(head_ref|event\.[a-z_.]*(title|body|ref|label|message|name|email|head_branch))' .github/workflows 2>/dev/null \
   | grep -vE ':[0-9]+:[[:space:]]*(-[[:space:]]*)?([A-Z_][A-Z0-9_]*|if)[[:space:]]*:'
 echo "## self-hosted runners"; grep -rnE 'runs-on:.*self-hosted' .github/workflows 2>/dev/null
-echo "## workflow files with no top-level permissions: (file names)"; grep -LE '^permissions:' .github/workflows/*.y*ml 2>/dev/null
+echo "## workflow files with no top-level permissions: (file names)"; find .github/workflows -name '*.y*ml' -exec grep -LE '^permissions:' {} + 2>/dev/null
 ```
 
 - `pull_request_target` or `workflow_run` that checks out or runs PR code hands a fork the repo's secrets: stop and fix.
@@ -115,7 +117,10 @@ Everything above, plus what already lives on GitHub:
 ```bash
 # The local clone has to hold everything the remote does, or the gate scans less than what goes public.
 [ "$(git rev-parse --is-shallow-repository)" = true ] && git fetch --unshallow origin
-git fetch origin '+refs/heads/*:refs/remotes/origin/*' --tags --prune   # explicit refspec: a single-branch clone fetches one branch otherwise
+# Explicit refspecs: a single-branch clone fetches one branch otherwise, and a plain --tags
+# refuses to update a local tag that differs from the remote's. Remote tags land under
+# refs/remotes/origin-tags/, where the gate's --all picks them up without touching local tags.
+git fetch origin '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/remotes/origin-tags/*' --prune || echo "FETCH FAILED - stop, the gate would scan a stale copy"
 git ls-remote --heads --tags origin                                # every branch and tag goes public
 comm -23 <(git ls-remote --heads origin | awk '{print $2}' | sed 's#refs/heads/##' | sort) <(git branch -r --format='%(refname:lstrip=3)' | sort)   # must print nothing
 gh issue list -R $R --state all --limit 200 --json number,title
@@ -128,6 +133,8 @@ gh api repos/$R/actions/secrets --jq '.secrets[].name'             # names only;
 - Delete stale remote branches before the flip. The gate scans every local and remote-tracking ref, so it only covers the remote after the fetch above; run it again now. Pull-request refs (`refs/pull/*`) are not fetched: closed PRs from deleted branches stay readable on a public repo, so check them by hand if any exist.
 - Issue, PR and review text, release assets, the wiki, and Actions logs and artifacts all become readable. Skim the titles; delete runs whose logs print anything private (`gh run delete <id>`).
 - Commits that were force-pushed away can stay reachable by SHA on GitHub. If the gate found a secret in history, a purge plus force-push on the existing repo is not enough to rely on: rotate, and prefer publishing to a new repo over flipping the old one.
+
+When the flip is done or abandoned, drop the temporary tag refs: `git for-each-ref refs/remotes/origin-tags --format='delete %(refname)' | git update-ref --stdin`.
 
 Print, then ask before running (same rule as Phase 6):
 

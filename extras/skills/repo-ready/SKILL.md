@@ -28,7 +28,7 @@ Prepare the current project for its first push to a public or private git host. 
 pwd && git rev-parse --is-inside-work-tree 2>/dev/null && git remote -v
 ```
 
-If not a git repo, stop and suggest `git init` first.
+If not a git repo, stop and suggest `git init` first. No output from `git remote -v` means there is no remote yet, which is the normal case here.
 
 If `origin` already exists and points to a real remote, ask whether to continue — this skill is for *first* push prep. If they say yes, skip the final `gh repo create` step at the end.
 
@@ -40,9 +40,9 @@ Gather everything inferrable before asking the user anything. Run these in paral
 
 **Project type & stack** (read only the files that exist): `package.json` (name, description, author, license, scripts, deps → detect framework: React/Next/Vue/Fastify/Express/etc.), `pyproject.toml`/`setup.py`/`requirements.txt` (Python), `Cargo.toml` (Rust), `go.mod` (Go), `Gemfile` (Ruby), `composer.json` (PHP), `pubspec.yaml` (Dart/Flutter), `Dockerfile`/`docker-compose.yml` (deployment signals), `.github/workflows/` (existing CI).
 
-**Existing docs** (so we don't overwrite):
+**Existing docs** (so we don't overwrite). Not `ls` with globs: zsh aborts the whole line when one pattern matches nothing.
 ```bash
-ls README* LICENSE* CONTRIBUTING* SECURITY* CHANGELOG* CODE_OF_CONDUCT* .github 2>/dev/null
+git ls-files -co --exclude-standard | grep -iE '^(README|LICENSE|LICENCE|COPYING|CONTRIBUTING|SECURITY|CHANGELOG|CODE_OF_CONDUCT)[^/]*$|^\.github/|^\.(husky|githooks)/|^(lefthook\.ya?ml|\.pre-commit-config\.yaml)$'
 ```
 
 **Secret gate** — **do this before writing anything**:
@@ -90,7 +90,7 @@ Then ask **only** the questions that can't be inferred. Use `AskUserQuestion` wi
 
 Only offer the Unraid option when the `uranus-deploy` skill is installed (`~/.claude/skills/uranus-deploy/SKILL.md` exists); otherwise show just Public / Private. That skill is the source for the box's SSH target and bare-repo root. Never write the address into this skill or into generated public files.
 
-When **Public** is chosen (or a private repo is being flipped), read `references/going-public.md` now, before any other question: re-run the gate in strict mode (its section 1) and run sections 2–4. Report every hit and get a decision on each before Phase 4 writes anything. From here on, every gate run for this repo is strict.
+When **Public** is chosen (or a private repo is being flipped), read `references/going-public.md` now, before any other question: run its section 1 (the gate in strict mode, then the live check) and sections 2–4. Report every hit and get a decision on each before Phase 4 writes anything. From here on, every gate run for this repo is strict.
 
 The destination changes the rest of the flow. When **Unraid** is chosen, the repo has no GitHub Actions runner and no GitHub UI, so **skip** Question 6 (repo owner), Question 7 (CI starter), Question 8 (GitGuardian), and artifacts 4h (CI workflow), 4l (gitleaks CI) and 4o (Dependabot config). Everything else — README, LICENSE, local gitleaks hook (4k), etc. — still applies. Phase 6 prints the bare-SSH setup instead of `gh repo create`.
 
@@ -119,7 +119,7 @@ Write files only for what's missing or was approved to replace. Never overwrite 
 
 ### 4a. LICENSE
 
-Fetch the SPDX-standard text for the chosen license. For MIT/Apache-2.0/AGPL-3.0, use the canonical template with `{year}` and `{copyright holder}` filled from `git config user.name` (`gh api licenses/mit --jq .body` returns the exact text). The holder is a person or company name, not a GitHub login; ask only if `user.name` is empty or the manifest's `author` names someone else.
+Fetch the SPDX-standard text for the chosen license. For MIT/Apache-2.0/AGPL-3.0, use the canonical template with `{year}` and `{copyright holder}` filled from `git config user.name` (`gh api licenses/mit --jq .body` returns the exact text, with `[year]` and `[fullname]` as the placeholders). The holder is a person or company name, not a GitHub login; ask only if `user.name` is empty or the manifest's `author` names someone else.
 
 ### 4b. README.md
 
@@ -206,10 +206,11 @@ Defense-in-depth. Phase 2's scan catches what's *already* committed; this hook p
 
 **Then check for an existing hook manager**: `git config --get core.hooksPath`, `.husky/`, `lefthook.yml`, `.pre-commit-config.yaml`. Setting `core.hooksPath` to `.githooks` would turn all of those off.
 
-- **A manager is present**: don't create `.githooks/` and don't touch `core.hooksPath`. Add this one line to that manager's pre-commit step:
+- **A manager is present**: don't touch `core.hooksPath`. Copy `assets/pre-commit` to `.githooks/gitleaks-staged`, `chmod +x` it, and add this one line to that manager's pre-commit step (husky: `.husky/pre-commit`):
   ```bash
-  gitleaks git --pre-commit --staged --redact --no-banner --config .gitleaks.toml .
+  .githooks/gitleaks-staged
   ```
+  It is the same script the no-manager case installs; a bare `gitleaks` call would miss the files gitleaks skips by default.
 - **No manager**: copy `assets/pre-commit` to `.githooks/pre-commit`, `chmod +x` it, and run `git config core.hooksPath .githooks` to activate it in this clone. The setting is per-clone (`.git/config`, not versioned), so the CONTRIBUTING.md / README setup step documents it for every other clone.
 
 Either way, verify the gitleaks CLI is installed (`command -v gitleaks`) — if missing, say so and suggest `brew install gitleaks`.
