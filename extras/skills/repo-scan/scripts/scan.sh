@@ -16,7 +16,7 @@ command -v rg >/dev/null 2>&1 || { echo "scan: ripgrep (rg) not installed" >&2; 
 
 # Every group below needs PCRE2; without it rg -P fails and would read as "0 hits".
 echo ab | rg -q -P 'a(?=b)' 2>/dev/null || { echo "scan: this rg build has no PCRE2 support (rg -P)" >&2; exit 2; }
-command -v perl >/dev/null 2>&1 || { echo "scan: perl not installed" >&2; exit 2; }
+perl -MJSON::PP -MMIME::Base64 -e 1 2>/dev/null || { echo "scan: perl with JSON::PP and MIME::Base64 is required" >&2; exit 2; }
 
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 LIST="$T/list"; SAFE="$T/safe"; CODE="$T/code"; LINKS="$T/links"; HITS="$T/hits"; IGN="$T/ignored"
@@ -25,7 +25,11 @@ LIST="$T/list"; SAFE="$T/safe"; CODE="$T/code"; LINKS="$T/links"; HITS="$T/hits"
 # A .git directory that arrived in an archive can carry config that runs code
 # on ordinary git commands. Read it as text first; only use git if it is plain.
 GIT_OK=0
-if [ -d .git ]; then
+if [ -L .git ] || [ -e .git/commondir ] || [ -e .git/config.worktree ] || [ -L .git/config ]; then
+  # A symlinked .git, a commondir pointer or a worktree config means git would
+  # load configuration this script has not read.
+  echo "GIT: untrusted config - .git is a symlink or redirects to another directory (commondir, config.worktree). Not running git in this repo."
+elif [ -d .git ]; then
   if rg -q -i -P '^\s*fsmonitor\s*=\s*(?!(true|false)\s*$)|^\s*\[(filter|diff|merge|include|includeIf)\b|textconv|worktreeConfig|^\s*(sshCommand|askpass|pager|editor|gitProxy)\s*=' .git/config 2>/dev/null; then
     echo "GIT: untrusted config - .git/config defines commands (shown under AUTOEXEC). Not running git in this repo."
   else
@@ -80,7 +84,8 @@ SCOPE="$CODE"
 grp() {
   local mode="$1" label="$2" pat="$3" filter="${4:-}" n f
   if [ -n "$filter" ]; then grep -E "$filter" "$SCOPE"; else cat "$SCOPE"; fi \
-    | tr '\n' '\0' | xargs -0 rg -H -n -P --no-heading --color never --no-messages -M 180 --max-columns-preview $RGX -e "$pat" -- /dev/null > "$HITS" 2>/dev/null
+    | tr '\n' '\0' | xargs -0 rg -H -n -P --no-heading --color never --no-messages $RGX -e "$pat" -- /dev/null 2>/dev/null \
+    | SCAN_PAT="$pat" perl -e "$EXCERPT" > "$HITS"
   n=$(wc -l < "$HITS" | tr -d ' ')
   if [ "$n" -eq 0 ]; then echo "-- $label: 0"; return; fi
   f=$(cut -d: -f1 "$HITS" | sort -u | wc -l | tr -d ' ')
@@ -101,6 +106,27 @@ names() {
 
 SRC='\.(js|jsx|ts|tsx|mjs|cjs|py|rb|rs|go|php|sh|bash|zsh|java|kt|swift|pl|lua|ps1)$'
 RGX=""   # extra rg flags for one grp call (no spaces inside a flag value); reset after use
+
+# Every hit line goes through this before it is shown: the text is cut to a
+# window around the match (a hit at column 5000 is still visible), control
+# characters are dropped, and anything shaped like a credential is masked.
+# The scan output is read by a model and quoted in reports; it must not carry
+# a secret out of the target.
+MASK='
+  sub mask { my $t = shift;
+    $t =~ s{(://[^/\s:@]+:)[^@\s/]{3,}@}{$1***@}g;
+    $t =~ s{((?:_authToken|token|secret|passw(?:or)?d|pwd|api[_-]?key|access[_-]?key|private[_-]?key|authorization|bearer)\w*["\x27]?\s*[:=]\s*["\x27]?)([^\s"\x27,;]{4})[^\s"\x27,;]{4,}}{$1$2...REDACTED}gi;
+    $t =~ s{\b((?:gh[pousr]_|github_pat_|sk-ant-|sk-proj-|sk_live_|sk_test_|rk_live_|xox[baprs]-|glpat-|npm_|hf_|AKIA|ASIA|AIza|ya29\.|eyJ)[A-Za-z0-9_-]{2})[A-Za-z0-9_\-./+=]{8,}}{$1...REDACTED}g;
+    return $t }'
+EXCERPT="$MASK"'
+  my $re = eval { qr/$ENV{SCAN_PAT}/ };
+  while (my $l = <STDIN>) { chomp $l;
+    my ($loc, $text) = $l =~ /^(.*?:\d+:)(.*)$/s ? ($1, $2) : ("", $l);
+    if (length($text) > 200) {
+      my $at = ($re && $text =~ $re) ? $-[0] : 0; my $from = $at > 60 ? $at - 60 : 0;
+      $text = ($from ? "[col $from] ..." : "") . substr($text, $from, 200) . " ..." }
+    $text =~ s/[^\x09\x20-\x7e\x80-\xff]//g;
+    print $loc, mask($text), "\n" }'
 
 # ---- STEP 1: inventory -----------------------------------------------------
 echo; echo "== INVENTORY =="
@@ -140,12 +166,14 @@ grp files "source line over 1000 chars" '.{1000,}' "$SRC"
 RGX='-o -r <<after-120+-spaces>>$1'
 grp hits "code pushed off-screen by whitespace" '\S[ \t]{120,}(\S.{0,140})' "$SRC"
 RGX=""
-echo "-- base64 literals that decode to a URL, shell or exec call (decoded text shown):"
-tr '\n' '\0' < "$CODE" | xargs -0 perl -MMIME::Base64 -ne '
-  while (/([A-Za-z0-9+\/]{16,}={0,2})/g) { my $d = eval { decode_base64($1) } // "";
-    next unless $d =~ /^[\x20-\x7e\s]+$/ && $d =~ m{https?://|/bin/(ba|z)?sh|child_process|\beval\s*\(|\bexec\s*\(|powershell|curl |wget }i;
-    $d =~ s/\s+/ /g; print "   $ARGV:$.: ", substr($d, 0, 140), "\n" }
-  close ARGV if eof' -- /dev/null 2>/dev/null | head -"$MAX"
+echo "-- base64 literals that decode to a URL, shell or exec call (decoded text shown, credentials masked):"
+tr '\n' '\0' < "$CODE" | xargs -0 perl -MMIME::Base64 -e "$MASK"'
+  for my $f (@ARGV) { open(my $fh, "<", $f) or next; my $n = 0;
+    while (my $l = <$fh>) { $n++;
+      while ($l =~ /([A-Za-z0-9+\/]{16,}={0,2})/g) { my $d = eval { decode_base64($1) } // "";
+        next unless $d =~ /^[\x20-\x7e\s]+$/ && $d =~ m{https?://|/bin/(ba|z)?sh|child_process|\beval\s*\(|\bexec\s*\(|powershell|curl |wget }i;
+        $d =~ s/\s+/ /g; (my $name = $f) =~ s/[^\x20-\x7e]/?/g; print "   $name:$n: ", mask(substr($d, 0, 140)), "\n" } }
+    close $fh }' /dev/null 2>/dev/null | head -"$MAX"
 
 # ---- unicode tricks --------------------------------------------------------
 echo; echo "== UNICODE =="
@@ -195,13 +223,14 @@ grp hits "Actions: untrusted event text outside an env: mapping (injection when 
 grp hits "Actions: third-party action not pinned to a SHA" 'uses:\s*(?!actions/|github/|\./)[^@\s]+@(?![0-9a-f]{40}\b)' '(^|/)\.github/(workflows|actions)/'
 if grep -qE '(^|/)\.github/(workflows|actions)/|(^|/)action\.ya?ml$' "$SAFE"; then
   if command -v zizmor >/dev/null 2>&1; then
-    # Static and offline; --no-config so a zizmor.yml in the target cannot switch audits off.
+    # Static and offline. --no-config, --no-ignores and --collect=all so that a zizmor.yml,
+    # an inline "zizmor: ignore" comment or a .gitignore entry in the target cannot hide a workflow.
     echo "-- zizmor workflow audit (severity audit file:line note):"
-    zizmor --offline --no-config --no-progress --format=json . 2>/dev/null | perl -MJSON::PP -e '
+    zizmor --offline --no-config --no-ignores --collect=all --no-progress --format=json . 2>/dev/null | perl -MJSON::PP -e '
       local $/; my $d = eval { decode_json(<STDIN>) };
       if (ref $d ne "ARRAY") { print "   zizmor gave no parseable output; run it by hand\n"; exit }
       my %rank = (High => 0, Medium => 1, Low => 2, Informational => 3, Unknown => 4); my @rows;
-      for my $f (@$d) { next if $f->{ignored};
+      for my $f (@$d) {
         my ($l) = grep { ($_->{symbolic}{kind} // "") eq "Primary" } @{ $f->{locations} || [] }; $l ||= $f->{locations}[0] || {};
         my $k = $l->{symbolic}{key} || {}; my $path = ($k->{Local} || {})->{verbatim_path} // "?"; $path =~ s{^\./}{};
         my $sev = $f->{determinations}{severity} // "Unknown";
@@ -214,6 +243,7 @@ if grep -qE '(^|/)\.github/(workflows|actions)/|(^|/)action\.ya?ml$' "$SAFE"; th
     echo "-- zizmor workflow audit: SKIPPED, zizmor not installed (brew install zizmor); the Actions groups above are the fallback"
   fi
 fi
+grp hits "comments that tell a scanner to skip a line (each one is a finding the target wanted hidden)" 'zizmor:\s*ignore|gitleaks:allow|trufflehog:ignore|nosemgrep|#\s*nosec\b|codeql\[|checkov:skip|trivy:ignore|hadolint\s+ignore|osv-scanner.*ignore'
 grp hits "Dockerfile: remote fetch or host access" '^\s*ADD\s+https?://|--privileged|docker\.sock|--network[= ]host' '(^|/)(Dockerfile[^/]*|[^/]*\.dockerfile|(docker-)?compose[^/]*\.ya?ml)$'
 if [ -d .git ]; then
   echo "-- .git/config lines that run commands:"
@@ -244,18 +274,18 @@ echo; echo "== FILES =="
 echo "-- hidden top-level entries (files beneath):"
 grep -E '^\.' "$LIST" | cut -d/ -f1 | sort | uniq -c | sed 's/^/   /'
 echo "-- binaries and archives by content (not extension):"
-grep -vE "$MEDIA" "$SAFE" | tr '\n' '\0' | xargs -0 file --mime-type 2>/dev/null \
+grep -vE "$MEDIA" "$SAFE" | tr '\n' '\0' | xargs -0 file --mime-type -- 2>/dev/null \
   | grep -v '(for architecture' | grep -E ': +application/(x-mach-binary|x-executable|x-pie-executable|x-sharedlib|x-dosexec|x-object|x-archive|java-archive|zip|gzip|x-tar|x-bzip2|x-xz|x-7z-compressed|wasm|x-elf|vnd\.microsoft\.portable-executable|octet-stream)$' | head -40 | sed 's/^/   /'
 echo "-- media or font extension, different content:"
-grep -E "$MEDIA" "$SAFE" | tr '\n' '\0' | xargs -0 file --mime-type 2>/dev/null \
+grep -E "$MEDIA" "$SAFE" | tr '\n' '\0' | xargs -0 file --mime-type -- 2>/dev/null \
   | grep -v '(for architecture' | grep -vE ': +(image|font|audio|video)/|: +application/(pdf|font-|vnd\.ms-fontobject|vnd\.ms-opentype|x-font-)|: +application/octet-stream$' | head -40 | sed 's/^/   /'
 echo "-- source files with binary content (NUL bytes; patterns report these as 'binary file matches'):"
-grep -E "$SRC" "$CODE" | tr '\n' '\0' | xargs -0 file --mime-encoding 2>/dev/null | grep -E ': +binary$' | head -40 | sed 's/^/   /'
+grep -E "$SRC" "$CODE" | tr '\n' '\0' | xargs -0 file --mime-encoding -- 2>/dev/null | grep -E ': +binary$' | head -40 | sed 's/^/   /'
 echo "-- executable bit set, not a shell script:"
 if [ $GIT_OK -eq 1 ]; then git ls-files -s | awk '$1=="100755"{sub(/^[^\t]*\t/,""); print}'; else find . -type f \( -perm -100 -o -perm -010 -o -perm -001 \) -not -path './.git/*' -not -path '*/node_modules/*' 2>/dev/null | sed 's#^\./##'; fi \
   | grep -vE '\.(sh|bash|zsh)$|(^|/)(gradlew|mvnw)$' | head -40 | sed 's/^/   /'
 echo "-- symlinks (target):"
-head -40 "$LINKS" | while IFS= read -r l; do echo "   $l -> $(readlink "$l" 2>/dev/null)"; done
+head -40 "$LINKS" | while IFS= read -r l; do echo "   $l -> $(readlink -- "$l" 2>/dev/null)"; done
 echo "-- files over 5 MB (size in KB):"
-tr '\n' '\0' < "$SAFE" | xargs -0 du -k 2>/dev/null | awk '$1>5000' | sort -rn | head -20 | sed 's/^/   /'
+tr '\n' '\0' < "$SAFE" | xargs -0 du -k -- 2>/dev/null | awk '$1>5000' | sort -rn | head -20 | sed 's/^/   /'
 exit 0
