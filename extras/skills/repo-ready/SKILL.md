@@ -88,7 +88,7 @@ Then ask **only** the questions that can't be inferred. Use `AskUserQuestion` wi
 - **Private GitHub** — `gh repo create --private`
 - **Personal (Unraid self-hosted)** — bare git over SSH on the user's own Unraid box, LAN-only. No GitHub involved.
 
-Only offer the Unraid option when the `uranus-deploy` skill is installed (`~/.claude/skills/uranus-deploy/SKILL.md` exists); otherwise show just Public / Private. That skill is the source for the box's SSH target and bare-repo root. Never write the address into this skill or into generated public files.
+Only offer the Unraid option when the `uranus-deploy` skill is installed (`~/.claude/skills/uranus-deploy/SKILL.md` exists); otherwise show just Public / Private. That skill's gitignored `.env` is the source for the box's SSH target (`URANUS_SSH`) and bare-repo root (`URANUS_GIT_ROOT`). Never write the address into this skill or into generated public files.
 
 When **Public** is chosen (or a private repo is being flipped), read `references/going-public.md` now, before any other question: run its section 1 (the gate in strict mode, then the live check) and sections 2–4. Report every hit and get a decision on each before Phase 4 writes anything. From here on, every gate run for this repo is strict.
 
@@ -322,7 +322,7 @@ Then print the security settings from `references/github-security.md` section 2,
 
 ### Unraid destination (personal self-hosted)
 
-Bare git over SSH on the Unraid box (LAN-only). Take `<ssh-target>` (user@host) and `<git-root>` (the directory the box's existing bare repos live in) from the `uranus-deploy` skill. The remote repo doesn't exist yet, so the first command initializes it on the box, then wires the remote and pushes. Substitute `<name>`.
+Bare git over SSH on the Unraid box (LAN-only). Take `<ssh-target>` (user@host) and `<git-root>` (the directory the box's existing bare repos live in) from the `uranus-deploy` skill's `.env` (`URANUS_SSH`, `URANUS_GIT_ROOT`). The remote repo doesn't exist yet, so the first command initializes it on the box, then wires the remote and pushes. Substitute `<name>`.
 
 ```bash
 # 1. Create the bare repo on the box (idempotent — safe to re-run)
