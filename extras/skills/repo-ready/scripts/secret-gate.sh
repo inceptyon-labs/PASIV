@@ -120,6 +120,40 @@ work=$(scan_git "${ISO[@]}" -- --pre-commit --staged) || exit 2
 unc=$(printf '%s\n%s\n' "$staged" "$work" | grep -v '^$' | sort -u)
 if [ -n "$unc" ]; then echo "$unc"; leaks=1; else echo "clean"; fi
 
+echo "== PATHS GITLEAKS SKIPS BY DEFAULT (lockfiles, *.svg, go.mod, node_modules/, vendor/, ...) =="
+# gitleaks' built-in allowlist never looks inside these paths, in any mode, so
+# a token in package-lock.json or a text file named logo.svg passes the scans
+# above. Their added lines are written out under neutral names and scanned as
+# plain files; the map turns each result back into "<commit>:<file>:<rule>".
+SKIPPED='gitleaks\.toml|\.(bmp|gif|jpe?g|png|svg|tiff?|eot|[ot]tf|woff2?|docx?|xlsx?|pdf|bin|gem)$|go\.(mod|sum|work(\.sum)?)$|(^|/)(node_modules|bower_components|vendor)/|(^|/)(deno\.lock|npm-shrinkwrap\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|pipfile\.lock|poetry\.lock|gradle\.lockfile|gradlew(\.bat)?|mvnw(\.cmd)?|javascript\.json)$|verification-metadata\.xml|(^|/)(v?env|virtualenv)/lib|\.dist-info/|\.min\.js(\.map)?$'
+mkdir "$tmp/skip"; : > "$tmp/skip.map"
+collect() {   # stdin: patch text; $1: label when the stream has no commit lines; $2: file-name prefix
+  awk -v re="$SKIPPED" -v dir="$tmp/skip" -v map="$tmp/skip.map" -v c="$1" -v p="$2" '
+    /^commit [0-9a-f]+$/ { c = substr($2, 1, 12); keep = 0; next }
+    /^diff --git / { f = $0; sub(/^diff --git a\/.* b\//, "", f); keep = (tolower(f) ~ re)
+                     if (keep) { if (out) close(out); n++; out = dir "/" p n ".txt"; print p n ".txt\t" c ":" f >> map }; next }
+    keep && /^\+/ && !/^\+\+\+ / { print substr($0, 2) > out }'
+}
+DIFF=(-U0 --no-renames --no-color --no-ext-diff)
+if git rev-parse --verify -q HEAD >/dev/null; then
+  # shellcheck disable=SC2086
+  env "${ENVV[@]}" git log $REFS -p -m --full-history "${DIFF[@]}" --format='commit %H' 2>/dev/null | collect history h
+fi
+env "${ENVV[@]}" git diff --cached "${DIFF[@]}" 2>/dev/null | collect staged s
+env "${ENVV[@]}" "${ISO[@]}" git diff --cached "${DIFF[@]}" 2>/dev/null | collect uncommitted u
+skip=""
+if [ -s "$tmp/skip.map" ]; then
+  out=$(gitleaks dir "${COMMON[@]}" "$tmp/skip" 2>&1); rc=$?
+  if [ $rc -ne 0 ] && ! printf '%s\n' "$out" | grep -q '^RuleID:'; then
+    echo "secret-gate: gitleaks failed:" >&2; printf '%s\n' "$out" | tail -5 >&2; exit 2
+  fi
+  skip=$(printf '%s\n' "$out" | awk -v map="$tmp/skip.map" '
+    BEGIN { while ((getline l < map) > 0) { split(l, a, "\t"); m[a[1]] = a[2] } }
+    /^RuleID:/ { r = $2 }
+    /^File:/   { n = split($2, a, "/"); print m[a[n]] ":" r }' | sort -u)
+fi
+if [ -n "$skip" ]; then echo "$skip"; leaks=1; else echo "clean"; fi
+
 SENSITIVE='(^|/)(\.env(\.[^/]*)?|\.npmrc|\.pypirc|\.netrc|\.htpasswd|id_(rsa|dsa|ecdsa|ed25519)|[^/]*\.(pem|key|p12|pfx|jks|keystore|mobileprovision|tfstate|tfvars|kdbx|ovpn|har|sqlite3?|db|sql|dump)|[^/]*\.tfstate\.backup|[^/]*credentials?[^/]*\.(json|ya?ml|xml|plist|csv)|[^/]*secrets?\.[^/]+|service[-_]?account[^/]*\.json|google-services\.json|GoogleService-Info\.plist)$'
 PLACEHOLDER='(^|/)\.env\.(example|sample|template|dist|defaults)$'
 

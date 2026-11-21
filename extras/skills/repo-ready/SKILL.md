@@ -20,7 +20,7 @@ Prepare the current project for its first push to a public or private git host. 
 
 **Input:** $ARGUMENTS (optional — pass `--dry-run` to print the plan without writing files)
 
-`assets/`, `references/` and `scripts/` paths below are relative to this skill's directory, not the project. Resolve them to absolute paths before running a script.
+`SKILL_DIR` is this skill's own directory: the one that holds this SKILL.md, shown as the skill's base directory when it loads. Scripts and assets live there, not in the project, so always call them by absolute path (`"$SKILL_DIR/scripts/…"`). If you don't know it: `SKILL_DIR=$(ls -d ~/.claude/skills/repo-ready 2>/dev/null || find ~/.claude/plugins -maxdepth 8 -type d -path '*skills/repo-ready' 2>/dev/null | sort | tail -1)`. Every `assets/`, `references/` and `scripts/` path below is relative to it.
 
 ## Phase 1: Preflight
 
@@ -47,14 +47,14 @@ ls README* LICENSE* CONTRIBUTING* SECURITY* CHANGELOG* CODE_OF_CONDUCT* .github 
 
 **Secret gate** — **do this before writing anything**:
 ```bash
-bash scripts/secret-gate.sh "$PWD"     # scripts/ is in this skill's directory
+bash "$SKILL_DIR/scripts/secret-gate.sh" "$PWD"; echo "gate exit=$?"
 ```
 It runs gitleaks over every commit on every ref and over everything uncommitted, and lists sensitive filenames (in the tree or deleted but still in history) and tracked files that are gitignored. It prints locations only, never values. Act on the exit code:
 
 - **0** — clean.
-- **1** — secrets found. **STOP the entire skill** and report the locations. Deleting the file is not a fix: the key is in history and has to be rotated, then squashed or purged per `references/going-public.md` section 1. Resume only when the gate passes.
-- **2** — could not scan (gitleaks missing, not a repo). Say why. For a **Public** destination this is a hard stop until it can run; for Private or Unraid, ask whether to continue unscanned.
-- **3** — no secrets, but files to review. Read each listed file, confirm it holds no live credential, and `git rm --cached` the ones that should not be tracked. A file that existed only in history still ships with a push.
+- **1** — secrets found. **STOP the entire skill** and report the locations. Then run `bash "$SKILL_DIR/scripts/live-check.sh" "$PWD"` (TruffleHog, own repos only) and say which of them are still live: those get rotated first. Deleting the file is not a fix: the key is in history and has to be rotated, then squashed or purged per `references/going-public.md` section 1. Resume only when the gate passes.
+- **2** — could not scan (gitleaks missing, not a repo, shallow clone). Say why. For a **Public** destination this is a hard stop until it can run; for Private or Unraid, ask whether to continue unscanned.
+- **3** — no secrets, but files to review. Read each listed file, confirm it holds no live credential, and `git rm --cached` the ones that should not be tracked. A file that existed only in history still ships with a push. A file you cleared and kept (an `.npmrc` with no token) is listed again on every later run; that is expected, and exit 3 with only cleared files counts as a pass.
 
 Don't replace the gate with your own grep, and don't eyeball values in its place.
 
@@ -90,7 +90,7 @@ Then ask **only** the questions that can't be inferred. Use `AskUserQuestion` wi
 
 Only offer the Unraid option when the `uranus-deploy` skill is installed (`~/.claude/skills/uranus-deploy/SKILL.md` exists); otherwise show just Public / Private. That skill is the source for the box's SSH target and bare-repo root. Never write the address into this skill or into generated public files.
 
-When **Public** is chosen (or a private repo is being flipped), read `references/going-public.md` now and run sections 2–4 alongside the gate. Report the hits in the Phase 3 summary so the user decides on them before any file is written.
+When **Public** is chosen (or a private repo is being flipped), read `references/going-public.md` now, before any other question: re-run the gate in strict mode (its section 1) and run sections 2–4. Report every hit and get a decision on each before Phase 4 writes anything. From here on, every gate run for this repo is strict.
 
 The destination changes the rest of the flow. When **Unraid** is chosen, the repo has no GitHub Actions runner and no GitHub UI, so **skip** Question 6 (repo owner), Question 7 (CI starter), Question 8 (GitGuardian), and artifacts 4h (CI workflow), 4l (gitleaks CI) and 4o (Dependabot config). Everything else — README, LICENSE, local gitleaks hook (4k), etc. — still applies. Phase 6 prints the bare-SSH setup instead of `gh repo create`.
 
@@ -109,9 +109,9 @@ The repo name defaults to the directory basename — confirm or override as a se
 
 **Question 7 — CI starter?** *(GitHub destinations only — skip for Unraid, which has no Actions runner.)* Only ask if no `.github/workflows/` exists AND the project has a detectable test command: Yes (basic CI workflow — test + build on PR) | No
 
-**Question 9 — Deploy to Uranus?** *(Only when the `uranus-deploy` skill is installed.)* Ask when Phase 2 found a deployable service: a `Dockerfile`, a `docker-compose.yml`, or a server framework (Fastify/Express/Hono-on-Node/FastAPI/Flask/Go net/http/SvelteKit-node). Skip for libraries, CLIs, mobile apps, Cloudflare Workers, and static sites. Options: **Yes, self-host on Uranus** (generate 4n and hand off to the `uranus-deploy` skill in Phase 6) | **No** (deploys elsewhere or not at all). Independent of Question 2: a repo can live on GitHub and run on Uranus.
-
 **Question 8 — GitGuardian cloud scanning?** *(GitHub destinations only — skip for Unraid.)* Optional; gitleaks hook + CI are installed automatically either way: Yes (print enrollment instructions in Phase 6) | No (gitleaks alone is enough for solo/small projects)
+
+**Question 9 — Deploy to Uranus?** *(Only when the `uranus-deploy` skill is installed.)* Ask when Phase 2 found a deployable service: a `Dockerfile`, a `docker-compose.yml`, or a server framework (Fastify/Express/Hono-on-Node/FastAPI/Flask/Go net/http/SvelteKit-node). Skip for libraries, CLIs, mobile apps, Cloudflare Workers, and static sites. Options: **Yes, self-host on Uranus** (generate 4n and hand off to the `uranus-deploy` skill in Phase 6) | **No** (deploys elsewhere or not at all). Independent of Question 2: a repo can live on GitHub and run on Uranus.
 
 ## Phase 4: Generate Artifacts
 
@@ -119,7 +119,7 @@ Write files only for what's missing or was approved to replace. Never overwrite 
 
 ### 4a. LICENSE
 
-Fetch the SPDX-standard text for the chosen license. For MIT/Apache-2.0/AGPL-3.0, use the canonical template with `{year}` and `{copyright holder}` filled from `git config user.name` (confirm with user if ambiguous).
+Fetch the SPDX-standard text for the chosen license. For MIT/Apache-2.0/AGPL-3.0, use the canonical template with `{year}` and `{copyright holder}` filled from `git config user.name` (`gh api licenses/mit --jq .body` returns the exact text). The holder is a person or company name, not a GitHub login; ask only if `user.name` is empty or the manifest's `author` names someone else.
 
 ### 4b. README.md
 
@@ -142,19 +142,21 @@ git config core.hooksPath .githooks
 
 If no CONTRIBUTING.md is being written (contributions = No), add the same block to the README's "Development" or "Contributing" section instead — the hook is still installed either way.
 
+If 4k found a hook manager (husky, lefthook, pre-commit), document that manager's own install step here (husky: `npm install` runs its `prepare` script) and leave `core.hooksPath` out.
+
 ### 4d. CODE_OF_CONDUCT.md (if accepting contributions)
 
-**Do NOT vendor the full Contributor Covenant text** — its verbatim harassment-category enumerations trip the output content filter mid-generation and halt the skill. Adopt by reference instead (the React/Kubernetes/Rust convention): copy `assets/code-of-conduct.md` to `CODE_OF_CONDUCT.md`, substituting `{email}` (maintainer email from `git config user.email`, confirm if ambiguous) and `{covenant-url}` (`https://www.contributor-covenant.org/version/2/1/code_of_conduct/`).
+**Do NOT vendor the full Contributor Covenant text** — its verbatim harassment-category enumerations trip the output content filter mid-generation and halt the skill. Adopt by reference instead (the React/Kubernetes/Rust convention): copy `assets/code-of-conduct.md` to `CODE_OF_CONDUCT.md`, substituting `{contact}` and `{covenant-url}` (`https://www.contributor-covenant.org/version/2/1/code_of_conduct/`). `{contact}` is an address the maintainer is willing to publish. For a Private or Unraid repo, default to `git config user.email`. For a **Public** repo, ask for it: never publish `user.email` unasked, and a `.local` or `noreply` address cannot receive mail, so neither is an answer.
 
 If the user specifically requests the full vendored text, generate it with a warning that the request may fail and need a retry.
 
 ### 4e. SECURITY.md
 
-Template with a vuln-reporting channel. For a **Public GitHub** repo, default to GitHub's private vulnerability reporting form, `https://github.com/<owner>/<name>/security/advisories/new` (Phase 6 enables it), so no personal email is published. Use an email only if the user asks for one or the destination is not public GitHub.
+A short policy (supported versions, how to report, what to expect) with a vuln-reporting channel. For a **Public GitHub** repo, default to GitHub's private vulnerability reporting form, `https://github.com/<owner>/<name>/security/advisories/new` (Phase 6 enables it), so no personal email is published. Use an email only if the user asks for one or the destination is not public GitHub.
 
 ### 4f. CHANGELOG.md
 
-Seed with Keep-a-Changelog format:
+Seed with Keep-a-Changelog format. Use the manifest's version if it has one (`package.json`, `Cargo.toml`, `pyproject.toml`), else `0.1.0`, and today's date:
 ```markdown
 # Changelog
 All notable changes to this project will be documented in this file.
@@ -174,7 +176,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 4h. CI workflow (if approved)
 
-Detect test runner from package.json / pyproject / etc. Write `.github/workflows/ci.yml` with lint + test + build on PR and main push. Keep it minimal — user can expand later. Give it a top-level `permissions: contents: read`, trigger on `pull_request` (never `pull_request_target`), and pin each action to a full commit SHA with the version in a trailing comment (`gh api repos/<owner>/<action>/git/ref/tags/<tag> --jq .object.sha`); the Dependabot `github-actions` entry keeps the pins current.
+Detect test runner from package.json / pyproject / etc. Write `.github/workflows/ci.yml` with lint + test + build on PR and main push. Keep it minimal — user can expand later. Give it a top-level `permissions: contents: read`, trigger on `pull_request` (never `pull_request_target`), set `persist-credentials: false` on `actions/checkout`, and pin each action to a full commit SHA with the version in a trailing comment: write `uses: owner/action@vN`, then run `GITHUB_TOKEN="$(gh auth token)" pinact run .github/workflows/ci.yml` (no pinact: `gh api repos/<owner>/<action>/git/ref/tags/<tag> --jq .object.sha` per action). The Dependabot `github-actions` entry keeps the pins current. If zizmor is installed, `zizmor --offline .github/workflows/ci.yml` must come back clean before moving on.
+
+Workflows that already exist are the project's own: don't rewrite them. If `references/going-public.md` section 4 flags one (no `permissions:` block, unpinned action, `pull_request_target`), show the finding and the edit, and make it only when the user agrees.
 
 ### 4i. .gitignore sanity
 
@@ -198,11 +202,17 @@ Save into the target repo at `./assets/logo.png` or `./.github/logo.png` (the pr
 
 Defense-in-depth. Phase 2's scan catches what's *already* committed; this hook prevents *future* leaks. Always install — no question needed. The CONTRIBUTING.md step (4c) tells contributors to activate it once per clone.
 
-Copy `assets/pre-commit` to `.githooks/pre-commit` and `chmod +x` it. Copy `assets/gitleaks.toml` to `.gitleaks.toml` at the repo root. If a `.gitleaks.toml` already exists and allowlists `README.md`, `docs/` or any other whole directory by path, say so and offer to replace its allowlist section with the one from the asset; a path allowlist exempts every rule there. Both are generic — no substitutions needed; custom `[[rules]]` for new providers get appended later per the comments in the file.
+**Config, always**: copy `assets/gitleaks.toml` to `.gitleaks.toml` at the repo root (no substitutions; custom `[[rules]]` for new providers get appended later per the comments in the file). If a `.gitleaks.toml` already exists and allowlists `README.md`, `docs/` or any other whole directory by path, say so and offer to replace its allowlist section with the one from the asset; a path allowlist exempts every rule there.
 
-**Check for an existing hook manager first**: `git config --get core.hooksPath`, `.husky/`, `lefthook.yml`, `.pre-commit-config.yaml`. Setting `core.hooksPath` to `.githooks` turns all of those off. If one is present, don't install `.githooks/pre-commit`; add the gitleaks line from `assets/pre-commit` to that manager's pre-commit step and write the setup step in 4c for that manager. Still copy `.gitleaks.toml`.
+**Then check for an existing hook manager**: `git config --get core.hooksPath`, `.husky/`, `lefthook.yml`, `.pre-commit-config.yaml`. Setting `core.hooksPath` to `.githooks` would turn all of those off.
 
-**Otherwise (no hook manager), activate the hook in the current clone**: run `git config core.hooksPath .githooks`. Either way, verify the gitleaks CLI is installed (`command -v gitleaks`) — if missing, say so and suggest `brew install gitleaks`. The setting is per-clone (`.git/config`, not versioned), so the CONTRIBUTING.md / README setup step still documents it for every other clone.
+- **A manager is present**: don't create `.githooks/` and don't touch `core.hooksPath`. Add this one line to that manager's pre-commit step:
+  ```bash
+  gitleaks git --pre-commit --staged --redact --no-banner --config .gitleaks.toml .
+  ```
+- **No manager**: copy `assets/pre-commit` to `.githooks/pre-commit`, `chmod +x` it, and run `git config core.hooksPath .githooks` to activate it in this clone. The setting is per-clone (`.git/config`, not versioned), so the CONTRIBUTING.md / README setup step documents it for every other clone.
+
+Either way, verify the gitleaks CLI is installed (`command -v gitleaks`) — if missing, say so and suggest `brew install gitleaks`.
 
 ### 4l. Secret-scanning CI (backstop)
 
@@ -216,7 +226,7 @@ No question needed. Read `references/github-security.md` and write `.github/depe
 
 Follow the conventions in the `uranus-deploy` skill (`~/.claude/skills/uranus-deploy/SKILL.md`, "Onboard a new service"). Write only what is missing:
 
-- `docker-compose.yml` with `build: .`, `container_name: <name>`, `restart: unless-stopped`, host port `"${NAME_PORT:-<port>}:<port>"`, secrets as `${VAR:?set VAR in .env}`, Unraid labels `net.unraid.docker.webui` and `net.unraid.docker.icon`, bind mounts (never anonymous volumes), optional dependencies behind `profiles:`. If a `Dockerfile` is missing, write one appropriate to the stack.
+- `docker-compose.yml` with `build: .`, `container_name: <name>`, `restart: unless-stopped`, host port `"${NAME_PORT:-<port>}:<port>"`, secrets as `${VAR:?set VAR in .env}`, Unraid labels `net.unraid.docker.webui` and `net.unraid.docker.icon`, bind mounts (never anonymous volumes), optional dependencies behind `profiles:`. If a `Dockerfile` is missing, write one appropriate to the stack, then lint it: `hadolint --no-color Dockerfile` (`brew install hadolint`; not installed = say SKIPPED). Fix every `error` and `warning` in the file you just wrote. For a Dockerfile the project already had, report hadolint's findings and leave the file alone.
 - `.env.example` listing every `${VAR}` the compose file reads.
 - `.deploy` containing `<name>` so `/acp` deploys after each push to `main`. Use the name the box already knows (`/mnt/user/appdata/<name>-src`, the compose `container_name`) when the service is already deployed — it is not always the repo directory basename.
 - `unraid-icon.png` (square, 512px) from the project logo if one exists (Question 5), else skip and say so.
@@ -266,6 +276,8 @@ Skipped:
   (none)
 ```
 
+Tools this skill leans on: `gitleaks` (required for the gate), and `trufflehog`, `zizmor`, `pinact`, `osv-scanner`, `hadolint` for the checks that name them (`brew install gitleaks trufflehog zizmor pinact osv-scanner hadolint`). Add a `Skipped checks:` line to the summary for every one that was missing; a check that did not run is never reported as a pass.
+
 Run a final check:
 ```bash
 git status --short
@@ -280,7 +292,7 @@ stay accurate.
 
 **Print first, then ask.** Print the shared-state commands (`gh repo create`, the GitHub security settings, `git init --bare`, `git push`, GitGuardian enrollment) so the user can review exactly what would run, then ask via `AskUserQuestion` whether to run them (see "Offer to run" below). Never run them unprompted — and this skill still never commits: the setup commands push only what is already committed. If the working tree is dirty, say so before asking; committing stays with the user (`/acp`).
 
-**Re-run the gate immediately before any push or visibility change**: `bash scripts/secret-gate.sh "$PWD"`, with `SECRET_GATE_BUILTIN=1` in front for a Public destination (strict mode: shipped config, and the repo's own `.gitleaksignore` and `gitleaks:allow` suppressions are not honored). Files were written and the user may have committed since Phase 2. Exit 1 blocks every destination; exit 2 blocks Public. For **Public**, every `references/going-public.md` finding also has to be fixed or explicitly accepted by the user first, and if the squash route was chosen, the printed block starts with those commands.
+**Re-run the gate immediately before any push or visibility change**: `bash "$SKILL_DIR/scripts/secret-gate.sh" "$PWD"`, with `SECRET_GATE_BUILTIN=1` in front for a Public destination (strict mode: shipped config, and the repo's own `.gitleaksignore` and `gitleaks:allow` suppressions are not honored). Files were written and the user may have committed since Phase 2. Exit 1 blocks every destination; exit 2 blocks Public. For **Public**, every `references/going-public.md` finding also has to be fixed or explicitly accepted by the user first. If the squash route was chosen, the printed block starts with those commands, and the gate run that follows them adds `SECRET_GATE_REFS=main`, because the old history is still on the local `private-history` branch.
 
 Which command block you print depends on the Question 2 destination.
 
@@ -305,7 +317,7 @@ gh repo edit <owner>/<name> --add-topic <t1>,<t2>,<t3>
 
 If the local branch is not `main`, put `git branch -M main` ahead of the create command. After a Public push, `git ls-remote --heads origin` should list only the branch that was meant to go out.
 
-Then print the security settings from `references/github-security.md` section 2 for `<owner>/<name>`: Dependabot alerts, security updates and the read-only default token for every repo; secret scanning, push protection, private vulnerability reporting, the default-branch ruleset and CodeQL default setup for **Public** only. If Phase 1 found an existing `origin` and `gh repo create` is skipped, still print them for that repo. For a visibility flip, print the flip command from `references/going-public.md` section 5 first.
+Then print the security settings from `references/github-security.md` section 2, starting with the line `R=<owner>/<name>` that the commands use: Dependabot alerts, security updates and the read-only default token for every repo; secret scanning, push protection, private vulnerability reporting, the default-branch ruleset and CodeQL default setup for **Public** only. If Phase 1 found an existing `origin` and `gh repo create` is skipped, still print them for that repo. For a visibility flip, print the flip command from `references/going-public.md` section 5 first.
 
 ### Unraid destination (personal self-hosted)
 

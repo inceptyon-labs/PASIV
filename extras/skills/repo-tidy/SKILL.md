@@ -28,9 +28,10 @@ would touch something running.
 - `--skip-memory` skip Phase 9
 - `--no-commit` stop before the final `/acp`
 
-`references/` paths are relative to this skill's directory. The TARS builder and the GitHub
-security standard live in the sibling skill: `../repo-ready/references/tars-registration.md`
-and `../repo-ready/references/github-security.md`.
+`SKILL_DIR` is this skill's own directory: the one that holds this SKILL.md, shown as the skill's base directory when it loads. Scripts and assets live there, not in the project, so always call them by absolute path (`"$SKILL_DIR/scripts/…"`). If you don't know it: `SKILL_DIR=$(ls -d ~/.claude/skills/repo-tidy 2>/dev/null || find ~/.claude/plugins -maxdepth 8 -type d -path '*skills/repo-tidy' 2>/dev/null | sort | tail -1)`.
+`references/` paths are relative to it. The TARS builder, the GitHub security standard, the
+secret gate and the gitleaks assets live in the sibling skill, under
+`"$SKILL_DIR/../repo-ready/"`: every `../repo-ready/…` path below starts there.
 
 ## Hard rules
 
@@ -134,6 +135,9 @@ box): the standard is the `uranus-deploy` skill. Invoke it for the checklist and
 - no rsync-style deploy script, no per-project `deploy-*.sh` that duplicates `deploy`
 - runtime state that the app writes (config edited through a UI, caches, catalogs) lives in
   a mounted directory, not in the image
+- `hadolint --no-color Dockerfile` (every Dockerfile in the repo; `brew install hadolint`,
+  not installed = SKIPPED): list each `error` and `warning` with its rule code as a gap.
+  Changing a Dockerfile changes the next deploy, so these are report-only here
 
 If the service is deployed some other way (rsync, a hand-made container in the Unraid UI),
 that is a **migration**: write the plan (compose file shape, what moves where, what per-host
@@ -172,9 +176,12 @@ Read `../repo-ready/references/github-security.md` and compare the repo against 
 All of these are safe to apply. If a call is refused (no admin on the repo, plan doesn't
 include it), list it as a follow-up. Under `--report`, print the gaps only.
 
-Public repos also get the workflow checks from `../repo-ready/references/going-public.md`
-section 4 (`pull_request_target`, event data in `run:`, self-hosted runners). Report hits as
-follow-ups; don't rewrite workflows in this pass. A public repo with no `LICENSE` or no
+Every GitHub repo with workflows gets the checks from
+`../repo-ready/references/going-public.md` section 4: zizmor, the pinact check and the
+greps. Report zizmor findings as follow-ups with severity; don't rewrite workflow logic in
+this pass. Pinning is the one exception, because it does not change what runs:
+`GITHUB_TOKEN="$(gh auth token)" pinact run` is safe to apply, and each pinned action goes in
+the summary. A missing tool is listed as SKIPPED. A public repo with no `LICENSE` or no
 `SECURITY.md` is a follow-up too.
 
 **Local secret scanning**, every git repo, GitHub or not:
@@ -279,7 +286,7 @@ TARS:       deploy_target, production_url, icon_path
 Wiki:       ~/memex/wiki/projects/<name>.md (dated note)
 Memory:     deleted audit-2026-08-21-findings (fixed, in AGENTS.md); kept 1
 Deployment: on standard  |  MIGRATION PLAN below, not run
-Security:   dependabot.yml (npm, github-actions), secret scanning on, ruleset, gate clean  |  current  |  not GitHub
+Security:   dependabot.yml (npm, github-actions), secret scanning on, ruleset, 3 actions pinned, zizmor 1 High, gate clean  |  current  |  not GitHub
 Diagram:    created  |  refreshed, re-pinned to <sha>  |  current  |  skipped (<why>)
 Follow-ups: no logo; CHANGELOG stopped at 1.2
 ```
@@ -288,11 +295,13 @@ Then run the secret gate over everything about to be committed and everything al
 history:
 
 ```bash
-bash ../repo-ready/scripts/secret-gate.sh "$PWD"      # public GitHub repo: prefix SECRET_GATE_BUILTIN=1 (strict mode)
+bash "$SKILL_DIR/../repo-ready/scripts/secret-gate.sh" "$PWD"; echo "gate exit=$?"      # public GitHub repo: prefix SECRET_GATE_BUILTIN=1 (strict mode)
 ```
 
-Exit 1 (secrets found): **stop, do not invoke `acp`**. Print the locations; for a GitHub repo
-that is public, say the key is already exposed and has to be rotated. Exit 3: read each listed
+Exit 1 (secrets found): **stop, do not invoke `acp`**. Print the locations, then run
+`bash "$SKILL_DIR/../repo-ready/scripts/live-check.sh" "$PWD"` (TruffleHog, verifies each
+candidate with its provider) and say which are still live. For a GitHub repo that is public,
+say the key is already exposed and has to be rotated. Exit 3: read each listed
 file and resolve it (untrack, or confirm it is clean) before committing. Exit 2 (gitleaks
 missing): say so, and continue only for a repo with no public remote.
 

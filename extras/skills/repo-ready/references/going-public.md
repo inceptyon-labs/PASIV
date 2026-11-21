@@ -6,7 +6,15 @@ Publishing is one-way: a clone, a fork or a cache can keep whatever was visible 
 
 ## 1. Secrets, in history and in the tree
 
-Run the gate in strict mode, so an allowlist in the repo's own `.gitleaks.toml`, a `.gitleaksignore` entry or an inline `gitleaks:allow` comment can't hide anything: `SECRET_GATE_BUILTIN=1 bash scripts/secret-gate.sh "$PWD"`. It must exit 0, or exit 3 with every listed file read and cleared. Exit 1 or 2 blocks a public destination.
+Run the gate in strict mode, so an allowlist in the repo's own `.gitleaks.toml`, a `.gitleaksignore` entry or an inline `gitleaks:allow` comment can't hide anything: `SECRET_GATE_BUILTIN=1 bash "$SKILL_DIR/scripts/secret-gate.sh" "$PWD"`. It must exit 0, or exit 3 with every listed file read and cleared. Exit 1 or 2 blocks a public destination.
+
+Then ask the providers. The gate matches patterns; `scripts/live-check.sh` runs TruffleHog over every branch's history and verifies each candidate with its provider, so it finds live keys the gate's rules missed and tells you which of the gate's findings still work:
+
+```bash
+bash "$SKILL_DIR/scripts/live-check.sh" "$PWD"; echo "live-check exit=$?"
+```
+
+Exit 1 (a LIVE credential) blocks a public destination even when the gate was clean. Exit 3 (candidates the provider could not be reached to verify) is treated the same until each is checked. Exit 2 (TruffleHog not installed) is reported as SKIPPED, not as a pass. "Not live" is not "safe to publish": a revoked key in history still gets the repo flagged, so it goes through the steps below too. Own repos only; never run it on a repo being vetted.
 
 A secret that was ever committed stays compromised after it is deleted from HEAD. In order:
 
@@ -24,19 +32,25 @@ A secret that was ever committed stays compromised after it is deleted from HEAD
      git filter-repo --invert-paths --path <file>            # drop a file everywhere
      git filter-repo --replace-text <(echo 'literal-secret==>REMOVED')   # or scrub a value
      ```
-3. Re-run the gate. It has to pass on the rewritten history. After a squash, the old commits are still on the local `private-history` branch, so scope the gate to what will be pushed: `SECRET_GATE_BUILTIN=1 SECRET_GATE_REFS=main bash scripts/secret-gate.sh "$PWD"`.
+3. Re-run the gate. It has to pass on the rewritten history. After a squash, the old commits are still on the local `private-history` branch, so scope the gate to what will be pushed: `SECRET_GATE_BUILTIN=1 SECRET_GATE_REFS=main bash "$SKILL_DIR/scripts/secret-gate.sh" "$PWD"`.
 
 ## 2. Personal and infrastructure details
 
 Not secrets, but they are in the repo for good once public. List the hits and let the user decide on each:
 
 ```bash
-git grep -nIE '\b(192\.168|10\.[0-9]{1,3}|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9]{1,3}\.[0-9]{1,3}\b|/Users/[A-Za-z0-9._-]+|/home/[a-z0-9._-]+|\broot@|[a-z0-9-]+\.(local|lan|internal)\b' | cut -c1-160
-git grep -nIE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' | grep -viE 'noreply|example\.(com|org)|@(types|[a-z0-9-]+/)' | cut -c1-160
-git log --all --format='%an <%ae>%n%cn <%ce>' | sort -u      # every author email becomes public
+# private IPs, home-directory paths, root@ logins, .local/.lan/.internal hostnames (no \b: BSD regex ignores it)
+PAT='(^|[^0-9.])(192\.168|10\.[0-9]{1,3}|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9]{1,3}\.[0-9]{1,3}([^0-9]|$)|/Users/[A-Za-z0-9._-]+|/home/[a-z0-9._-]+|(^|[^A-Za-z0-9])root@|[a-z0-9-]+\.(local|lan|internal)([^a-z0-9]|$)'
+EMAIL='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}'
+echo "## in the tree";          git grep -nIE "$PAT" | cut -c1-160
+echo "## emails in the tree";   git grep -nIE "$EMAIL" | grep -viE 'noreply|example\.(com|org)|@(types|[a-z0-9-]+/)' | cut -c1-160
+echo "## commits whose diff has such a line (history)"; git log --all --oneline -E -G"$PAT|$EMAIL" | head -30
+echo "## author identities";    git log --all --format='%an <%ae>%n%cn <%ce>' | sort -u      # every author email becomes public
 ```
 
-If the user wants a commit email kept private: set `git config user.email <id>+<login>@users.noreply.github.com` for future commits. Rewriting past ones is a `git filter-repo --mailmap` history rewrite; offer it, don't assume it.
+Editing a file fixes the tree, not the history. If the user wants a hit gone and its commit is in the history list, that takes the squash or a `git filter-repo --replace-text` purge from section 1; say so, don't report it as fixed.
+
+If the user wants a commit email kept private: `git config user.email "$(gh api user --jq '"\(.id)+\(.login)@users.noreply.github.com"')"` covers future commits. Rewriting past ones is a `git filter-repo --mailmap` history rewrite. Offer both; never change `user.email` or rewrite authors unasked.
 
 ## 3. What else ships
 
@@ -48,21 +62,45 @@ cat .gitmodules 2>/dev/null
 git grep -nIE 'git\+ssh://|git@[a-z0-9.-]+:|"file:\.\.?/|link:\.\.?/' -- '*.json' '*.toml' '*.yaml' '*.yml' '*.lock' | head
 # agent files, handoffs, task trackers and scratch notes that are tracked
 git ls-files | grep -iE '(^|/)(CLAUDE\.md|AGENTS\.md|\.claude/|\.cursor|\.mcp\.json|\.beans/|handoffs?/|HANDOFF|NOTES\.md|TODO\.md|docs/tasks/)'
+# known vulnerabilities and licenses of every locked dependency (reads lockfiles only; needs network)
+osv-scanner scan source -r . --licenses 2>/dev/null; echo "osv-scanner exit=$?"
 ```
 
 Agent files are the user's call (`de-vibe --gitignore` untracks them). A public repo needs a LICENSE; without one it is all-rights-reserved, so confirm "None" was deliberate.
+
+Reading the `osv-scanner` output (exit 1 = vulnerabilities found, 128 = no lockfile, so nothing was checked; not installed = SKIPPED, `brew install osv-scanner`):
+
+- **Vulnerabilities**: report the count and the worst CVSS score. Publishing with known-vulnerable dependencies is the user's call, but they should hear it before Dependabot tells them in public. Don't upgrade anything in this pass.
+- **Licenses**: the last table lists each license and how many packages use it. Compare it with the license chosen in Question 1:
+  - Project is MIT, Apache-2.0 or BSD and a dependency is GPL, AGPL or LGPL only (no `OR` alternative): flag it. The combined work may have to be distributed under the copyleft license.
+  - Any dependency with no license, `UNLICENSED`, or a non-commercial or source-available license (`BUSL`, `SSPL`, `CC-BY-NC`, `Elastic`): flag it for every project license.
+  - Project is AGPL-3.0 or GPL-3.0: permissive dependencies are fine; flag `GPL-2.0-only` and Apache-2.0 under GPL-2.0.
+  - Name the packages behind a flagged license with `osv-scanner scan source -r . --licenses --format json`. This is a heads-up, not legal advice; say that.
 
 ## 4. Workflows
 
 A public repo runs workflows for strangers' pull requests.
 
+Run zizmor first if it is installed (`brew install zizmor`). It audits workflows, composite actions and `dependabot.yml` for far more than the greps below: template injection, credentials left on disk by `actions/checkout`, cache poisoning, writes to `GITHUB_ENV`, spoofable bot checks, over-broad secrets and permissions. With a token it also checks actions against known-vulnerable versions and impostor commits:
+
 ```bash
-grep -rnE 'pull_request_target|workflow_run' .github/workflows 2>/dev/null
+GH_TOKEN="$(gh auth token 2>/dev/null)" zizmor --no-progress . ; echo "zizmor exit=$?"     # no token: add --offline
+pinact run --fix=false --no-api; echo "pinact exit=$?"                                       # non-zero: lists every action not pinned to a full SHA
+```
+
+- zizmor **High** findings block a public push until fixed or accepted; show Medium and Low, and let the user decide. A fix it marks "unsafe" changes behavior: describe it, don't apply it blind.
+- Unpinned actions: `GITHUB_TOKEN="$(gh auth token)" pinact run` rewrites each `uses:` to its commit SHA with the version in a comment. That is the same code the workflow runs today, so it is safe to apply to workflows this skill wrote; for the project's existing workflows show the diff and apply on a yes.
+- Neither installed: say SKIPPED for each and fall back to the greps.
+
+The greps work without either tool. Each command prints under its own heading; a heading with nothing under it is a pass.
+
+```bash
+echo "## fork-triggered with secrets"; grep -rnE 'pull_request_target|workflow_run' .github/workflows 2>/dev/null
 # untrusted event text; safe only as the value of an env: entry (those lines are filtered out)
-grep -rnE '\$\{\{[^}]*github\.(head_ref|event\.[a-z_.]*(title|body|ref|label|message|name|email|head_branch))' .github/workflows 2>/dev/null \
+echo "## event text outside env:"; grep -rnE '\$\{\{[^}]*github\.(head_ref|event\.[a-z_.]*(title|body|ref|label|message|name|email|head_branch))' .github/workflows 2>/dev/null \
   | grep -vE ':[0-9]+:[[:space:]]*(-[[:space:]]*)?([A-Z_][A-Z0-9_]*|if)[[:space:]]*:'
-grep -rnE 'runs-on:.*self-hosted' .github/workflows 2>/dev/null
-grep -LE '^permissions:' .github/workflows/*.y*ml 2>/dev/null                          # no explicit token scope
+echo "## self-hosted runners"; grep -rnE 'runs-on:.*self-hosted' .github/workflows 2>/dev/null
+echo "## workflow files with no top-level permissions: (file names)"; grep -LE '^permissions:' .github/workflows/*.y*ml 2>/dev/null
 ```
 
 - `pull_request_target` or `workflow_run` that checks out or runs PR code hands a fork the repo's secrets: stop and fix.

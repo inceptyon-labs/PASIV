@@ -26,7 +26,7 @@ LIST="$T/list"; SAFE="$T/safe"; CODE="$T/code"; LINKS="$T/links"; HITS="$T/hits"
 # on ordinary git commands. Read it as text first; only use git if it is plain.
 GIT_OK=0
 if [ -d .git ]; then
-  if rg -q -i -P '^\s*fsmonitor\s*=\s*(?!(true|false)\s*$)|^\s*\[(filter|diff|merge|include|includeIf)\b|textconv|^\s*(sshCommand|askpass|pager|editor|gitProxy)\s*=' .git/config 2>/dev/null; then
+  if rg -q -i -P '^\s*fsmonitor\s*=\s*(?!(true|false)\s*$)|^\s*\[(filter|diff|merge|include|includeIf)\b|textconv|worktreeConfig|^\s*(sshCommand|askpass|pager|editor|gitProxy)\s*=' .git/config 2>/dev/null; then
     echo "GIT: untrusted config - .git/config defines commands (shown under AUTOEXEC). Not running git in this repo."
   else
     GIT_OK=1
@@ -37,6 +37,8 @@ if [ $GIT_OK -eq 1 ]; then
   # stays in the list, so .gitignore cannot be used to hide one.
   if git -c core.quotepath=off ls-files -co --exclude-standard > "$LIST" 2>/dev/null && [ -s "$LIST" ]; then
     echo "GIT: file list from git ($(wc -l < "$LIST" | tr -d ' ') files)"
+    refs=$(git for-each-ref --format='%(refname)' 2>/dev/null | grep -cvE '^refs/(remotes/[^/]+/HEAD|stash)$')
+    echo "GIT: $refs refs; only the checked-out tree ($(git rev-parse --abbrev-ref HEAD 2>/dev/null)) is pattern-scanned, not other branches, tags or deleted files"
     odd=$(grep -c '^"' "$LIST"); [ "$odd" -gt 0 ] && echo "ANOMALY: $odd filenames with quotes or control characters, NOT scanned by the pattern groups (git ls-files | grep '^\"')"
   else
     # git refused (ownership, corruption) or listed nothing: never report an empty scan as clean.
@@ -78,7 +80,7 @@ SCOPE="$CODE"
 grp() {
   local mode="$1" label="$2" pat="$3" filter="${4:-}" n f
   if [ -n "$filter" ]; then grep -E "$filter" "$SCOPE"; else cat "$SCOPE"; fi \
-    | tr '\n' '\0' | xargs -0 rg -H -n -P --no-heading --color never --no-messages -M 180 --max-columns-preview -e "$pat" -- /dev/null > "$HITS" 2>/dev/null
+    | tr '\n' '\0' | xargs -0 rg -H -n -P --no-heading --color never --no-messages -M 180 --max-columns-preview $RGX -e "$pat" -- /dev/null > "$HITS" 2>/dev/null
   n=$(wc -l < "$HITS" | tr -d ' ')
   if [ "$n" -eq 0 ]; then echo "-- $label: 0"; return; fi
   f=$(cut -d: -f1 "$HITS" | sort -u | wc -l | tr -d ' ')
@@ -98,11 +100,19 @@ names() {
 }
 
 SRC='\.(js|jsx|ts|tsx|mjs|cjs|py|rb|rs|go|php|sh|bash|zsh|java|kt|swift|pl|lua|ps1)$'
+RGX=""   # extra rg flags for one grp call (no spaces inside a flag value); reset after use
+
+# ---- STEP 1: inventory -----------------------------------------------------
+echo; echo "== INVENTORY =="
+names "manifests and lockfiles" '(^|/)(package\.json|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|requirements[^/]*\.txt|setup\.py|pyproject\.toml|Pipfile(\.lock)?|poetry\.lock|uv\.lock|Cargo\.(toml|lock)|go\.(mod|sum)|Gemfile(\.lock)?|composer\.(json|lock)|Package\.(swift|resolved)|pubspec\.(yaml|lock)|build\.gradle(\.kts)?|pom\.xml)$'
+echo "-- files by extension:"
+sed -nE 's/.*\.([A-Za-z0-9]{1,6})$/\1/p' "$LIST" | tr 'A-Z' 'a-z' | sort | uniq -c | sort -rn | head -12 | sed 's/^/   /'
 
 # ---- STEP 4: code that runs at install or build ------------------------------
 echo; echo "== INSTALL =="
 grp hits "npm lifecycle scripts" '"(preinstall|install|postinstall|preuninstall|postuninstall|prepare|prepublish|prepublishOnly|prepack|postpack)"\s*:' '(^|/)package\.json$'
 names "build-time code (runs on install/build)" '(^|/)(binding\.gyp|build\.rs|setup\.py|extconf\.rb|conftest\.py|[^/]*\.pth|Makefile|justfile|Taskfile\.ya?ml|\.pnpmfile\.cjs)$'
+grp hits "build hooks in manifests (in-tree Python build backend, Rust proc-macro, go:generate)" '^\s*backend-path\s*=|^\s*proc-macro\s*=\s*true|^//go:generate\s' '(^|/)(pyproject\.toml|Cargo\.toml)$|\.go$'
 grp hits "pipe to shell" '(curl|wget|iwr|Invoke-WebRequest)[^|\n]*\|\s*(sudo\s+)?((ba|z|da)?sh|python3?|node|iex)\b'
 grp hits "registry override or token" 'registry\s*=|_authToken|always-auth|--(extra-)?index-url|trusted-host' '(^|/)(\.npmrc|\.yarnrc(\.yml)?|pip\.conf|requirements[^/]*\.txt|\.pypirc)$'
 grp hits "non-registry dependency in a manifest" '"[^"]+"\s*:\s*"(git\+|git://|github:|https?://|file:)' '(^|/)package\.json$'
@@ -127,7 +137,15 @@ grp hits "python dynamic exec" '\bexec\s*\(|__import__\s*\(|compile\s*\(.*exec|m
 grp hits "long base64-like string" '[A-Za-z0-9+/]{120,}={0,2}'
 grp hits "long hex literal" '0x[0-9a-fA-F]{24,}'
 grp files "source line over 1000 chars" '.{1000,}' "$SRC"
-grp hits "code pushed off-screen by whitespace" '\S[ \t]{120,}\S' "$SRC"
+RGX='-o -r <<after-120+-spaces>>$1'
+grp hits "code pushed off-screen by whitespace" '\S[ \t]{120,}(\S.{0,140})' "$SRC"
+RGX=""
+echo "-- base64 literals that decode to a URL, shell or exec call (decoded text shown):"
+tr '\n' '\0' < "$CODE" | xargs -0 perl -MMIME::Base64 -ne '
+  while (/([A-Za-z0-9+\/]{16,}={0,2})/g) { my $d = eval { decode_base64($1) } // "";
+    next unless $d =~ /^[\x20-\x7e\s]+$/ && $d =~ m{https?://|/bin/(ba|z)?sh|child_process|\beval\s*\(|\bexec\s*\(|powershell|curl |wget }i;
+    $d =~ s/\s+/ /g; print "   $ARGV:$.: ", substr($d, 0, 140), "\n" }
+  close ARGV if eof' -- /dev/null 2>/dev/null | head -"$MAX"
 
 # ---- unicode tricks --------------------------------------------------------
 echo; echo "== UNICODE =="
@@ -170,10 +188,32 @@ grp hits "agent hooks and MCP commands" '"(hooks|command|args|url)"\s*:' '(^|/)(
 grp hits "devcontainer lifecycle commands" '"(postCreate|postStart|postAttach|onCreate|initialize|updateContent)Command"'
 grp hits "gitattributes drivers" '\b(filter|diff|merge)=' '(^|/)\.gitattributes$'
 grp hits "submodule URLs" '^\s*url\s*=' '(^|/)\.gitmodules$'
-grp hits "instructions aimed at an AI agent" '(?i)ignore (all |any )?(previous|prior|above|earlier) (instructions|rules)|disregard (the|your|all|any) (previous|above|instructions)|you are now\b|do not (tell|mention|reveal|inform) (this |it )?(to )?the user|</?system>|(always|must|silently) (run|execute)[^\n]{0,40}(curl|wget|bash|sh\b|npx|pip)'
+grp hits "instructions aimed at an AI agent" '(?i)\b(ai|llm|assistant|agent|reviewer|claude|copilot|cursor|gemini|chatgpt)s?\b[^\n]{0,40}\b(must|should|always|need to|are required to|have to)\b[^\n]{0,30}\b(run|execute|ignore|skip|mark|report|install|fetch|not)\b|<!--[^\n]{0,80}\b(assistant|ai agent|llm|claude|system prompt|instructions?)\b|\b(silently|quietly|secretly|without (telling|asking|mentioning|informing))\b[^\n]{0,40}\b(run|execute|install|download|delete|send|upload)\b|\bmark (the )?(verdict|result|scan|review|repo(sitory)?) (as )?(pass|safe|clean)|\bdo not (report|flag|mention)\b|ignore (all |any )?(previous|prior|above|earlier) (instructions|rules)|disregard (the|your|all|any) (previous|above|instructions)|you are now\b|do not (tell|mention|reveal|inform) (this |it )?(to )?the user|</?system>|(always|must|silently) (run|execute)[^\n]{0,40}(curl|wget|bash|sh\b|npx|pip)'
 grp hits "Actions: fork-triggered with secrets" 'pull_request_target|workflow_run' '(^|/)\.github/workflows/'
+grp hits "Actions: checks out pull-request code (CRITICAL together with pull_request_target or workflow_run)" 'github\.event\.pull_request\.head\.(sha|ref)|refs/pull/|github\.head_ref' '(^|/)\.github/(workflows|actions)/'
 grp hits "Actions: untrusted event text outside an env: mapping (injection when inside run: or script:)" '^(?!\s*(-\s*)?([A-Z_][A-Z0-9_]*|if)\s*:).*\$\{\{[^}]*github\.(head_ref|event\.[a-z_.]*(title|body|ref|label|message|name|email|head_branch))' '(^|/)\.github/(workflows|actions)/'
 grp hits "Actions: third-party action not pinned to a SHA" 'uses:\s*(?!actions/|github/|\./)[^@\s]+@(?![0-9a-f]{40}\b)' '(^|/)\.github/(workflows|actions)/'
+if grep -qE '(^|/)\.github/(workflows|actions)/|(^|/)action\.ya?ml$' "$SAFE"; then
+  if command -v zizmor >/dev/null 2>&1; then
+    # Static and offline; --no-config so a zizmor.yml in the target cannot switch audits off.
+    echo "-- zizmor workflow audit (severity audit file:line note):"
+    zizmor --offline --no-config --no-progress --format=json . 2>/dev/null | perl -MJSON::PP -e '
+      local $/; my $d = eval { decode_json(<STDIN>) };
+      if (ref $d ne "ARRAY") { print "   zizmor gave no parseable output; run it by hand\n"; exit }
+      my %rank = (High => 0, Medium => 1, Low => 2, Informational => 3, Unknown => 4); my @rows;
+      for my $f (@$d) { next if $f->{ignored};
+        my ($l) = grep { ($_->{symbolic}{kind} // "") eq "Primary" } @{ $f->{locations} || [] }; $l ||= $f->{locations}[0] || {};
+        my $k = $l->{symbolic}{key} || {}; my $path = ($k->{Local} || {})->{verbatim_path} // "?"; $path =~ s{^\./}{};
+        my $sev = $f->{determinations}{severity} // "Unknown";
+        push @rows, [ $rank{$sev} // 4, sprintf("   %-13s %-28s %s:%d  %s", $sev, $f->{ident}, $path,
+          ($l->{concrete}{location}{start_point}{row} // 0) + 1, substr($l->{symbolic}{annotation} // "", 0, 90)) ] }
+      print "   ", scalar(@rows), " findings\n"; my $n = 0;
+      for (sort { $a->[0] <=> $b->[0] or $a->[1] cmp $b->[1] } @rows) { last if ++$n > 30; print "$_->[1]\n" }
+      print "   ... ", @rows - 30, " more (zizmor --offline --no-config .)\n" if @rows > 30'
+  else
+    echo "-- zizmor workflow audit: SKIPPED, zizmor not installed (brew install zizmor); the Actions groups above are the fallback"
+  fi
+fi
 grp hits "Dockerfile: remote fetch or host access" '^\s*ADD\s+https?://|--privileged|docker\.sock|--network[= ]host' '(^|/)(Dockerfile[^/]*|[^/]*\.dockerfile|(docker-)?compose[^/]*\.ya?ml)$'
 if [ -d .git ]; then
   echo "-- .git/config lines that run commands:"
@@ -205,10 +245,10 @@ echo "-- hidden top-level entries (files beneath):"
 grep -E '^\.' "$LIST" | cut -d/ -f1 | sort | uniq -c | sed 's/^/   /'
 echo "-- binaries and archives by content (not extension):"
 grep -vE "$MEDIA" "$SAFE" | tr '\n' '\0' | xargs -0 file --mime-type 2>/dev/null \
-  | grep -E ': +application/(x-mach-binary|x-executable|x-pie-executable|x-sharedlib|x-dosexec|x-object|x-archive|java-archive|zip|gzip|x-tar|x-bzip2|x-xz|x-7z-compressed|wasm|x-elf|vnd\.microsoft\.portable-executable|octet-stream)$' | head -40 | sed 's/^/   /'
+  | grep -v '(for architecture' | grep -E ': +application/(x-mach-binary|x-executable|x-pie-executable|x-sharedlib|x-dosexec|x-object|x-archive|java-archive|zip|gzip|x-tar|x-bzip2|x-xz|x-7z-compressed|wasm|x-elf|vnd\.microsoft\.portable-executable|octet-stream)$' | head -40 | sed 's/^/   /'
 echo "-- media or font extension, different content:"
 grep -E "$MEDIA" "$SAFE" | tr '\n' '\0' | xargs -0 file --mime-type 2>/dev/null \
-  | grep -vE ': +(image|font|audio|video)/|: +application/(pdf|font-|vnd\.ms-fontobject|vnd\.ms-opentype|x-font-)|: +application/octet-stream$' | head -40 | sed 's/^/   /'
+  | grep -v '(for architecture' | grep -vE ': +(image|font|audio|video)/|: +application/(pdf|font-|vnd\.ms-fontobject|vnd\.ms-opentype|x-font-)|: +application/octet-stream$' | head -40 | sed 's/^/   /'
 echo "-- source files with binary content (NUL bytes; patterns report these as 'binary file matches'):"
 grep -E "$SRC" "$CODE" | tr '\n' '\0' | xargs -0 file --mime-encoding 2>/dev/null | grep -E ': +binary$' | head -40 | sed 's/^/   /'
 echo "-- executable bit set, not a shell script:"
