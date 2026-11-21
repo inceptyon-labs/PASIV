@@ -4,9 +4,6 @@ dist/
 *.log
 .DS_Store
 .env
-.github/automation.config.json
-review-*.json
-!.github/automation.config.json.example
 
 # Upstream-tracking cache (scripts/superpowers-diff.sh)
 .cache/

@@ -27,8 +27,7 @@
     {
       "name": "pasiv-extras",
       "source": "./extras",
-      "description": "Standalone utilities: repo security scan, first-push repo prep, App Store readiness, de-vibe, image generation. Ad hoc — not loaded by the core workflow.",
-      "version": "1.0.0",
+      "description": "Standalone utilities: repo security scan, first-push prep, repo maintenance, App Store readiness, de-vibe and humanizer, deep risk audit, AGENTS.md audit, image generation, design pipeline. Ad hoc, not loaded by the core workflow.",
       "category": "productivity",
       "tags": [
         "security",

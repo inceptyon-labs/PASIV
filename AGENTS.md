@@ -11,7 +11,7 @@
 
 ## Workflows
 
-- Don't bump versions by hand. `.github/workflows/version-bump.yml` bumps the patch in `.claude-plugin/plugin.json` and `marketplace.json` on every push to `main` and pushes its own commit, so `git pull --rebase` before the next push. It bumps only the core `pasiv` entry; `pasiv-extras` is versioned by hand.
+- Don't bump versions by hand. `.github/workflows/version-bump.yml` bumps the patch in `.claude-plugin/plugin.json` and `marketplace.json` on every push to `main` and pushes its own commit, so `git pull --rebase` before the next push. It bumps only the core `pasiv` entry. `pasiv-extras` has no `version` field on purpose, so users get its changes on every commit; Claude Code only updates a versioned plugin when the version string changes.
 
 ## Architecture diagram
 
