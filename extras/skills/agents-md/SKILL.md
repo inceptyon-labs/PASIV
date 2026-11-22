@@ -131,8 +131,11 @@ and before editing.
    on disk, or two lines in the file contradicting each other are all
    staleness even though everything named exists. This is the highest-yield
    check: every audited repo with a file over 5KB had it.
-3. **Structure** — is CLAUDE.md a one-line `@AGENTS.md` pointer? If the two
-   files both have content, diff the topics; parallel coverage means
+3. **Structure** — is CLAUDE.md a one-line `@AGENTS.md` pointer? Other tool
+   files (`WARP.md`, `GEMINI.md`) that are symlinks to AGENTS.md (`test -L`,
+   or mode `120000` in `git ls-tree HEAD`) are correct pointers, not copies;
+   `diff` and `wc` follow the link, so check before calling one a duplicate.
+   If the two files both have content, diff the topics; parallel coverage means
    divergence is already underway. Consolidate into AGENTS.md. Exception:
    a repo whose AGENTS.md is loaded globally (`~/memex/AGENTS.md`, which
    `~/.claude/CLAUDE.md` imports and `~/.codex/AGENTS.md` symlinks to)

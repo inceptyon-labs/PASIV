@@ -7,12 +7,15 @@ files except to resolve a collision.
 ## 1. What stays where it is
 
 **Root files that GitHub, package registries or tools look for at the root:** `README*`,
-`LICENSE*`, `CHANGELOG*`, `CONTRIBUTING*`, `SECURITY*`, `CODE_OF_CONDUCT*`, `AGENTS.md`,
-`CLAUDE.md`, `GEMINI.md`, `DESIGN.md` and `PRODUCT.md` (impeccable and design-pipeline read them
-from the root), `llms.txt`.
+`LICENSE*`, `CHANGELOG*`, `CONTRIBUTING*`, `SECURITY*`, `CODE_OF_CONDUCT*`, agent files
+(`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `WARP.md`, `.cursorrules`, `.windsurfrules`), `DESIGN.md`
+and `PRODUCT.md` (impeccable and design-pipeline read them from the root), `llms.txt`. A
+duplicated agent file is Phase 3's job (`agents-md`), not a move. A symlink to AGENTS.md is a
+pointer, not a duplicate.
 
 **Tool-owned paths:** PASIV reads and writes these at fixed paths, so never move them or
 anything inside them: `docs/handoffs/`, `docs/tasks/`, `docs/designs/`, `docs/metrics/`,
+`docs/scans/` (repo-scan reports), `docs/app-store-ready/` (its reports),
 `docs/design-system*`, `docs/archive/`, `docs/architecture.json`, `.beans/`, `.pasiv.yml`. Also
 leave `.github/`, `fastlane/`, `.claude/`, and any `node_modules/`, `Pods/`, `vendor/` or build
 output.

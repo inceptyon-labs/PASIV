@@ -688,6 +688,7 @@ docs/
 │   ├── github-projects.md
 │   └── model-optimization.md
 ├── designs/                    # Design documents from /brainstorm
+├── handoffs/                   # Session handoffs (archive/ after loading)
 ├── archive/                    # Superseded plans and designs
 └── scans/                      # Security scan reports
 ```

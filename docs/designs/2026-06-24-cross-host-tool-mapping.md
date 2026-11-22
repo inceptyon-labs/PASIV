@@ -20,9 +20,9 @@ PASIV's skills name Claude-Code-native mechanisms directly (the `Skill` tool, `T
 |---|---|---|---|
 | Sub-skill invocation | `Skill` tool | Codex skills / `@skill` / prompt-include | If no skill mechanism: inline the skill body. |
 | Subagent dispatch (`execute` GREEN, `review` claude pass) | `Task` tool + `model` | `codex exec` subprocess, or Codex sub-task; `claude -p` for the claude engine | Context-isolation needs a real subprocess. Inline fallback works but loses the token/standard-context win. |
-| **Native tasks** (TaskCreate/Update/List/Get, blockedBy) | native task manager | **none** | Biggest gap — see below. |
+| **Native tasks** (TaskCreate/Update/List/Get, blockedBy) | native task manager | **none** | Biggest gap; see below. |
 | User prompts | `AskUserQuestion` | plain-text question / Codex equivalent | Multi-select degrades to a numbered prompt. |
-| Codex review engine | `mcp__my-codex-mcp__codex` | native | **Done** — handled by review's phase-3 adapters. |
+| Codex review engine | `mcp__my-codex-mcp__codex` | native | **Done**: handled by review's phase-3 adapters. |
 | Model selection | `model:` frontmatter + dispatch `model` | Codex model flags | Tier→model map per host. |
 | File/shell (Read/Write/Edit/Bash/Glob/Grep) | native | native (same/similar) | ~1:1, portable. |
 | Hooks (PreCompact, …) | CC hook events | Codex hook events differ | Ship per-host hook configs. (ponytail omits Gemini `hooks.json` because event names differ.) |
@@ -32,14 +32,14 @@ PASIV's skills name Claude-Code-native mechanisms directly (the `Skill` tool, `T
 
 The execution layer (TaskCreate/Update/List + `blockedBy`) is Claude-Code-only. Under Codex, two options:
 
-1. **Backend-as-execution-view** — use the configured backend (beans/local) as BOTH the durable store and the live task view. beans already has `--ready` / dependency semantics, so it covers `blockedBy`. *Recommended.*
-2. **`<plan>.tasks.json`** — the coordinator reads/writes a plan-adjacent JSON (superpowers' pattern). More moving parts.
+1. **Backend-as-execution-view**: use the configured backend (beans/local) as BOTH the durable store and the live task view. beans already has `--ready` / dependency semantics, so it covers `blockedBy`. *Recommended.*
+2. **`<plan>.tasks.json`**: the coordinator reads/writes a plan-adjacent JSON (superpowers' pattern). More moving parts.
 
 Either way, `plan`/`execute`/`kick` would call a task shim instead of naming the native tools.
 
 ## Recommended architecture
 
-A thin **host-shim** each skill calls instead of naming CC tools directly — detect host once, then route:
+A thin **host-shim** each skill calls instead of naming CC tools directly. It detects the host once, then routes:
 
 ```
 dispatch(role, model, prompt)   # Task subagent | codex exec | claude -p
@@ -64,4 +64,4 @@ PASIV ships today as a Claude Code plugin (`.claude-plugin/`). Full Codex suppor
 
 ## Out of scope for the first pass
 
-Copilot/Gemini hosts — design the shim so they slot in, but Codex is the only second host worth wiring first (it's where the Claude-as-reviewer inversion already pays off via phase 3).
+Copilot/Gemini hosts. Design the shim so they slot in, but Codex is the only second host worth wiring first (it's where the Claude-as-reviewer inversion already pays off via phase 3).
