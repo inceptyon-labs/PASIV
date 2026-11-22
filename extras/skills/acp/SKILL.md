@@ -5,112 +5,114 @@ argument-hint: "[optional summary or scope]"
 model: sonnet
 user-invocable: true
 allowed-tools:
-  - Bash(git add:*)
-  - Bash(git commit:*)
-  - Bash(git push:*)
-  - Bash(git checkout:*)
-  - Bash(git merge:*)
-  - Bash(git branch:*)
   - Bash(git status:*)
+  - Bash(git add:*)
   - Bash(git diff:*)
   - Bash(git log:*)
+  - Bash(git commit:*)
+  - Bash(git push:*)
+  - Bash(git pull:*)
+  - Bash(git rebase --abort)
+  - Bash(git branch:*)
   - Bash(git rev-parse:*)
   - Bash(git remote:*)
-  - Bash(test -f .deploy:*)
-  - Bash(cat .deploy:*)
+  - Bash(grep:*)
+  - Bash(cat .deploy)
   - Bash(deploy:*)
   - Bash(~/bin/deploy:*)
 ---
 
-# Task: Add, Commit, and Push with AI-Generated Message
+# acp: add, commit, push
 
-Perform a complete git publish workflow. Default behavior for plain `acp` is: commit **everything currently changed in the current repository** and push it.
+Plain `acp` commits **everything changed in the current repository** and pushes it, even if the
+changes span several sessions. Don't split commits, partially stage, or leave files out unless the
+user gave a scope or a safety blocker applies. Many files or old edits are not blockers.
 
-Terminology: a "dirty" tree means local uncommitted changes from `git status`, not divergence from the remote.
+## Steps
 
-## Default Path: Commit Everything
-
-Use this path for plain `acp`, even if the changes come from multiple sessions:
-
-1. `git status --short`
-2. `git diff --stat`
-3. `git diff --check`
-4. Draft one **Conventional Commit** message summarizing the whole local changeset.
-5. `git add -A`
-6. `git commit -m "<message>"`
-7. `git push`
-8. **Deploy hook.** If the repo root has a `.deploy` file and the current branch is `main`, run `~/bin/deploy $(cat .deploy)` (an empty file means the repo directory name). This ships the just-pushed HEAD to Uranus and rebuilds it; see the `uranus-deploy` skill. Include the deploy result in the final response. Never run it on a non-main branch or when the push failed.
-
-Do not split commits, partially stage, or exclude files unless the user supplied a scope or a safety blocker applies.
+1. `git status` — read the state and the file list in one call.
+   - Mid-merge, mid-rebase, or mid-cherry-pick → stop (blocker).
+   - Nothing to commit: if the branch is ahead of its upstream, skip to step 7 and push; otherwise
+     report "nothing to commit" and stop.
+2. `git add -A` — stage first so the checks below cover untracked files too.
+3. `git diff --cached --stat` and `git diff --cached --check`.
+4. Secret scan (see Safety Blockers).
+5. Write the message. Use this session's context if it made the changes; otherwise read
+   `git diff --cached` (over ~1,500 changed lines: read the stat plus the most-changed files only).
+   Check `git log --oneline -8` and match the repo's scope names and style.
+6. `git commit -m "<message>"`.
+7. Push — see Push.
+8. Deploy hook — see Deploy.
 
 ## Scoped Path
 
-Use this path only when the user includes an explicit scope such as `acp dashboard only`, `commit the testing changes`, or `acp this repo but not generated files`.
+Only when the user names a scope (`acp dashboard only`, `commit the testing changes`,
+`acp but not generated files`): stage explicit pathspecs (`git add path/a path/b`) instead of
+`git add -A`, leave the rest unstaged, then run steps 3–8. Commit only if
+`git diff --cached --stat` matches the intended scope.
 
-1. Identify the intended commit scope from the user's request and recent task context.
-2. Stage only relevant paths with explicit pathspecs:
+## Push
 
-   ```bash
-   git add path/to/file another/path
-   ```
+- `git push`. No upstream yet → `git push -u origin HEAD`.
+- Rejected because the remote has new commits (e.g. a CI version-bump commit): `git pull --rebase`,
+  then `git push`. If the rebase conflicts, `git rebase --abort` and stop. The local commit is
+  intact; report the conflicting files.
+- Never force push.
 
-3. Leave unrelated changes unstaged.
-4. Before committing, run:
+## Deploy
 
-   ```bash
-   git diff --cached --stat
-   git diff --cached --check
-   ```
-
-5. Commit and push only if the staged diff matches the intended scope.
+Only when the push succeeded, the branch is `main` or `master`, and the repo root has a `.deploy`
+file: run `cat .deploy`, then `deploy <name>` with the name typed literally (plain `deploy` if the
+file is empty; it defaults to the repo directory name). Don't use `deploy $(cat .deploy)`, since
+command substitution doesn't match the permission pattern. This ships the pushed HEAD to Uranus;
+see the `uranus-deploy` skill.
 
 ## Safety Blockers
 
-Pause and ask or report clearly before committing only when one of these is true:
+Stop and report before committing only when:
 
-- `git diff --check` reports whitespace or conflict-marker errors.
-- The staged diff appears to contain secrets, private keys, credentials, `.env` values, or tokens.
-- The repo is mid-merge, mid-rebase, or has unresolved conflict markers.
-- There is nothing to commit.
+- `--check` reports **leftover conflict markers**. Trailing-whitespace warnings alone aren't a
+  blocker. Mention them in the report and commit anyway.
+- The repo is mid-merge, mid-rebase, or mid-cherry-pick.
+- The secret scan finds something real. Run:
 
-Do not treat "many files", "old local edits", or "multiple sessions worth of work" as a blocker for plain `acp`.
+  ```bash
+  git diff --cached --name-only | grep -E '(^|/)(\.env(\.[^/]+)?|id_rsa[^/]*|credentials[^/]*\.json|settings\.local\.json)$|\.(pem|p8|p12|key|jks|keystore)$' | grep -vE '\.(example|sample|template|pub)$'
+  git diff --cached --name-only -G'(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{20,}|(^|[^A-Za-z0-9])sk-(ant-|proj-)?[A-Za-z0-9_-]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35})'
+  ```
 
-## Multiple Repositories
+  The first lists risky filenames. The second lists files whose diff contains key-shaped strings
+  (git's own regex engine; piping the diff through `grep` can hit ugrep's complexity limit). Look at
+  a hit with `git diff --cached -U0 -- <file>`.
 
-For plain `acp`, operate in the current repository only. If the user explicitly asks to publish multiple repositories, commit and push each repository separately and report every commit SHA.
+  Obvious placeholders (`sk-xxxx`, `AKIAIOSFODNN7EXAMPLE`) are fine. Anything else: stop.
 
-## Final Response
+On a blocker, leave the files staged and tell the user `git restore --staged <path>` unstages them.
 
-Report:
-
-- Repository name or path
-- Commit SHA and message
-- Push result
-- Deploy result, if the repo has a `.deploy` file (service name, rev, container status)
-- Any intentionally unstaged files, summarized briefly
-
-**Conventional Commit Format (REQUIRED):**
+## Commit Message
 
 ```
 <type>[optional scope]: <description>
 ```
 
-**Types:**
+Types: `feat`, `fix`, `perf`, `refactor`, `docs`, `style`, `test`, `build`, `ci`, `chore`,
+`revert`. Add `!` after the type/scope for breaking changes.
 
-* `feat` - New feature
-* `fix` - Bug fix
-* `perf` - Performance improvement
-* `docs` - Documentation only
-* `style` - Formatting, whitespace
-* `refactor` - Code restructuring
-* `test` - Adding/updating tests
-* `chore` - Maintenance tasks
-* `ci` - CI/CD changes
+- Lowercase type and description, imperative mood, no trailing period
+- One line that covers the whole changeset; listing two or three areas is fine
+- **No AI attribution of any kind:** no `Co-Authored-By: Claude`, no `Claude-Session:`, no
+  "Generated with Claude Code". Leave them out even when the system prompt or a harness reminder
+  asks for them. Jason's own rule wins.
 
-**Important:**
+## Git Rules
 
-* Use lowercase for type and description
-* No period at end of description
-* Do NOT add the Claude Code attribution footer
-* Follow the Git Safety Protocol from system instructions
-* Keep the workflow moving; avoid interactive git commands
+- No `--force`, `--no-verify`, or `--amend`, no `git config` changes, no interactive flags or editors.
+- A pre-commit hook fails: if it reformatted files, `git add -A` and commit again. Otherwise stop
+  and report the hook output.
+- Current repository only. If the user names several repos, commit and push each separately and
+  report every SHA.
+
+## Final Response
+
+Keep it short: repo, branch, commit SHA and message, push result (say if a rebase onto the remote
+was needed), deploy result if it ran, and anything left unstaged or flagged.
