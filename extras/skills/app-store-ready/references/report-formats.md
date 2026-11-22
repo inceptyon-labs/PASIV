@@ -14,6 +14,7 @@ Modes: `validate`, `full`.
 - Blockers: X
 - Warnings: Y
 - Passes: Z
+- iPhone Duo: OPTIMIZED / RUNS BUT NOT OPTIMIZED / BROKEN LAYOUT RISK / N/A (no iPhone)
 - Overall: GO / NO-GO
 
 ## Blockers (Must Fix)
@@ -81,10 +82,17 @@ Mode: `go`.
 # Pre-Submission Go/No-Go Checklist
 
 ## Hard Requirements
-- [ ] Icon: 1024×1024, no alpha ✅/❌
-- [ ] Screenshots: all device classes ✅/❌
+- [ ] Built with a current SDK (Xcode 26+ / iOS 26 SDK; iOS 27 SDK from April 2027) ✅/❌
+- [ ] Deployment target iOS 13 or later ✅/❌
+- [ ] Icon: 1024×1024 (or .icon), no alpha on default ✅/❌
+- [ ] Screenshots: required sizes, majority show app in use ✅/❌
 - [ ] Privacy policy URL: live ✅/❌
 - [ ] Support URL: live ✅/❌
+- [ ] PrivacyInfo.xcprivacy + listed-SDK manifests ✅/❌
+- [ ] Age rating questionnaire current ✅/❌
+- [ ] Demo account in review notes (if login) ✅/❌
+- [ ] Account deletion (if account creation) ✅/❌
+- [ ] iPhone Duo: iOS 27.1 SDK+, scene life cycle, no layout red flags, Duo screenshots ✅/❌
 [... full checklist]
 
 ## Verdict: GO / NO-GO

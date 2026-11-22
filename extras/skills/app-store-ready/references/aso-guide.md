@@ -14,6 +14,21 @@ Apple's search algorithm considers these factors (in rough order of weight):
 8. **Ratings & Reviews** — affects ranking position
 9. **Downloads & Velocity** — strongest ranking signal overall
 
+Only the name, subtitle, keywords, IAP names, and developer name are confirmed text inputs.
+ASO vendors report that Apple also reads screenshot caption text (since mid-2025); Apple hasn't
+confirmed it. Write captions that would rank for the target terms anyway, since they cost nothing.
+
+### Custom Product Pages in Search
+Up to 70 custom product pages can be live at once, and each can be assigned keywords. A page
+with assigned keywords can appear in search results for those keywords in place of the default
+page — a way to match screenshots to a specific search intent (e.g. a "budget" page and a
+"meal plan" page for the same app).
+
+### Creative Assets (fall 2026)
+Product page header and search result assets (image or muted looping video) give extra
+visibility in search results and on the product page. They follow 2.3.14: brand/app related,
+no specific or discounted pricing, no unverifiable claims. Specs in screenshot-sizes.md.
+
 ## Keyword Research Methodology
 
 ### Step 1: Seed Keywords
@@ -31,7 +46,7 @@ For each seed keyword, find:
 
 ### Step 3: Evaluate
 For each keyword candidate, assess:
-- **Volume**: How often is it searched? (use App Annie, Sensor Tower, or web search for estimates)
+- **Volume**: How often is it searched? (use Apple Ads search popularity, Sensor Tower, AppTweak, Appfigures, or web search for estimates)
 - **Competition**: How many quality apps target this term?
 - **Relevance**: Does it genuinely describe your app?
 - **Intent**: Is the searcher looking for an app like yours?
@@ -100,6 +115,8 @@ The choice depends on brand strength:
 
 ### Rules
 - 100 bytes max (not characters — CJK characters use 3 bytes each in UTF-8, emoji use 4)
+- Each keyword longer than two characters (Apple's rule)
+- Don't repeat the app name or company name — the app is already searchable by both
 - Comma-separated, NO spaces after commas
 - Singular form only (Apple handles plurals)
 - Don't repeat words from title or subtitle

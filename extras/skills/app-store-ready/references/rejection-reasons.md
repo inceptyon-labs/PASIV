@@ -98,26 +98,50 @@ by how frequently they appear in developer reports and forums — not an officia
 - No opt-out mechanism for data sharing
 - Fingerprinting (collecting device characteristics for tracking)
 
-### 9. Guideline 4.8 — Sign in with Apple
-**What**: Apps with third-party login that don't offer Sign in with Apple.
+### 9. Guideline 4.8 — Login Services
+**What**: Apps whose primary account uses third-party/social login but offer no equivalent
+login that limits data to name and email, allows a private email, and doesn't track for ads
+without consent. Sign in with Apple satisfies this; it isn't the only option.
 **Signs**:
-- Google Sign-In, Facebook Login, etc. without Apple option
-- Sign in with Apple button is less prominent than others
-- Sign in with Apple doesn't work correctly
+- Google Sign-In, Facebook Login, etc. as the only sign-in choices
+- The equivalent option collects more than name and email
+- Sign in with Apple (if offered) doesn't work correctly
+
+### 9b. Guideline 5.1.2(i) — Sharing data with third-party AI
+**What**: Personal data or user content sent to a third-party AI service without clear
+disclosure and explicit permission.
+**Signs**:
+- Calls to OpenAI, Anthropic, Gemini, or similar APIs with user text, photos, or voice
+- No screen naming the AI provider and asking for consent before the first send
+- Privacy policy and App Privacy labels don't mention the AI provider
+
+### 9c. Guideline 2.5.19 — Hidden Features
+**What**: Hidden, dormant, or undocumented functionality, including features switched on after
+approval (bait-and-switch). Grounds for removal and account termination.
+**Signs**:
+- Remote config or server flags that unlock features App Review never saw
+- Code obfuscation hiding functionality
+- App behaves differently by region, date, or account in ways not described in review notes
 
 ### 10. Guideline 1.2 — User Generated Content
-**What**: App allows user content without moderation.
+**What**: App allows user content (including AI-generated content) without moderation.
 **Signs**:
 - No content reporting mechanism
 - No ability to block users
-- No content moderation system
-- No terms of service / acceptable use policy
+- No filtering, including for nonconsensual intimate imagery (AI-generated too)
+- Random or anonymous chat, Chatroulette-style, or "hot-or-not" features
+- No published contact information
+- Creator-content apps without an age restriction based on verified or declared age (1.2.1(a))
 
 ### 11. Guideline 4.3 — Spam
 **What**: App is a clone, duplicate, or uses misleading tactics.
 **Signs**:
-- Multiple similar apps from same developer
-- App closely copies another app's UI/functionality
+- Multiple similar apps from same developer (4.3(a))
+- New entry in a saturated category (dating, flashlight, sound effects, wallpaper, simple timers,
+  fortune telling) without a meaningfully different experience (4.3(b)); Apple may also remove
+  existing ones that aren't updated or don't attract customers
+- App closely copies another app's UI/functionality, or uses another developer's icon, brand,
+  or product name in its icon or name (4.1)
 - Fake system dialogs or misleading UI elements
 - SEO manipulation in metadata
 - App with minimal changes resubmitted under different name
@@ -126,39 +150,54 @@ by how frequently they appear in developer reports and forums — not an officia
 
 ## Guideline Reference
 
+Current as of the October 16, 2026 revision.
+
 ### Section 1: Safety
 - **1.1** Objectionable Content
-- **1.2** User Generated Content — need moderation, reporting, blocking
-- **1.3** Kids Category — COPPA compliance, no third-party analytics
-- **1.4** Physical Harm — medical apps need disclaimers
-- **1.5** Developer Information — real contact info required
+- **1.2** User Generated Content — filtering (incl. AI-generated NCII), reporting, blocking, contact info
+- **1.2.1** Creator Content — (a) age restriction by verified or declared age
+- **1.3** Kids Category — no links out or purchases outside a parental gate, no third-party analytics/ads
+- **1.4** Physical Harm — medical apps need disclaimers and validated accuracy claims
+- **1.5** Developer Information — real contact info via app and Support URL
+- **1.6** Data Security
 
 ### Section 2: Performance
-- **2.1** App Completeness — no bugs, crashes, or placeholder content
-- **2.2** Beta Testing — no "beta" apps on the store
+- **2.1** App Completeness — final build, no placeholders, demo account + live backend, IAP reviewable
+- **2.2** Beta Testing — demos, betas, and trials belong on TestFlight
 - **2.3** Accurate Metadata — everything must match reality
+  - **2.3.3** Screenshots — majority must show the app in use
+  - **2.3.7** Name (30 chars), keywords, subtitle — no prices, trademarks, unverifiable claims
+  - **2.3.8** Icons/screenshots/previews 4+ appropriate
+  - **2.3.10** No other mobile platforms or alternative marketplaces
+  - **2.3.12** What's New must describe significant changes
+  - **2.3.14** Creative assets — brand/app related, no pricing, no unverifiable claims (new, Oct 2026)
 - **2.4** Hardware Compatibility — must work on claimed devices
-- **2.5** Software Requirements — no private APIs, must use current SDK
+- **2.5** Software Requirements — public APIs only, run on the currently shipping OS, self-contained code
+  - **2.5.19** No hidden, dormant, or undocumented features (new, Oct 2026)
 
 ### Section 3: Business
-- **3.1** Payments — IAP for digital goods, no external payment links
-- **3.2** Other Business Issues — clear pricing, no deceptive subscriptions
+- **3.1** Payments — IAP for digital goods; US storefront allows external links/CTAs; other
+  storefronts need a StoreKit External Purchase Link Entitlement
+- **3.2** Other Business Issues — 3.2.2 unacceptable practices (forced ratings/reviews, loans
+  over 36% APR, etc.)
 
 ### Section 4: Design
 - **4.0** Design — quality bar, native feel
-- **4.1** Copycats — no clones of existing apps
-- **4.2** Minimum Functionality — must add genuine value
-- **4.3** Spam — no duplicate apps, no SEO manipulation
-- **4.5** Apple Sites and Services — proper API usage
-- **4.7** HTML5 Games/Apps — must be in Safari, not native wrapper
-- **4.8** Sign in with Apple — required if you have social login
+- **4.1** Copycats — (c) no other developer's icon, brand, or product name in your icon or name
+- **4.2** Minimum Functionality — must add genuine value beyond a repackaged website
+- **4.3** Spam — no duplicate apps or undifferentiated entries in saturated categories
+- **4.5** Apple Sites and Services — 4.5.3 no spam via push, Game Center, or Live Activities
+- **4.7** Mini apps, mini games, streaming games, chatbots, plug-ins, and game emulators
+- **4.8** Login Services — equivalent privacy-preserving login alongside third-party login
+- **4.10** Monetizing Built-In Capabilities
 
 ### Section 5: Legal
-- **5.1** Privacy — data collection, storage, sharing
+- **5.1** Privacy — 5.1.1 collection (incl. (v) account deletion, (ix) regulated fields incl.
+  crypto exchanges); 5.1.2 sharing (incl. (i) third-party AI consent); 5.1.4 Kids
 - **5.2** Intellectual Property — no IP infringement
 - **5.3** Gaming/Gambling — licensing required
 - **5.4** VPN Apps — strict requirements
-- **5.5** Developer Code of Conduct — manipulation, fraud
+- **5.6** Developer Code of Conduct — manipulation, fraud, review/chart manipulation
 
 ---
 
@@ -193,6 +232,15 @@ advertisingIdentifier          // without ATT prompt
 // RISK: Deprecated APIs
 UIWebView                     // must use WKWebView
 addressBook                   // must use Contacts framework
+
+// RISK: Third-party AI without consent (5.1.2(i))
+"api.openai.com"
+"api.anthropic.com"
+"generativelanguage.googleapis.com"
+// → confirm an in-app disclosure + explicit consent before first send
+
+// RISK: Hidden features (2.5.19)
+RemoteConfig / feature flags gating whole features App Review can't see
 ```
 
 ### Metadata Patterns to Flag
@@ -202,12 +250,13 @@ addressBook                   // must use Contacts framework
 "best"           → requires substantiation
 "#1"             → requires third-party verification
 "free"           → Apple shows price separately
-"beta"           → implies incomplete
-"android"        → competitor platform reference
-"google"         → competitor reference
-"samsung"        → competitor reference
-"$", "€", "£"   → pricing should be in IAP
-"subscribe at"   → potential IAP bypass
+"beta", "demo"   → implies incomplete (2.2)
+"android"        → other mobile platform (2.3.10)
+"google play"    → alternative marketplace reference (2.3.10)
+"samsung"        → other platform reference (2.3.10)
+"$", "€", "£", "% off" → pricing in metadata or creative assets (2.3.7, 2.3.14)
+"subscribe at"   → IAP bypass outside the US storefront (3.1.1(a))
+"for kids"       → reserved for Kids Category (2.3.8)
 ```
 
 ---
@@ -230,7 +279,10 @@ Before every submission:
 - [ ] Check all screenshots match current app version
 - [ ] Review metadata for prohibited terms
 - [ ] Verify privacy labels match actual behavior
-- [ ] Test Sign in with Apple flow (if applicable)
+- [ ] Test the equivalent login option (Sign in with Apple or similar) if third-party login exists
+- [ ] Demo account + live backend in App Review Notes
+- [ ] Age rating questionnaire answered with current questions
+- [ ] AI data-sharing disclosure and consent (if applicable)
 - [ ] Test account deletion flow end-to-end (if app supports account creation)
 - [ ] Test on oldest supported iOS version
 - [ ] Remove all debug/test code and logging
