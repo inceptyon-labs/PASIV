@@ -430,7 +430,7 @@ Standalone utilities ship as a **separate plugin** so the core workflow stays le
 | `/repo-scan` | Multi-ecosystem security vetting: CVEs, malware patterns, obfuscated code, secrets; PASS/CAUTION/FAIL report in `docs/scans/` |
 | `/repo-ready` | Prep for first GitHub push: README, LICENSE, community files, Dependabot, secret scan |
 | `/app-store-ready` | Apple App Store submission validator + ASO/keyword optimizer |
-| `/repo-tidy` | Maintenance pass on a shipping repo: README vs disk, stale docs, deploy standard, GitHub security settings, diagram, TARS/memory refresh |
+| `/repo-tidy` | Maintenance pass on a shipping repo: README vs disk, stale docs, docs gathered into `docs/`, proven-dead files removed, deploy standard, GitHub security settings, diagram, TARS/memory refresh |
 | `/de-vibe` | Strip AI tells: invisible characters and chat residue, de-slop docs, drop restate-comments, scrub trailers |
 | `/humanizer` | De-slop a single document and rewrite it in the author's voice |
 | `/fable-audit` | Judgment-led deep audit of auth, data isolation, money movement, key exposure, shared state |

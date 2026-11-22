@@ -385,7 +385,7 @@ The last step of every run, including one the gate stopped early:
 bash "$SKILL_DIR/scripts/runlog.sh" report
 ```
 
-Exit 1 means a listed check has no record: run it, or record a skip with the reason, and print the report again. Put the report in your final message verbatim, in a code block; tool output doesn't reach the user on its own.
+Exit 1 means a listed check has no record: run it, or record a skip with the reason, and print the report again. The report is Markdown: paste it into your final message as-is, not inside a code block, so the terminal renders the headings and wraps long lines. Tool output doesn't reach the user on its own.
 
 ## Principles
 

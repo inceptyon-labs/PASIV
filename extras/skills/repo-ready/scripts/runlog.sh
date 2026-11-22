@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Run ledger for the repo-ready, repo-tidy and repo-scan skills. `start` lists
 # every check the run owes and records which tools are installed. Each check is
-# then recorded as it runs, or skipped with a reason. `report` prints the table
-# and names every listed check that nothing recorded.
+# then recorded as it runs, or skipped with a reason. `report` prints Markdown,
+# grouped worst first (not run, couldn't run, findings, passed, done, skipped),
+# for the skill to paste into its final message unfenced.
 #
 # Usage (call every command from the directory the skill started in; the
 # ledger is keyed on it):
@@ -10,7 +11,7 @@
 #   runlog.sh ran    <check> <exit-code> [detail]   a tool command ran
 #   runlog.sh done   <check> [detail]               a step with no tool finished
 #   runlog.sh skip   <check> <reason>               deliberately not run
-#   runlog.sh report                                every record, in check order
+#   runlog.sh report                                every record, grouped by status
 # Exit:  report: 0 every listed check has a record, 1 at least one has none
 #        others: 0 recorded, 2 usage error, unknown check, or no ledger
 # The ledger lives outside the repo, under $TMPDIR/repo-runlog/.
@@ -21,8 +22,8 @@ here=$(pwd -P)
 log="$dir/$(printf '%s' "$here" | cksum | cut -d' ' -f1).tsv"
 cmd="${1:-}"; [ $# -gt 0 ] && shift
 
-usage() { sed -n '7,16p' "$0" >&2; exit 2; }
-clean() { printf '%s' "$*" | tr '\t\n' '  ' | cut -c1-120; }
+usage() { sed -n '8,17p' "$0" >&2; exit 2; }
+clean() { printf '%s' "$*" | tr '\t\n' '  ' | cut -c1-300; }
 need_log() {
   [ -f "$log" ] && return
   echo "runlog: no ledger for $here. Run 'runlog.sh start' first, from the directory the skill started in." >&2
@@ -106,8 +107,9 @@ ran)
   need_log; need_check "${1:-}"
   case "${2:-}" in ''|*[!0-9]*) echo "runlog: exit code must be a number, got '${2:-}'" >&2; exit 2 ;; esac
   m=$(meaning "$1" "$2"); d="${m#*|}"
-  [ $# -gt 2 ] && d="${d:+$d; }$(clean "${*:3}")"
-  printf 'R\t%s\t%s\t%s\t%s\n' "$1" "${m%%|*}" "$2" "$d" >> "$log"
+  u=""; [ $# -gt 2 ] && u=$(clean "${*:3}") && d="${d:+$d; }$u"
+  # field 6 keys re-runs: a later run of the same check with the same detail replaces this one
+  printf 'R\t%s\t%s\t%s\t%s\t%s\n' "$1" "${m%%|*}" "$2" "$d" "$u" >> "$log"
   ;;
 done)
   need_log; need_check "${1:-}"
@@ -121,30 +123,55 @@ skip)
 report)
   need_log
   awk -F'\t' '
+    function line(k, nested,   x, s) {
+      s = (nested ? "  - " rs[k] : "- `" rc[k] "`")
+      if (re[k] != "") s = s (nested ? ", " : " (") "exit " re[k] (nested ? "" : ")")
+      if (rd[k] != "") s = s ": " rd[k]
+      if (k in rerun) s = s " (re-run)"
+      return s
+    }
     $1=="H" { h[$2] = $3 }
-    $1=="T" { tools = tools (tools ? ", " : "") $2 " " $3 }
+    $1=="T" { nt++; tn[nt] = $2; tv[nt] = $3 }
     $1=="C" { order[++n] = $2 }
-    $1=="R" { r++; rc[r] = $2; rs[r] = $3; re[r] = $4; rd[r] = $5; last[$2] = $3 }
+    $1=="R" { r++; rc[r] = $2; rs[r] = $3; re[r] = $4; rd[r] = $5; key = $2 SUBSEP $6
+              if (key in cur) { gone[cur[key]] = 1; rerun[r] = 1 }
+              cur[key] = r }
     END {
-      printf "Run report: %s\n", h["skill"]
-      printf "Dir:        %s\n", h["dir"]
-      printf "Started:    %s\n", h["started"]
-      if (tools) printf "Tools:      %s\n", tools
-      printf "\n%-20s %-13s %-5s %s\n", "CHECK", "STATUS", "EXIT", "DETAIL"
-      for (i = 1; i <= n; i++) {
-        c = order[i]
-        if (!(c in last)) { printf "%-20s NOT RUN\n", c; missing = missing (missing ? ", " : "") c; count["NOT RUN"]++; continue }
-        name = c
-        for (k = 1; k <= r; k++) if (rc[k] == c) { printf "%-20s %-13s %-5s %s\n", name, rs[k], re[k], rd[k]; name = "" }
-        count[last[c]]++
+      ng = split("NOT RUN|couldn'\''t run|findings|ok|done|skipped", G, "|")
+      split("Not run|Couldn'\''t run|Findings|Passed|Done|Skipped", T, "|")
+      for (g = 1; g <= ng; g++) rank[G[g]] = g
+      # a check takes the worst status among its live runs (a replaced re-run no longer counts)
+      for (k = 1; k <= r; k++) {
+        if (k in gone) continue
+        c = rc[k]; runs[c]++; lastrec[c] = k
+        if (!(c in st) || rank[rs[k]] < rank[st[c]]) st[c] = rs[k]
       }
-      printf "\n%d checks:", n; sep = " "
-      split("ok findings done skipped", k1, " ")
-      for (j = 1; j <= 4; j++) if (count[k1[j]]) { printf "%s%d %s", sep, count[k1[j]], k1[j]; sep = ", " }
-      if (count["couldn'\''t run"]) { printf "%s%d couldn'\''t run", sep, count["couldn'\''t run"]; sep = ", " }
-      if (missing) printf "%s%d NOT RUN (%s)", sep, count["NOT RUN"], missing
+      for (i = 1; i <= n; i++) { c = order[i]; if (!(c in st)) st[c] = "NOT RUN"; cnt[st[c]]++ }
+      printf "**Run report: %s**  \n`%s` · started %s\n\n", h["skill"], h["dir"], h["started"]
+      printf "%d checks:", n; sep = " "
+      for (g = 1; g <= ng; g++) if (cnt[G[g]]) { printf "%s%d %s", sep, cnt[G[g]], tolower(T[g]); sep = ", " }
       print ""
-      exit missing ? 1 : 0
+      for (g = 1; g <= ng; g++) {
+        if (!cnt[G[g]]) continue
+        printf "\n**%s**\n\n", T[g]
+        for (i = 1; i <= n; i++) {
+          c = order[i]
+          if (st[c] != G[g]) continue
+          if (G[g] == "NOT RUN") { print "- `" c "`"; continue }
+          if (runs[c] == 1) { print line(lastrec[c], 0); continue }
+          print "- `" c "` (" runs[c] " runs)"
+          for (k = 1; k <= r; k++) if (rc[k] == c && !(k in gone)) print line(k, 1)
+        }
+      }
+      if (nt) {
+        printf "\nTools:"; sep = " "
+        for (t = 1; t <= nt; t++) {
+          if (tv[t] == "MISSING") printf "%s**%s MISSING**", sep, tn[t]; else printf "%s%s %s", sep, tn[t], tv[t]
+          sep = ", "
+        }
+        print ""
+      }
+      exit cnt["NOT RUN"] ? 1 : 0
     }' "$log"
   ;;
 *) usage ;;

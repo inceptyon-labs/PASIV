@@ -1,6 +1,6 @@
 ---
 name: repo-tidy
-description: Bring an existing project back in line - verify the README against disk, audit AGENTS.md, archive or fix stale docs, check the deployment against the house standard, check Dependabot, secret scanning, workflows and the OpenSSF Scorecard on GitHub repos, create or refresh the Archify architecture diagram, put the logo everywhere, refresh the TARS project record, the memex wiki page and Claude's project memory, then commit. Use for "tidy repo", "repo tidy", "clean up this repo", "bring this project up to date", "housekeeping pass", "is this repo current".
+description: Bring an existing project back in line - verify the README against disk, audit AGENTS.md, archive or fix stale docs, gather scattered docs into docs/, remove proven-dead source files and flag unused assets, dependencies and untracked clutter, check the deployment against the house standard, check Dependabot, secret scanning, workflows and the OpenSSF Scorecard on GitHub repos, create or refresh the Archify architecture diagram, put the logo everywhere, refresh the TARS project record, the memex wiki page and Claude's project memory, then commit. Use for "tidy repo", "repo tidy", "clean up this repo", "bring this project up to date", "housekeeping pass", "is this repo current".
 model: opus
 user-invocable: true
 allowed-tools:
@@ -29,6 +29,8 @@ would touch something running.
 - `--skip-deploy` skip Phase 5
 - `--skip-diagram` skip Phase 5b
 - `--skip-memory` skip Phase 9
+- `--skip-dead-code` skip the analyzer and build part of Phase 10b (builds can be slow); the
+  clutter check still runs
 - `--no-commit` stop before the final `/acp`
 
 `SKILL_DIR` is this skill's own directory: the one that holds this SKILL.md, shown as the skill's base directory when it loads. Scripts and assets live there, not in the project, so always call them by absolute path (`"$SKILL_DIR/scripts/…"`). If you don't know it: `SKILL_DIR=$(ls -d ~/.claude/skills/repo-tidy 2>/dev/null || find ~/.claude/plugins -maxdepth 8 -type d -path '*skills/repo-tidy' 2>/dev/null | sort | tail -1)`.
@@ -45,15 +47,17 @@ variables don't carry between calls) and run it from the project root, which key
 It lives outside the repo, so it runs under `--report` too. Start it before Phase 1:
 
 ```bash
-bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh" start repo-tidy inventory readme agents-md stale-docs deploy hadolint diagram github-settings zizmor pinact gitleaks-setup scorecard logo tars wiki memory hygiene de-vibe secret-gate live-check --tools gitleaks trufflehog zizmor pinact hadolint scorecard gh sqlite3
+bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh" start repo-tidy inventory readme agents-md stale-docs doc-layout deploy hadolint diagram github-settings zizmor pinact gitleaks-setup scorecard logo tars wiki memory hygiene dead-code unused-assets clutter de-vibe secret-gate live-check --tools gitleaks trufflehog zizmor pinact hadolint scorecard gh sqlite3
 ```
 
-Checks by phase: 1 `inventory` · 2 `readme` · 3 `agents-md` · 4 `stale-docs` · 5 `deploy`,
-`hadolint` · 5b `diagram` · 5c `github-settings`, `zizmor`, `pinact`, `gitleaks-setup`,
-`scorecard` · 6 `logo` · 7 `tars` · 8 `wiki` · 9 `memory` · 10 `hygiene`, `de-vibe` ·
-11 `secret-gate`, `live-check`. Record each one when it finishes:
+Checks by phase: 1 `inventory` · 2 `readme` · 3 `agents-md` · 4 `stale-docs` · 4b
+`doc-layout` · 5 `deploy`, `hadolint` · 5b `diagram` · 5c `github-settings`, `zizmor`, `pinact`,
+`gitleaks-setup`, `scorecard` · 6 `logo` · 7 `tars` · 8 `wiki` · 9 `memory` · 10 `hygiene` · 10b
+`dead-code`, `unused-assets`, `clutter`, `de-vibe` · 11 `secret-gate`, `live-check`. Record each
+one when it finishes:
 
-- **A tool ran** (`hadolint`, `zizmor`, `pinact`, `scorecard`, `secret-gate`, `live-check`):
+- **A tool ran** (`hadolint`, `zizmor`, `pinact`, `scorecard`, `secret-gate`, `live-check`, and
+  each dead-code analyzer with the tool name as the detail):
   take the exit code straight after the tool, before any `echo … exit=$?`, and record it on
   the same command line: `<tool command>; rc=$?; echo "exit=$rc"; RUNLOG ran <check> $rc`.
   The ledger reads the code as ok, findings or couldn't run. Several Dockerfiles: one `ran`
@@ -71,6 +75,13 @@ Checks by phase: 1 `inventory` · 2 `readme` · 3 `agents-md` · 4 `stale-docs` 
   separate, deliberate session.
 - **Never delete a document you did not create** unless it is obvious junk (empty, `.DS_Store`,
   an exact duplicate). Everything else that is stale gets archived or corrected.
+- **Delete source files only with proof** (Phase 10b): the analyzer and a repo-wide grep both
+  say unused, and the project's build passes after removal. No passing baseline build means
+  nothing is deleted. Assets and dependencies are report-only.
+- **Never delete untracked files.** They aren't in git, so there's no undo. Gitignore junk
+  patterns; ask about anything that looks like work.
+- **Move docs, never code.** Phase 4b moves documentation only, and leaves anything that code,
+  config, CI, a tool, or an external URL references by path.
 - **Every change and every archive lands in the final summary.** Git makes repo changes
   reversible; the summary makes them reviewable. Claude memory and the TARS database are
   outside git, so nothing there is removed without a copy (Phase 9) or overwritten without
@@ -84,7 +95,7 @@ Checks by phase: 1 `inventory` · 2 `readme` · 3 `agents-md` · 4 `stale-docs` 
 ```bash
 pwd && git rev-parse --is-inside-work-tree && git status --short && git log --oneline -5
 # no shell globs: zsh aborts the whole line when one pattern matches nothing
-git ls-files -co --exclude-standard | grep -iE '^(README|AGENTS|CLAUDE|NOTES|CHANGELOG|HANDOFF|TODO|PLAN)[^/]*$|^[^/]+\.md$|^(docs|specs|handoffs)/' | head -80
+git ls-files -co --exclude-standard | grep -iE '^(README|AGENTS|CLAUDE|NOTES|CHANGELOG|HANDOFF|TODO|PLAN)[^/]*$|^[^/]+\.md$|^(docs|specs|handoffs|notes|design|planning|adr|rfcs|documentation|wiki)/' | head -80
 for f in docker-compose.yml compose.yml Dockerfile .deploy unraid-icon.png wrangler.toml fly.toml vercel.json; do [ -e "$f" ] && echo "$f"; done
 ls scripts 2>/dev/null; find . -maxdepth 3 -name '*.plist' -not -path '*/node_modules/*' 2>/dev/null
 find . -maxdepth 3 \( -iname 'logo.*' -o -iname 'icon.*' -o -iname 'favicon.*' \) -not -path '*/node_modules/*' -not -path '*/build/*' 2>/dev/null
@@ -148,6 +159,15 @@ Ladder, in order of preference:
 `CHANGELOG.md` is special: if it stopped at a version the git log has long passed, add one
 entry summarizing "since <last version>" from the log rather than reconstructing every release.
 Never invent dates.
+
+## Phase 4b: Doc layout
+
+Read `references/doc-layout.md` and follow it: gather root-level and scattered docs into
+`docs/` (grouped into subfolders only when there are enough), `git mv` each one, rewrite links
+to and inside every moved file, and run `scripts/md-links.py` until the moves leave no broken
+links. Root files GitHub and tools expect, PASIV's fixed paths, docs-site trees, package READMEs,
+and anything referenced outside Markdown stay put. Record
+`RUNLOG done doc-layout "<n moved, n links updated>"`, or `current` when nothing needed moving.
 
 ## Phase 5: Deployment standard
 
@@ -331,26 +351,55 @@ content. List every deletion in the summary under its own heading.
   other scripts). Archive them like documents; don't delete.
 - leftovers from retired mechanisms: launchd plists for jobs now on cron elsewhere, old
   deploy scripts, `*.bak`, `*.orig`
-- then invoke the `de-vibe` skill; its own confirm gate applies
+
+## Phase 10b: Dead files and clutter
+
+Read `references/dead-code.md` and follow it:
+1. **Dead source files:** run the baseline build, find candidates with the stack's analyzer
+   (knip, Periphery, vulture, cargo-machete) or the import-grep method, cross-check each with a
+   repo-wide grep, skip the never-delete list, then `git rm` the survivors and rebuild. A
+   failing rebuild restores the batch and bisects. Record `dead-code`, or skip it under
+   `--skip-dead-code`.
+2. **Unused dependencies and assets:** list only. Record `unused-assets`.
+3. **Untracked clutter:** gitignore junk patterns before the final `/acp` sweeps them in. Ask
+   about large files and untracked source. Record `clutter`.
+
+Then invoke the `de-vibe` skill; its own confirm gate applies.
 
 ## Phase 11: Summary and commit
 
-Print one block:
+Print the summary as Markdown, not inside a code block: an aligned code block breaks into
+wrapped fragments once a line is wider than the terminal. One bullet per area; leave out an
+area with nothing to report, and give each follow-up its own bullet:
 
+```markdown
+**Repo tidy: <name>**
+
+- **Fixed:** README (3 paths, port), AGENTS.md (2 dead refs), docs/runbook.md
+- **Archived:** docs/archive/2026-03-04-spec-v1.md, scripts/archive/deploy-old.sh
+- **Moved:** ARCHITECTURE.md → docs/architecture.md, specs/ → docs/specs/ (7 links updated)
+- **Deleted:** .DS_Store (2)
+- **Removed (dead code):** src/legacy/OldChart.tsx, src/utils/format-old.ts (build passed)
+- **Ignored:** *.log, Screenshot*.png (untracked clutter)
+- **Added:** .deploy, unraid-icon.png, favicon link
+- **TARS:** deploy_target, production_url, icon_path
+- **Wiki:** ~/memex/wiki/projects/<name>.md (dated note)
+- **Memory:** deleted audit-2026-08-21-findings (fixed, in AGENTS.md); kept 1
+- **Deployment:** on standard
+- **Security:** dependabot.yml (npm, github-actions), secret scanning on, ruleset, 3 actions pinned, zizmor 1 High, gate clean
+- **Scorecard:** 2.5/10 before this pass (rerun after the push)
+- **Diagram:** refreshed, re-pinned to <sha>
+
+**Follow-ups**
+
+- No logo
+- CHANGELOG stopped at 1.2
+- Unused (review): 1 file (in project.pbxproj), 6 exports, 3 dependencies, 4 assets
 ```
-Fixed:      README (3 paths, port), AGENTS.md (2 dead refs), docs/runbook.md
-Archived:   docs/archive/2026-03-04-spec-v1.md, scripts/archive/deploy-old.sh
-Deleted:    .DS_Store (2)
-Added:      .deploy, unraid-icon.png, favicon link
-TARS:       deploy_target, production_url, icon_path
-Wiki:       ~/memex/wiki/projects/<name>.md (dated note)
-Memory:     deleted audit-2026-08-21-findings (fixed, in AGENTS.md); kept 1
-Deployment: on standard  |  MIGRATION PLAN below, not run
-Security:   dependabot.yml (npm, github-actions), secret scanning on, ruleset, 3 actions pinned, zizmor 1 High, gate clean  |  current  |  not GitHub
-Scorecard:  2.5/10 before this pass (rerun after the push)  |  skipped (private, not GitHub, no CLI)
-Diagram:    created  |  refreshed, re-pinned to <sha>  |  current  |  skipped (<why>)
-Follow-ups: no logo; CHANGELOG stopped at 1.2
-```
+
+Other values those areas take: Deployment `MIGRATION PLAN below, not run`; Security
+`current` or `not GitHub`; Scorecard `skipped (private | not GitHub | no CLI)`; Diagram
+`created`, `current` or `skipped (<why>)`.
 
 Then run the secret gate over everything about to be committed and everything already in
 history:
@@ -373,8 +422,8 @@ bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh" report
 ```
 
 Exit 1 means a listed check has no record: run it, or record a skip with the reason, and
-print the report again. Never invoke `acp` past a `NOT RUN` line. Put the report in your
-final message verbatim, in a code block; tool output doesn't reach the user on its own.
+print the report again. Never invoke `acp` while the report lists anything under **Not run**.
+The report is Markdown: paste it into your final message as-is, not inside a code block, so the terminal renders the headings and wraps long lines. Tool output doesn't reach the user on its own.
 
 Then, unless `--report` or `--no-commit`: invoke `acp`. It commits everything and, on
 `main` with a `.deploy` marker, deploys. Say so in the line before you invoke it, so a deploy
