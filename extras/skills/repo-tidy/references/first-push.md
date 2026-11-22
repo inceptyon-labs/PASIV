@@ -5,7 +5,7 @@ signals, propose a complete set of repo artifacts, confirm only the non-inferrab
 write the files, print the final `gh repo create` command, and offer (via `AskUserQuestion`) to
 run it. This mode never commits; the user does that (`/acp`).
 
-Shared steps (secret gate, gitleaks setup, gitignore, Dockerfiles, TARS, logo placement) are in
+Shared steps (secret gate, gitleaks setup, gitignore, internal docs, Dockerfiles, TARS, logo placement) are in
 SKILL.md; this file says when to run them. Under `--report` / `--dry-run`, print the plan and
 write nothing.
 
@@ -21,12 +21,12 @@ write nothing.
 Start the ledger before Phase 1:
 
 ```bash
-bash "$SKILL_DIR/scripts/runlog.sh" start repo-tidy/first-push preflight secret-gate live-check going-public osv-scanner zizmor pinact gitignore gitleaks-hook hadolint tars secret-gate-final github-settings --tools gitleaks trufflehog zizmor pinact osv-scanner hadolint gh
+bash "$SKILL_DIR/scripts/runlog.sh" start repo-tidy/first-push preflight secret-gate live-check going-public osv-scanner zizmor pinact gitignore internal-docs gitleaks-hook hadolint tars secret-gate-final github-settings --tools gitleaks trufflehog zizmor pinact osv-scanner hadolint gh
 ```
 
 Where each is recorded: `preflight` Phase 1 · `secret-gate`, `live-check` Phase 2 (or
 `references/going-public.md` section 1 for Public) · `going-public`, `osv-scanner` going-public
-sections 2–3 · `zizmor`, `pinact` going-public section 4 or 4h · `gitignore` 4i ·
+sections 2–3 · `zizmor`, `pinact` going-public section 4 or 4h · `gitignore`, `internal-docs` 4i ·
 `gitleaks-hook` 4k · `hadolint` 4n · `tars` 4m · `secret-gate-final`, `github-settings` Phase 6.
 Deliberate skips here: private destination so no going-public, gate clean so no `live-check`,
 no workflows, Question 9 = No, no TARS db, the user runs Phase 6 themselves.
@@ -262,6 +262,11 @@ Workflows that already exist are the project's own: don't rewrite them. If
 
 SKILL.md § Gitignore. Mark appended entries with a `# Added by repo-tidy` comment header, and
 offer `git rm --cached` for each tracked-but-ignored file rather than doing it unasked.
+
+Then SKILL.md § Internal docs. Write its `.gitignore` rules, then list the internal docs that
+are tracked and ask once with `AskUserQuestion`: **Untrack all (Recommended)** | **Pick which**
+| **Keep tracked**. For a Public destination, include the history count from
+`references/internal-docs.md` section 4 in the question, since the push publishes that history.
 
 ### 4j. Logo (if requested)
 

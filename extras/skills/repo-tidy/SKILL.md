@@ -1,6 +1,6 @@
 ---
 name: repo-tidy
-description: Get a repo ready for its first push, or bring an existing one back in line. First push - README, LICENSE, CONTRIBUTING, SECURITY, CHANGELOG, .github templates, Dependabot, secret gate, gh repo create, going public. Upkeep - verify the README against disk, audit AGENTS.md, archive stale docs, gather docs into docs/, remove proven-dead files, flag unused assets and clutter, check the deployment standard, GitHub security settings and Scorecard, refresh the Archify diagram, logo, TARS record, memex wiki and Claude memory, then commit. Use for "repo ready", "prep for github", "first push", "make this repo public", "tidy repo", "repo tidy", "clean up this repo", "bring this project up to date", "housekeeping pass", "is this repo current".
+description: Get a repo ready for its first push, or bring an existing one back in line. First push - README, LICENSE, CONTRIBUTING, SECURITY, CHANGELOG, .github templates, Dependabot, secret gate, gh repo create, going public. Both modes untrack and gitignore internal docs (specs, PRDs, plans, designs, decisions, handoffs, scans). Upkeep - verify the README against disk, audit AGENTS.md, archive stale docs, gather docs into docs/, remove proven-dead files, flag unused assets and clutter, check the deployment standard, GitHub security settings and Scorecard, refresh the Archify diagram, logo, TARS record, memex wiki and Claude memory, then commit. Use for "repo ready", "prep for github", "first push", "make this repo public", "tidy repo", "repo tidy", "clean up this repo", "bring this project up to date", "housekeeping pass", "is this repo current".
 model: opus
 user-invocable: true
 allowed-tools:
@@ -161,6 +161,13 @@ rule does nothing for a file that is already tracked: `git ls-files -ci --exclud
 them, and `git rm --cached <file>` untracks each (the working copy stays). If one ever held a
 credential, untracking is not enough: it's still in history, so list it to rotate and purge
 (`references/going-public.md` section 1).
+
+### Internal docs
+
+Git tracks only docs for people who use, install, configure or contribute to the shipped
+project. Specs, PRDs, plans, designs, decisions, handoffs, task files, scans, audit reports and
+archives stay on disk, gitignored, in private repos too. Sort, untrack, fix links and check
+history per `references/internal-docs.md`.
 
 ### Dockerfiles
 

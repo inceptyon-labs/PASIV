@@ -5,7 +5,7 @@ features. Every step is "compare a claim to disk, then correct the claim or the 
 archiving to deleting, corrections to rewrites, and reporting to acting when an action would
 touch something running.
 
-Shared steps (secret gate, gitleaks setup, gitignore, Dockerfiles, TARS, logo placement) are in
+Shared steps (secret gate, gitleaks setup, gitignore, internal docs, Dockerfiles, TARS, logo placement) are in
 SKILL.md; this file says when to run them. Under `--report`, every phase still runs its read-only
 checks (the gate, zizmor, `pinact run --fix=false`, hadolint, the Scorecard, the dead-code
 analyzers and baseline build, `gh api` GETs) and lists what it would change. It writes no file,
@@ -31,11 +31,11 @@ changes no setting, and where a phase says to invoke another skill it prints "wo
 Start the ledger before Phase 1:
 
 ```bash
-bash "$SKILL_DIR/scripts/runlog.sh" start repo-tidy inventory readme agents-md stale-docs doc-layout deploy hadolint diagram github-settings zizmor pinact gitleaks-setup scorecard logo tars wiki memory hygiene dead-code unused-assets clutter de-vibe secret-gate live-check --tools gitleaks trufflehog zizmor pinact hadolint scorecard gh sqlite3
+bash "$SKILL_DIR/scripts/runlog.sh" start repo-tidy inventory readme agents-md internal-docs stale-docs doc-layout deploy hadolint diagram github-settings zizmor pinact gitleaks-setup scorecard logo tars wiki memory hygiene dead-code unused-assets clutter de-vibe secret-gate live-check --tools gitleaks trufflehog zizmor pinact hadolint scorecard gh sqlite3
 ```
 
-Checks by phase: 1 `inventory` · 2 `readme` · 3 `agents-md` · 4 `stale-docs` · 4b
-`doc-layout` · 5 `deploy`, `hadolint` · 5b `diagram` · 5c `github-settings`, `zizmor`, `pinact`,
+Checks by phase: 1 `inventory` · 2 `readme` · 3 `agents-md` · 3b `internal-docs` · 4
+`stale-docs` · 4b `doc-layout` · 5 `deploy`, `hadolint` · 5b `diagram` · 5c `github-settings`, `zizmor`, `pinact`,
 `gitleaks-setup`, `scorecard` · 6 `logo` · 7 `tars` · 8 `wiki` · 9 `memory` · 10 `hygiene` · 10b
 `dead-code`, `unused-assets`, `clutter`, `de-vibe` · 11 `secret-gate`, `live-check`. Each
 dead-code analyzer records as its own `ran dead-code` with the tool name as the detail.
@@ -86,24 +86,34 @@ one-line `CLAUDE.md` pointer, dead references, and derivable facts. Do not repea
 here. If the project has no AGENTS.md and is one the user works on with agents, scaffold it
 through that skill.
 
+## Phase 3b: Internal docs
+
+Read `references/internal-docs.md` and follow it: sort every tracked doc by its reader, untrack
+and gitignore the internal ones (specs, PRDs, plans, designs, decisions, handoffs, task files,
+scans, reports, archives), unlink them from tracked docs, and report how much history still
+holds them. Apply it directly; `git add -f` reverses an untrack. Record
+`RUNLOG done internal-docs "<n untracked, n rules>"`, or `current` when nothing internal is
+tracked.
+
 ## Phase 4: Stale documents
 
-Candidates: everything under `docs/`, `specs/`, `handoffs/`, `NOTES.md`, `TODO.md`, `PLAN*.md`,
-`CHANGELOG.md`, and any top-level `*.md` that isn't README, AGENTS, CLAUDE, LICENSE, CONTRIBUTING,
-SECURITY, CODE_OF_CONDUCT.
+Candidates: the tracked docs Phase 3b kept (usage docs, references, ARCHITECTURE.md, runbooks
+written for users) and `CHANGELOG.md`. Internal docs are local after Phase 3b; leave their
+staleness alone.
 
 A document is stale when any of these hold:
 - it names files, commands, or flags that no longer exist
 - it describes as planned something the README or git log shows shipped
 - a newer document or the README fully supersedes it
-- it is a handoff or session note older than the last 10 commits it refers to
 
 Ladder, in order of preference:
 1. **Correct** it if it is mostly right and still read (a runbook, a design still in force).
-2. **Archive** it if it records a decision, a spec, or history worth keeping:
-   `git mv <doc> docs/archive/<YYYY-MM-DD>-<original-name>` where the date is the doc's last
-   commit date (`git log -1 --format=%as -- <doc>`). Add one line at the top:
-   `> Archived <today>: superseded by <what>.`
+2. **Archive** it if it records history worth keeping. `docs/archive/` is gitignored (Phase
+   3b), so the archive is local and the commit removes the doc from the tree:
+   `git rm -q --cached <doc> && mkdir -p docs/archive && mv <doc> docs/archive/<YYYY-MM-DD>-<original-name>`
+   where the date is the doc's last commit date (`git log -1 --format=%as -- <doc>`). Add one
+   line at the top: `> Archived <today>: superseded by <what>.` Unlink it from tracked docs
+   (`references/internal-docs.md` section 3, step 4).
 3. **Delete** only obvious junk. Empty files, `.DS_Store`, exact duplicates, generated output
    that is gitignored everywhere else.
 
@@ -286,8 +296,9 @@ nothing to report, and give each follow-up its own bullet:
 **Repo tidy: <name>**
 
 - **Fixed:** README (3 paths, port), AGENTS.md (2 dead refs), docs/runbook.md
-- **Archived:** docs/archive/2026-03-04-spec-v1.md, scripts/archive/deploy-old.sh
-- **Moved:** ARCHITECTURE.md → docs/architecture.md, specs/ → docs/specs/ (7 links updated)
+- **Untracked (internal, kept on disk):** docs/designs/ (4), NOTES.md; .gitignore +2 rules; in 17 commits of history
+- **Archived:** docs/archive/2026-03-04-runbook-v1.md (local), scripts/archive/deploy-old.sh
+- **Moved:** ARCHITECTURE.md → docs/architecture.md, guides/ → docs/guides/ (7 links updated)
 - **Deleted:** .DS_Store (2)
 - **Removed (dead code):** src/legacy/OldChart.tsx, src/utils/format-old.ts (build passed)
 - **Ignored:** *.log, Screenshot*.png (untracked clutter)

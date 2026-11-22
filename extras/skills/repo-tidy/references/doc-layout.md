@@ -1,8 +1,9 @@
 # Doc layout (Phase 4b)
 
 Goal: project docs live together under `docs/`, grouped when there are enough of them, with
-every link still working. This moves docs only. It never moves code, and it doesn't rename
-files except to resolve a collision.
+every link still working. This moves tracked docs only: internal docs were untracked in Phase 3b
+(`references/internal-docs.md`) and stay where they are on disk. It never moves code, and it
+doesn't rename files except to resolve a collision.
 
 ## 1. What stays where it is
 
@@ -16,7 +17,8 @@ pointer, not a duplicate.
 **Tool-owned paths:** PASIV reads and writes these at fixed paths, so never move them or
 anything inside them: `docs/handoffs/`, `docs/tasks/`, `docs/designs/`, `docs/metrics/`,
 `docs/scans/` (repo-scan reports), `docs/app-store-ready/` (its reports),
-`docs/design-system*`, `docs/archive/`, `docs/architecture.json`, `.beans/`, `.pasiv.yml`. Also
+`docs/design-system*`, `docs/archive/`, `docs/architecture.json`, `.beans/`, `.pasiv.yml`. Most
+of these are internal and gitignored by Phase 3b; they still never move. Also
 leave `.github/`, `fastlane/`, `.claude/`, and any `node_modules/`, `Pods/`, `vendor/` or build
 output.
 
@@ -35,14 +37,14 @@ files, so an external URL would break.
 
 ## 2. Candidates
 
+Tracked docs only. Specs, plans, notes, roadmaps, ADRs and handoffs are internal and were
+untracked in Phase 3b, so they aren't candidates.
+
 - Root-level `*.md` not in the keep list: `ARCHITECTURE.md`, `DEPLOY.md`, `SETUP.md`,
-  `NOTES.md`, `ROADMAP.md`, `TODO.md`, `PLAN*.md`, `API.md`, `TESTING.md`, `RUNBOOK.md`,
-  `HANDOFF*.md`, design or spec notes
-- Doc folders outside `docs/`: `specs/`, `notes/`, `design/`, `planning/`, `documentation/`,
-  `wiki/`, `adr/`, `rfcs/`, `handoffs/` at the root (PASIV's own handoffs live in
-  `docs/handoffs/` already)
-- Prose docs dropped inside source trees: a `NOTES.md` or `DESIGN-NOTES.md` under `src/`,
-  `lib/`, `Sources/`. A short `README.md` explaining that folder's code stays next to the code
+  `USAGE.md`, `API.md`, `TESTING.md`, `RUNBOOK.md`, `FAQ.md`
+- Doc folders outside `docs/`: `documentation/`, `guides/`, `wiki/`
+- Prose docs dropped inside source trees: a usage or setup doc under `src/`, `lib/`,
+  `Sources/`. A short `README.md` explaining that folder's code stays next to the code
 - Images and diagrams used only by docs (not by the app or the README header) that sit at the
   root or in a random folder: move to `docs/images/`
 
@@ -53,12 +55,11 @@ archive it.
 
 - Default: `docs/<lowercase-name>.md` (`ARCHITECTURE.md` → `docs/architecture.md`). Lowercasing
   is the one allowed rename. Skip it if the project's existing `docs/` files use uppercase.
-- A whole folder moves as a folder: `specs/` → `docs/specs/`, `adr/` → `docs/decisions/` only
-  if `docs/decisions/` already exists, otherwise `docs/adr/`.
+- A whole folder moves as a folder: `guides/` → `docs/guides/`.
 - **Group only when it helps.** If `docs/` would have more than about 8 loose files after the
   moves, group them by kind, reusing any subfolders the project already has. Common groups:
-  `docs/specs/`, `docs/runbooks/` (deploy, ops, recovery), `docs/reference/` (APIs, schemas,
-  configs), `docs/decisions/` (ADRs). Don't invent a taxonomy for three files, and don't split
+  `docs/guides/`, `docs/runbooks/` (deploy, ops, recovery), `docs/reference/` (APIs, schemas,
+  configs). Don't invent a taxonomy for three files, and don't split
   a group that has one member.
 - Name collision (`docs/notes.md` already exists): keep both by moving the incoming one as
   `docs/notes-<old-folder-or-root>.md` and mention it, or merge only if they're the same doc.
@@ -91,5 +92,5 @@ would change, and touch nothing.
 
 ## Summary line
 
-`**Moved:** ARCHITECTURE.md → docs/architecture.md, specs/ → docs/specs/ (7 links updated)`,
+`**Moved:** ARCHITECTURE.md → docs/architecture.md, guides/ → docs/guides/ (7 links updated)`,
 plus `kept in place: PRIVACY.md (linked from App Store metadata)` when something was held back.

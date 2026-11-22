@@ -60,13 +60,13 @@ git rev-list --objects --all | git cat-file --batch-check='%(objecttype) %(objec
 # dependencies an outsider cannot fetch
 cat .gitmodules 2>/dev/null
 git grep -nIE 'git\+ssh://|git@[a-z0-9.-]+:|"file:\.\.?/|link:\.\.?/' -- '*.json' '*.toml' '*.yaml' '*.yml' '*.lock' | head
-# agent files, handoffs, task trackers and scratch notes that are tracked
-git ls-files | grep -iE '(^|/)(CLAUDE\.md|AGENTS\.md|\.claude/|\.cursor|\.mcp\.json|\.beans/|handoffs?/|HANDOFF|NOTES\.md|TODO\.md|docs/tasks/)'
+# agent and tool config that is tracked
+git ls-files | grep -iE '(^|/)(CLAUDE\.md|AGENTS\.md|\.claude/|\.cursor|\.mcp\.json)'
 # known vulnerabilities and licenses of every locked dependency (reads lockfiles only; needs network)
 osv-scanner scan source -r . --licenses 2>/dev/null; echo "osv-scanner exit=$?"
 ```
 
-Agent files are the user's call (`de-vibe --gitignore` untracks them). A public repo needs a LICENSE; without one it is all-rights-reserved, so confirm "None" was deliberate.
+Agent files are the user's call (`de-vibe --gitignore` untracks them). Specs, plans, designs, handoffs, task files, scans and other internal docs go through SKILL.md § Internal docs, including its history check (`references/internal-docs.md` section 4): a public push or flip publishes every commit that holds them. A public repo needs a LICENSE; without one it is all-rights-reserved, so confirm "None" was deliberate.
 
 Reading the `osv-scanner` output (exit 1 = vulnerabilities found, 128 = no lockfile, so nothing was checked; not installed = SKIPPED, `brew install osv-scanner`):
 
