@@ -43,11 +43,15 @@ Arguments: `"Title" "Body" "labels" "type" [parent]`
 # Map PASIV type to beans type
 # Epic → milestone, Feature → feature, Task → task
 
+# beans takes one --tag per label; LABELS is comma-separated
+TAG_ARGS=()
+for label in $(printf '%s' "$LABELS" | tr ',' ' '); do TAG_ARGS+=(--tag "$label"); done
+
 # Without parent:
-beans create "$TITLE" -t $BEANS_TYPE --body "$BODY" --tags "$LABELS"
+beans create "$TITLE" -t $BEANS_TYPE --body "$BODY" "${TAG_ARGS[@]}"
 
 # With parent:
-beans create "$TITLE" -t $BEANS_TYPE --body "$BODY" --tags "$LABELS" --parent $PARENT_ID
+beans create "$TITLE" -t $BEANS_TYPE --body "$BODY" "${TAG_ARGS[@]}" --parent $PARENT_ID
 ```
 
 Return the created bean ID.
@@ -77,7 +81,7 @@ If comment provided, append to body.
 Arguments: bean ID
 
 ```bash
-beans query '{ beans(filter: {parent: "'$ID'"}) { id title status } }'
+beans query '{ beans(filter: {parentId: "'$ID'"}) { id title status } }'
 ```
 
 Return list of child beans.
@@ -112,7 +116,7 @@ beans update $ID --body "$UPDATED"
 Arguments: bean ID, files, decisions, notes
 
 ```bash
-beans update $ID --append-body "## Completed
+beans update $ID --body-append "## Completed
 
 **Files changed:**
 $FILES
@@ -151,7 +155,7 @@ Arguments: bean ID
 ```bash
 PARENT=$(beans show $ID --json | jq -r '.parent // empty')
 if [ -n "$PARENT" ]; then
-  beans query '{ beans(filter: {parent: "'$PARENT'", status: "completed"}) { id title body } }'
+  beans query '{ beans(filter: {parentId: "'$PARENT'", status: ["completed"]}) { id title body } }'
 fi
 ```
 
