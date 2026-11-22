@@ -1,6 +1,6 @@
 {
   "name": "pasiv-extras",
-  "description": "PASIV standalone utilities: repo-scan, repo-ready, repo-tidy, app-store-ready, de-vibe, humanizer, fable-audit, agents-md, codex-image, design-pipeline, plus personal helpers (acp, acpd, uranus-deploy). Ad hoc tools outside the core workflow.",
+  "description": "PASIV standalone utilities: repo-scan, repo-tidy (first push + upkeep), app-store-ready, de-vibe, humanizer, fable-audit, agents-md, codex-image, design-pipeline, plus personal helpers (acp, acpd, uranus-deploy). Ad hoc tools outside the core workflow.",
   "author": {
     "name": "Inceptyon Labs"
   },

@@ -131,7 +131,7 @@ No `.pasiv.yml` defaults to Local Markdown (zero-dependency). GitHub and Beans a
 | `/reflect` | Memory / feedback | Persist durable facts, corrections, and reusable workflows from the session (also fires from `finish` when `auto_reflect` is on) |
 | `/review [profile]` | - | Review the diff at a chosen depth: `quick`/`standard`/`fast`/`deep`/`codex` |
 
-**Standalone utilities** live in the separate **`pasiv-extras`** plugin (`/plugin install pasiv-extras@pasiv`) so they don't load into every session: `/repo-scan` (security vetting), `/repo-ready` (first-push prep), `/app-store-ready` (submission validator + ASO), `/repo-tidy` (maintenance pass), `/de-vibe` (strip AI tells), `/humanizer` (de-slop a document), `/fable-audit` (deep risk audit), `/agents-md` (AGENTS.md scaffold/audit), `/codex-image` (image generation via Codex CLI), `/design-pipeline` (PRD to finished UI design workflow), plus personal helpers (`/acp`, `/acpd`, `/uranus-deploy`).
+**Standalone utilities** live in the separate **`pasiv-extras`** plugin (`/plugin install pasiv-extras@pasiv`) so they don't load into every session: `/repo-scan` (security vetting), `/repo-tidy` (first-push prep and maintenance pass; `/repo-ready` is an alias for its first-push mode), `/app-store-ready` (submission validator + ASO), `/de-vibe` (strip AI tells), `/humanizer` (de-slop a document), `/fable-audit` (deep risk audit), `/agents-md` (AGENTS.md scaffold/audit), `/codex-image` (image generation via Codex CLI), `/design-pipeline` (PRD to finished UI design workflow), plus personal helpers (`/acp`, `/acpd`, `/uranus-deploy`).
 
 ## Workflow patterns
 
@@ -428,9 +428,8 @@ Standalone utilities ship as a **separate plugin** so the core workflow stays le
 | Skill | What it does |
 |-------|--------------|
 | `/repo-scan` | Multi-ecosystem security vetting: CVEs, malware patterns, obfuscated code, secrets; PASS/CAUTION/FAIL report in `docs/scans/` |
-| `/repo-ready` | Prep for first GitHub push: README, LICENSE, community files, Dependabot, secret scan |
 | `/app-store-ready` | Apple App Store submission validator + ASO/keyword optimizer |
-| `/repo-tidy` | Maintenance pass on a shipping repo: README vs disk, stale docs, docs gathered into `docs/`, proven-dead files removed, deploy standard, GitHub security settings, diagram, TARS/memory refresh |
+| `/repo-tidy` | One skill, two modes. First push (`ready`, or the `/repo-ready` alias): README, LICENSE, community files, Dependabot, secret gate, `gh repo create`, going public. Upkeep: README vs disk, stale docs, docs gathered into `docs/`, proven-dead files removed, deploy standard, GitHub security settings, diagram, TARS/memory refresh. Picks the mode from the repo's push state |
 | `/de-vibe` | Strip AI tells: invisible characters and chat residue, de-slop docs, drop restate-comments, scrub trailers |
 | `/humanizer` | De-slop a single document and rewrite it in the author's voice |
 | `/fable-audit` | Judgment-led deep audit of auth, data isolation, money movement, key exposure, shared state |
@@ -669,8 +668,8 @@ extras/                         # pasiv-extras plugin — ad hoc utilities
 ├── .claude-plugin/plugin.json
 └── skills/
     ├── repo-scan/              # /repo-scan (security vetting)
-    ├── repo-ready/             # /repo-ready (first-push prep)
-    ├── repo-tidy/              # /repo-tidy (maintenance pass)
+    ├── repo-tidy/              # /repo-tidy (first push + upkeep; scripts shared with repo-scan)
+    ├── repo-ready/             # /repo-ready alias → repo-tidy ready
     ├── app-store-ready/        # /app-store-ready (submission + ASO)
     ├── de-vibe/                # /de-vibe (strip AI tells)
     ├── humanizer/              # /humanizer (de-slop one document)

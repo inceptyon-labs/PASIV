@@ -1,6 +1,6 @@
 # GitHub dependency and secret monitoring (Phase 4o + Phase 6)
 
-The standard for every repo hosted on GitHub. `repo-ready` applies it on first push; `repo-tidy` checks existing repos against it. None of it applies to a non-GitHub remote.
+The standard for every repo hosted on GitHub. `repo-tidy` applies it on first push and checks existing repos against it. None of it applies to a non-GitHub remote.
 
 ## 1. `.github/dependabot.yml`
 

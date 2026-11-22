@@ -24,14 +24,14 @@ Comprehensive security scan of a repository. Designed for vetting forked/cloned 
 
 **Input:** $ARGUMENTS (optional path to scan — defaults to current working directory)
 
-`SKILL_DIR` is this skill's own directory: the one that holds this SKILL.md, shown as the skill's base directory when it loads. Scripts and assets live there, not in the project, so always call them by absolute path (`"$SKILL_DIR/scripts/…"`). If you don't know it: `SKILL_DIR=$(ls -d ~/.claude/skills/repo-scan 2>/dev/null || find ~/.claude/plugins -maxdepth 8 -type d -path '*skills/repo-scan' 2>/dev/null | sort | tail -1)`. The secret gate and gitleaks config belong to the sibling skill, at `"$SKILL_DIR/../repo-ready/"`.
+`SKILL_DIR` is this skill's own directory: the one that holds this SKILL.md, shown as the skill's base directory when it loads. Scripts and assets live there, not in the project, so always call them by absolute path (`"$SKILL_DIR/scripts/…"`). If you don't know it: `SKILL_DIR=$(ls -d ~/.claude/skills/repo-scan 2>/dev/null || find ~/.claude/plugins -maxdepth 8 -type d -path '*skills/repo-scan' 2>/dev/null | sort | tail -1)`. The secret gate and gitleaks config belong to the sibling skill, at `"$SKILL_DIR/../repo-tidy/"`.
 
 **Task bookkeeping:** If the task tools (TaskCreate/TaskUpdate) are available, wrap every scan step (3–9, including 8b) in TaskUpdate — mark its task in_progress at the start and completed at the end. Without them, skip the bookkeeping. Not repeated per step below.
 
-**Run report:** every check also goes in a ledger, and its report becomes the Scan Coverage section, so the user sees what ran, what couldn't, and what never did. `RUNLOG` below is shorthand for `bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh"`: expand it in every command (shell variables don't carry between calls) and run it from the directory the skill was invoked from, which keys the ledger. It writes under `$TMPDIR`, never into TARGET, and runs no git. Start it in Step 0, once TARGET checks out:
+**Run report:** every check also goes in a ledger, and its report becomes the Scan Coverage section, so the user sees what ran, what couldn't, and what never did. `RUNLOG` below is shorthand for `bash "$SKILL_DIR/../repo-tidy/scripts/runlog.sh"`: expand it in every command (shell variables don't carry between calls) and run it from the directory the skill was invoked from, which keys the ledger. It writes under `$TMPDIR`, never into TARGET, and runs no git. Start it in Step 0, once TARGET checks out:
 
 ```bash
-bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh" start repo-scan scan osv-scanner typosquat install-scripts obfuscation network malware secret-gate autoexec zizmor files --tools rg perl osv-scanner gitleaks zizmor
+bash "$SKILL_DIR/../repo-tidy/scripts/runlog.sh" start repo-scan scan osv-scanner typosquat install-scripts obfuscation network malware secret-gate autoexec zizmor files --tools rg perl osv-scanner gitleaks zizmor
 ```
 
 Record each check when it finishes:
@@ -188,10 +188,10 @@ Record all findings.
 
 ## Step 8: Secrets Detection
 
-Use gitleaks, not hand-written patterns. The gate ships with the sibling `repo-ready` skill; `SECRET_GATE_BUILTIN=1` makes it ignore any `.gitleaks.toml` inside TARGET, which a hostile repo could use to allowlist its own secrets:
+Use gitleaks, not hand-written patterns. The gate ships with the sibling `repo-tidy` skill; `SECRET_GATE_BUILTIN=1` makes it ignore any `.gitleaks.toml` inside TARGET, which a hostile repo could use to allowlist its own secrets:
 
 ```bash
-SECRET_GATE_BUILTIN=1 bash "$SKILL_DIR/../repo-ready/scripts/secret-gate.sh" "$TARGET"; echo "gate exit=$?"
+SECRET_GATE_BUILTIN=1 bash "$SKILL_DIR/../repo-tidy/scripts/secret-gate.sh" "$TARGET"; echo "gate exit=$?"
 ```
 
 Strict mode also ignores the target's `.gitleaksignore` and inline `gitleaks:allow` comments. It scans every commit on every ref plus the working tree and prints `commit:file:rule:line` locations, never values. Exit 1 = secrets found, 3 = sensitive filenames to read, 2 = could not run. On exit 1 or 3, read every section it printed: exit 1 does not mean the filename sections are empty. Its closing line is written for the publishing flow; here a finding is a finding, and the scan carries on. On exit 2 read its message: gitleaks missing means this step is SKIPPED; a shallow clone means history could not be scanned, so use the fallback below and say the history is unchecked.
@@ -199,7 +199,7 @@ Strict mode also ignores the target's `.gitleaksignore` and inline `gitleaks:all
 If Step 2 reported `GIT: untrusted config`, or TARGET is not a git repo, scan the files without git:
 
 ```bash
-OUT=$(mktemp); gitleaks dir --config "$SKILL_DIR/../repo-ready/assets/gitleaks.toml" --ignore-gitleaks-allow --gitleaks-ignore-path "$(mktemp -d)" --redact --verbose --no-banner "$TARGET" > "$OUT" 2>&1; rc=$?; grep -E '^(RuleID|File|Line):' "$OUT"; echo "gitleaks exit=$rc"
+OUT=$(mktemp); gitleaks dir --config "$SKILL_DIR/../repo-tidy/assets/gitleaks.toml" --ignore-gitleaks-allow --gitleaks-ignore-path "$(mktemp -d)" --redact --verbose --no-banner "$TARGET" > "$OUT" 2>&1; rc=$?; grep -E '^(RuleID|File|Line):' "$OUT"; echo "gitleaks exit=$rc"
 ```
 
 `gitleaks dir` always honors a `.gitleaksignore` in the scanned directory. If TARGET has one, every fingerprint in it is a finding the scan was told to skip: report the file as HIGH and read each listed location by hand.
@@ -320,7 +320,7 @@ Where a step gives no severity, use these defaults:
 Before writing the report, print the ledger:
 
 ```bash
-bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh" report
+bash "$SKILL_DIR/../repo-tidy/scripts/runlog.sh" report
 ```
 
 Exit 1 means a check has no record: go back and run that step, or record a skip with the reason, and print it again. The final output goes in the Scan Coverage section unchanged.

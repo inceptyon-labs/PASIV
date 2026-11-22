@@ -3,7 +3,7 @@
 For a project that already has a `project_metadata` row. The row carries the full schema
 the desktop app requires (~55 keys); read it, overlay the corrections, write it back. Do not
 rebuild it from scratch and do not drop keys. If the row is missing, use the builder in
-`../../repo-ready/references/tars-registration.md` instead.
+`tars-registration.md` instead.
 
 ```bash
 python3 <<'PY'
@@ -17,7 +17,7 @@ row = db.execute(
     "select p.id, m.data from projects p join project_metadata m on m.project_id=p.id where p.path=?",
     (path,)).fetchone()
 if not row:
-    raise SystemExit("no TARS row for this path; use the repo-ready builder")
+    raise SystemExit("no TARS row for this path; use the tars-registration.md builder")
 pid, m = row[0], json.loads(row[1])
 
 # Overlay only what the manifest contradicts. Examples:

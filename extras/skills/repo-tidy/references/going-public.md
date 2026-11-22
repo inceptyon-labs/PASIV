@@ -92,7 +92,7 @@ pinact run --fix=false --no-api; echo "pinact exit=$?"
 - zizmor exit codes: 0 = nothing found; 3 = no workflows or actions to audit, which is not applicable, not a failure; 14 = at least one **High**; 13, 12, 11 = worst finding Medium, Low, informational. High findings block a public push until fixed or accepted; show Medium and Low, and let the user decide. A fix it marks "unsafe" changes behavior: describe it, don't apply it blind.
 - pinact exits non-zero and prints one "can't be pinned" line per action that is not pinned to a full SHA (offline it cannot say more). `GITHUB_TOKEN="$T" pinact run` rewrites each `uses:` to its commit SHA with the version in a comment. That is the same code the workflow runs today, so it is safe to apply to workflows this skill wrote; for the project's existing workflows show the diff and apply on a yes. An action on a branch ref (`@main`, `@beta`) has no version to pin and stays as it is: list it as a follow-up. pinact honors a `.pinact.yaml` in the repo, so an action excluded there is not reported.
 - Neither installed: say SKIPPED for each and fall back to the greps.
-- If this runs before the skill has written `.github/` (Phase 3 of repo-ready), run it again after Phase 4: the workflows and `dependabot.yml` it writes are audited too.
+- If this runs before the skill has written `.github/` (first-push Phase 3), run it again after Phase 4: the workflows and `dependabot.yml` it writes are audited too.
 
 The greps work without either tool. Each command prints under its own heading; a heading with nothing under it is a pass.
 

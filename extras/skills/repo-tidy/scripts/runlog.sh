@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run ledger for the repo-ready, repo-tidy and repo-scan skills. `start` lists
+# Run ledger for the repo-tidy and repo-scan skills. `start` lists
 # every check the run owes and records which tools are installed. Each check is
 # then recorded as it runs, or skipped with a reason. `report` prints Markdown,
 # grouped worst first (not run, couldn't run, findings, passed, done, skipped),

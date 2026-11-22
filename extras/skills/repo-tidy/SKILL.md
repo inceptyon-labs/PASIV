@@ -1,6 +1,6 @@
 ---
 name: repo-tidy
-description: Bring an existing project back in line - verify the README against disk, audit AGENTS.md, archive or fix stale docs, gather scattered docs into docs/, remove proven-dead source files and flag unused assets, dependencies and untracked clutter, check the deployment against the house standard, check Dependabot, secret scanning, workflows and the OpenSSF Scorecard on GitHub repos, create or refresh the Archify architecture diagram, put the logo everywhere, refresh the TARS project record, the memex wiki page and Claude's project memory, then commit. Use for "tidy repo", "repo tidy", "clean up this repo", "bring this project up to date", "housekeeping pass", "is this repo current".
+description: Get a repo ready for its first push, or bring an existing one back in line. First push - README, LICENSE, CONTRIBUTING, SECURITY, CHANGELOG, .github templates, Dependabot, secret gate, gh repo create, going public. Upkeep - verify the README against disk, audit AGENTS.md, archive stale docs, gather docs into docs/, remove proven-dead files, flag unused assets and clutter, check the deployment standard, GitHub security settings and Scorecard, refresh the Archify diagram, logo, TARS record, memex wiki and Claude memory, then commit. Use for "repo ready", "prep for github", "first push", "make this repo public", "tidy repo", "repo tidy", "clean up this repo", "bring this project up to date", "housekeeping pass", "is this repo current".
 model: opus
 user-invocable: true
 allowed-tools:
@@ -16,415 +16,172 @@ allowed-tools:
 
 # Repo Tidy
 
-A maintenance pass over a project that already exists and already ships. Nothing here adds
-features. Every step is "compare a claim to disk, then correct the claim or the disk".
-Prefer archiving to deleting, corrections to rewrites, and reporting to acting when an action
-would touch something running.
+One skill for a repo's whole life on your machine, in two modes:
 
-**Input:** $ARGUMENTS, optional flags:
-- `--report` scan and print the plan, change nothing. Under `--report` every phase still runs
-  its read-only checks (the gate, zizmor, `pinact run --fix=false`, hadolint, the Scorecard,
-  `gh api` GETs) and lists what it would change; it writes no file, changes no setting, and
-  where a phase says to invoke another skill it prints "would invoke <skill>" and moves on
-- `--skip-deploy` skip Phase 5
-- `--skip-diagram` skip Phase 5b
-- `--skip-memory` skip Phase 9
-- `--skip-dead-code` skip the analyzer and build part of Phase 10b (builds can be slow); the
-  clutter check still runs
-- `--no-commit` stop before the final `/acp`
+- **First push** (`ready`): prepare an unpublished project, write the community and security
+  files, and print (then offer to run) the `gh repo create` or bare-SSH setup. Never commits.
+  Flow: `references/first-push.md`.
+- **Upkeep** (`tidy`): a maintenance pass over a project that already ships. Compare every claim
+  to disk and fix the claim or the disk, then commit with `/acp`. Flow: `references/upkeep.md`.
+
+Security vetting of someone else's code is a different skill (`repo-scan`): it never runs the
+target's code, and this one builds and installs.
+
+**Input:** $ARGUMENTS — an optional mode word and flags:
+- `ready` / `first push` → first push. `public` / `make public` → first push, including the
+  visibility flip of an existing private GitHub repo. `tidy` / `upkeep` → upkeep.
+- `--report` (alias `--dry-run`): scan and print the plan, change nothing. Read-only checks still run.
+- Upkeep only: `--skip-deploy`, `--skip-diagram`, `--skip-memory`, `--skip-dead-code` (the
+  analyzer and build part; the clutter check still runs), `--no-commit` (stop before `/acp`).
+
+## Pick the mode
+
+1. A mode word in the arguments wins. The `repo-ready` alias passes `ready`.
+2. Otherwise check the repo:
+   ```bash
+   git rev-parse --is-inside-work-tree 2>/dev/null && git remote -v && git ls-remote --heads origin 2>/dev/null | head -1
+   ```
+   - Not a git repo: stop and suggest `git init`.
+   - No remote, or a remote with no branches yet: ask once with `AskUserQuestion` — **First-push
+     prep (Recommended)** | **Upkeep only** (a local-only project that won't be published).
+   - A remote with pushed history: upkeep.
+3. Read the mode's flow file and follow it from Phase 1. Read the other flow file only if the
+   user switches modes partway (first push found an existing remote and they chose upkeep).
 
 `SKILL_DIR` is this skill's own directory: the one that holds this SKILL.md, shown as the skill's base directory when it loads. Scripts and assets live there, not in the project, so always call them by absolute path (`"$SKILL_DIR/scripts/…"`). If you don't know it: `SKILL_DIR=$(ls -d ~/.claude/skills/repo-tidy 2>/dev/null || find ~/.claude/plugins -maxdepth 8 -type d -path '*skills/repo-tidy' 2>/dev/null | sort | tail -1)`.
-`references/` paths are relative to it. The TARS builder, the GitHub security standard, the
-secret gate and the gitleaks assets live in the sibling skill, under
-`"$SKILL_DIR/../repo-ready/"`: every `../repo-ready/…` path below starts there.
+Every `assets/`, `references/` and `scripts/` path in this skill is relative to it.
 
 ## Run report
 
-Every check goes in a ledger, and the pass ends by printing it, so the user sees what ran,
-what was skipped and why, and what never ran. `RUNLOG` below is shorthand for
-`bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh"`: expand it in every command (shell
-variables don't carry between calls) and run it from the project root, which keys the ledger.
-It lives outside the repo, so it runs under `--report` too. Start it before Phase 1:
+Every check goes in a ledger, and the run ends by printing it, so the user sees what ran, what
+was skipped and why, and what never ran. `RUNLOG` is shorthand for
+`bash "$SKILL_DIR/scripts/runlog.sh"`: expand it in every command (shell variables don't carry
+between calls) and run it from the project root, which keys the ledger. It lives outside the
+repo, so it runs under `--report` too. Each flow file has its own `start` line and check list.
+Record each check when it finishes:
 
-```bash
-bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh" start repo-tidy inventory readme agents-md stale-docs doc-layout deploy hadolint diagram github-settings zizmor pinact gitleaks-setup scorecard logo tars wiki memory hygiene dead-code unused-assets clutter de-vibe secret-gate live-check --tools gitleaks trufflehog zizmor pinact hadolint scorecard gh sqlite3
-```
+- **A tool ran**: take the exit code straight after the tool, before any `echo … exit=$?`, and
+  record it on the same command line: `<tool command>; rc=$?; echo "exit=$rc"; RUNLOG ran <check> $rc`.
+  The ledger reads the code as ok, findings or couldn't run. Several targets (Dockerfiles,
+  analyzers): one `ran` per target, with the target as the detail. A strict-mode gate gets the
+  detail `strict`
+- **A step with no tool finished** (a phase, an invoked skill): `RUNLOG done <check> "<what changed, or current>"`
+- **Deliberately not run**: `RUNLOG skip <check> "<reason>"`
 
-Checks by phase: 1 `inventory` · 2 `readme` · 3 `agents-md` · 4 `stale-docs` · 4b
-`doc-layout` · 5 `deploy`, `hadolint` · 5b `diagram` · 5c `github-settings`, `zizmor`, `pinact`,
-`gitleaks-setup`, `scorecard` · 6 `logo` · 7 `tars` · 8 `wiki` · 9 `memory` · 10 `hygiene` · 10b
-`dead-code`, `unused-assets`, `clutter`, `de-vibe` · 11 `secret-gate`, `live-check`. Record each
-one when it finishes:
+At the end, also when the gate stopped the run: `bash "$SKILL_DIR/scripts/runlog.sh" report`.
+Exit 1 means a listed check has no record: run it, or record a skip with the reason, and print
+the report again. The report is Markdown: paste it into your final message as-is, not inside a
+code block, so the terminal renders the headings and wraps long lines. Tool output doesn't reach
+the user on its own.
 
-- **A tool ran** (`hadolint`, `zizmor`, `pinact`, `scorecard`, `secret-gate`, `live-check`, and
-  each dead-code analyzer with the tool name as the detail):
-  take the exit code straight after the tool, before any `echo … exit=$?`, and record it on
-  the same command line: `<tool command>; rc=$?; echo "exit=$rc"; RUNLOG ran <check> $rc`.
-  The ledger reads the code as ok, findings or couldn't run. Several Dockerfiles: one `ran`
-  per file, with the file as the detail
-- **A step with no tool finished** (a phase, an invoked skill):
-  `RUNLOG done <check> "<what changed, or current>"`
-- **Deliberately not run** (a `--skip-*` flag, not a GitHub repo, no Dockerfile, no
-  workflows, gate passed so no `live-check`): `RUNLOG skip <check> "<reason>"`
+Tools: `gitleaks` (required for the gate), and `trufflehog`, `zizmor`, `pinact`, `osv-scanner`,
+`hadolint`, `scorecard` for the checks that name them
+(`brew install gitleaks trufflehog zizmor pinact osv-scanner hadolint scorecard`). A missing one
+shows as MISSING on the report's Tools line and as couldn't run on its check; a check that did
+not run is never reported as a pass.
 
 ## Hard rules
 
 - **Never edit** secrets, `.env*`, signing keys, risk caps, trading or billing config, or
   anything a project's AGENTS.md says agents must not touch. Read AGENTS.md first.
-- **Never migrate a running deployment.** Phase 5 reports gaps and a plan; the migration is a
-  separate, deliberate session.
-- **Never delete a document you did not create** unless it is obvious junk (empty, `.DS_Store`,
-  an exact duplicate). Everything else that is stale gets archived or corrected.
-- **Delete source files only with proof** (Phase 10b): the analyzer and a repo-wide grep both
-  say unused, and the project's build passes after removal. No passing baseline build means
-  nothing is deleted. Assets and dependencies are report-only.
-- **Never delete untracked files.** They aren't in git, so there's no undo. Gitignore junk
-  patterns; ask about anything that looks like work.
-- **Move docs, never code.** Phase 4b moves documentation only, and leaves anything that code,
-  config, CI, a tool, or an external URL references by path.
+- Each flow file adds its own mode-specific rules at the top.
 - **Every change and every archive lands in the final summary.** Git makes repo changes
-  reversible; the summary makes them reviewable. Claude memory and the TARS database are
-  outside git, so nothing there is removed without a copy (Phase 9) or overwritten without
-  being listed.
-- **Never commit past a failed secret gate.** Phase 11 runs it before `/acp`.
-- **Match the project's voice.** Terse README stays terse. Do not add sections the project
-  never had for the sake of completeness.
+  reversible; the summary makes them reviewable. Claude memory and the TARS database are outside
+  git, so nothing there is removed without a copy or overwritten without being listed.
+- **Never commit or push past a failed secret gate.**
+- **Match the project's voice.** Terse README stays terse. Don't add sections the project never
+  had for the sake of completeness. Every question asked must be one the repo can't answer.
 
-## Phase 1: Inventory (facts only, no edits)
+## Shared steps
 
-```bash
-pwd && git rev-parse --is-inside-work-tree && git status --short && git log --oneline -5
-# no shell globs: zsh aborts the whole line when one pattern matches nothing
-git ls-files -co --exclude-standard | grep -iE '^(README|AGENTS|CLAUDE|NOTES|CHANGELOG|HANDOFF|TODO|PLAN)[^/]*$|^[^/]+\.md$|^(docs|specs|handoffs|notes|design|planning|adr|rfcs|documentation|wiki)/' | head -80
-for f in docker-compose.yml compose.yml Dockerfile .deploy unraid-icon.png wrangler.toml fly.toml vercel.json; do [ -e "$f" ] && echo "$f"; done
-ls scripts 2>/dev/null; find . -maxdepth 3 -name '*.plist' -not -path '*/node_modules/*' 2>/dev/null
-find . -maxdepth 3 \( -iname 'logo.*' -o -iname 'icon.*' -o -iname 'favicon.*' \) -not -path '*/node_modules/*' -not -path '*/build/*' 2>/dev/null
-```
-
-If the tree is dirty, say so once. Continue; the final `/acp` sweeps everything, so ask only
-if the dirty files look like work in progress the user may not want bundled.
-
-Read `README.md` and `AGENTS.md` fully. Read the first 30 lines of every other document
-found. Record: stack, entry commands, ports, paths, scripts, and every external resource the
-docs name. This is the manifest the rest of the pass checks against.
-
-Also read, if they exist:
-- `~/memex/wiki/projects/<name>.md` (chat-derived context, may be stale in the other direction)
-- the TARS row: `sqlite3 ~/.tars/tars.db "select data from project_metadata where project_id=(select id from projects where path='$PWD')"`
-
-## Phase 2: README
-
-The README is the source of truth for what the project is, so it has to be true.
-
-For every path, script, command, port, URL, env var and file the README names, check it on
-disk (`ls`, `grep -n`, `git ls-files`). Then:
-- **Wrong**: fix in place. Renamed script, moved file, changed port, retired flag.
-- **Missing**: add only what a reader needs to run or deploy the thing: the logo header if a
-  logo exists, a deploy line if Phase 5 finds a standard deployment with no mention.
-- **Describes future work as present**: rewrite that sentence to the shipped state.
-- **Duplicates AGENTS.md operational detail**: leave the README the "what", move the "how"
-  to AGENTS.md if it isn't already there.
-
-Don't restructure. Don't add badges, tables of contents, or "Contributing" sections that
-weren't there.
-
-## Phase 3: AGENTS.md / CLAUDE.md
-
-Invoke the `agents-md` skill in audit mode and apply its findings. Its rules already cover the
-one-line `CLAUDE.md` pointer, dead references, and derivable facts. Do not repeat that work
-here. If the project has no AGENTS.md and is one the user works on with agents, scaffold it
-through that skill.
-
-## Phase 4: Stale documents
-
-Candidates: everything under `docs/`, `specs/`, `handoffs/`, `NOTES.md`, `TODO.md`,
-`PLAN*.md`, `CHANGELOG.md`, and any top-level `*.md` that isn't README, AGENTS, CLAUDE,
-LICENSE, CONTRIBUTING, SECURITY, CODE_OF_CONDUCT.
-
-A document is stale when any of these hold:
-- it names files, commands, or flags that no longer exist
-- it describes as planned something the README or git log shows shipped
-- a newer document or the README fully supersedes it
-- it is a handoff or session note older than the last 10 commits it refers to
-
-Ladder, in order of preference:
-1. **Correct** it if it is mostly right and still read (a runbook, a design still in force).
-2. **Archive** it if it records a decision, a spec, or history worth keeping:
-   `git mv <doc> docs/archive/<YYYY-MM-DD>-<original-name>` where the date is the doc's last
-   commit date (`git log -1 --format=%as -- <doc>`). Add one line at the top:
-   `> Archived <today>: superseded by <what>.`
-3. **Delete** only obvious junk. Empty files, `.DS_Store`, exact duplicates, generated output
-   that is gitignored everywhere else.
-
-`CHANGELOG.md` is special: if it stopped at a version the git log has long passed, add one
-entry summarizing "since <last version>" from the log rather than reconstructing every release.
-Never invent dates.
-
-## Phase 4b: Doc layout
-
-Read `references/doc-layout.md` and follow it: gather root-level and scattered docs into
-`docs/` (grouped into subfolders only when there are enough), `git mv` each one, rewrite links
-to and inside every moved file, and run `scripts/md-links.py` until the moves leave no broken
-links. Root files GitHub and tools expect, PASIV's fixed paths, docs-site trees, package READMEs,
-and anything referenced outside Markdown stay put. Record
-`RUNLOG done doc-layout "<n moved, n links updated>"`, or `current` when nothing needed moving.
-
-## Phase 5: Deployment standard
-
-Detect the target from the manifest, then check against the house standard for that target.
-Report gaps as a numbered plan. Apply only the items marked safe.
-
-**Uranus / Unraid** (a compose file, a Dockerfile, a deploy script, or docs mention the
-box): the standard is the `uranus-deploy` skill. Invoke it for the checklist and verify:
-- `docker-compose.yml` at the repo root with `container_name`, `restart: unless-stopped`,
-  host port from `.env` with a default, `net.unraid.docker.webui` and `.icon` labels
-- `.deploy` marker at the root (safe to add if the service is already on the pattern)
-- `unraid-icon.png` at the root, square, 512px (safe to add if a logo exists)
-- `.dockerignore` exists and excludes `.git`, `node_modules`, `data`, `.env`, build output
-- `.gitignore` covers `.env`, `docker-compose.override.yml`, `compose.override.yml`, `data/`
-  or whatever the compose file bind-mounts
-- no rsync-style deploy script, no per-project `deploy-*.sh` that duplicates `deploy`
-- runtime state that the app writes (config edited through a UI, caches, catalogs) lives in
-  a mounted directory, not in the image
-- `hadolint --no-color Dockerfile` (every Dockerfile in the repo; `brew install hadolint`,
-  not installed = SKIPPED): list each `error` and `warning` with its rule code as a gap.
-  Changing a Dockerfile changes the next deploy, so these are report-only here
-
-If the service is deployed some other way (rsync, a hand-made container in the Unraid UI),
-that is a **migration**: write the plan (compose file shape, what moves where, what per-host
-files the box needs, what restarts) into the summary and stop. Do not run it.
-
-**Cloudflare Workers** (`wrangler.toml`): `package.json` has a `deploy` script, the README
-names it, the TARS row's `deploy_command` matches.
-
-**App Store / Play / Homebrew tap**: verify the README and TARS row name the current
-distribution channel; nothing to change on disk.
-
-**No deployment**: say so and move on.
-
-## Phase 5b: Architecture diagram
-
-Read `references/architecture-diagram.md`. Use it to decide whether to create the
-`docs/architecture.json` spec, refresh it, or leave it alone. If you create it, also add
-the agent-file note it holds. Under `--report`, print the decision and its reason only.
-
-## Phase 5c: Dependency and secret monitoring
-
-GitHub remotes only: `gh repo view --json nameWithOwner,visibility`. Skip silently for
-anything else.
-
-Read `../repo-ready/references/github-security.md` and compare the repo against it:
-- no `.github/dependabot.yml` and no Renovate config: write one
-- a `dependabot.yml` missing an ecosystem the repo now uses, or `github-actions` when
-  workflows exist: add the entry
-- Dependabot alerts or security updates off: enable them
-- public repo with secret scanning or push protection off: enable both
-- public repo with private vulnerability reporting off, no `protect-default-branch` ruleset,
-  or CodeQL default setup `not-configured`: enable each
-- default `GITHUB_TOKEN` permission is `write`: set it to `read` only if every workflow has
-  its own `permissions:` block; otherwise list the workflows that lack one as a follow-up
-
-All of these are safe to apply. If a call is refused (no admin on the repo, plan doesn't
-include it), list it as a follow-up. Under `--report`, print the gaps only.
-
-Every GitHub repo with workflows gets the checks from
-`../repo-ready/references/going-public.md` section 4: zizmor, the pinact check and the
-greps. Report zizmor findings as follow-ups with severity; don't rewrite workflow logic in
-this pass. Pinning is the one exception, because it does not change what runs:
-`GITHUB_TOKEN="$(gh auth token)" pinact run` is safe to apply, and each pinned action goes in
-the summary. An action on a branch ref (`@main`, `@beta`) cannot be pinned to a version: list
-it as a follow-up. A missing tool is listed as SKIPPED. A public repo with no `LICENSE` or no
-`SECURITY.md` is a follow-up too.
-
-**Local secret scanning**, every git repo, GitHub or not:
-- `.gitleaks.toml` missing: copy `../repo-ready/assets/gitleaks.toml`
-- `.gitleaks.toml` allowlists `README.md`, `docs/` or another whole directory by path (the
-  older template did): replace its allowlist section with the one in the asset, keeping any
-  custom `[[rules]]`
-- no pre-commit secret hook: install `../repo-ready/assets/pre-commit` as
-  `.githooks/pre-commit` and run `git config core.hooksPath .githooks`. If the repo uses
-  husky, lefthook or pre-commit, leave `core.hooksPath` alone: install the asset as
-  `.githooks/gitleaks-staged` and add the line `.githooks/gitleaks-staged` to that manager's
-  pre-commit step
-- a hook from an older template (it has no `SKIPPED=` line, so a token in a lockfile or an
-  `.svg` passes it): replace it with the asset
-- hook file present but `git config --get core.hooksPath` is empty in this clone: set it
-- GitHub repo with workflows but no `.github/workflows/gitleaks.yml`, or one that still calls
-  `gitleaks detect`, has no `permissions:` block, downloads the binary with no checksum, or
-  has no "Scan files gitleaks skips by default" step: replace it with
-  `../repo-ready/assets/gitleaks-workflow.yml`
-
-Open Dependabot alerts and secret-scanning alerts go in the summary as follow-ups. Don't
-resolve or fix them in this pass.
-
-**Scorecard**, public GitHub repos only, after the settings above are applied:
+### Secret gate
 
 ```bash
-bash "$SKILL_DIR/scripts/scorecard.sh" <owner>/<name>
+bash "$SKILL_DIR/scripts/secret-gate.sh" "$PWD"; rc=$?; echo "gate exit=$rc"
 ```
 
-It prints the OpenSSF Scorecard total and every check, lowest first (`?` means not
-applicable). Exit 2 means no score: say SKIPPED (`brew install scorecard`). Put the total in
-the summary and sort the checks that scored below 7 into three piles (a check at 7 or above
-needs no mention):
+Prefix `SECRET_GATE_BUILTIN=1` (strict mode: the shipped config, and the repo's own
+`.gitleaksignore` and `gitleaks:allow` suppressions are not honored) for a public GitHub repo or
+a Public destination. It runs gitleaks over every commit on every ref and over everything
+uncommitted, lists sensitive filenames (in the tree or deleted but still in history) and tracked
+files that are gitignored, and prints locations only, never values. Act on the exit code:
 
-- **This pass already handles it**: Branch-Protection (ruleset), Dependency-Update-Tool
-  (`dependabot.yml`), SAST (CodeQL default setup), Token-Permissions, Pinned-Dependencies
-  (pinact), Vulnerabilities (Dependabot alerts), License. Settings count immediately; file
-  changes count once the commit is pushed, so say the score will move after `/acp` and
-  don't list these as follow-ups.
-- **Follow-up**: Dangerous-Workflow (the zizmor findings above), Security-Policy (no
-  `SECURITY.md`), Binary-Artifacts, Maintained.
-- **Expected low for a solo project, mention once and move on**: Code-Review, Contributors,
-  CII-Best-Practices, Fuzzing, Signed-Releases, Packaging, CI-Tests.
+- **0** — clean.
+- **1** — secrets found. **Stop**: first push writes nothing more, upkeep doesn't commit. Report
+  the locations, then run `bash "$SKILL_DIR/scripts/live-check.sh" "$PWD"` (TruffleHog, own repos
+  only) and say which are still live; those get rotated first. Deleting the file is not a fix:
+  the key is in history and has to be rotated, then squashed or purged per
+  `references/going-public.md` section 1. For a repo that is already public, say the key is
+  already exposed. Resume only when the gate passes.
+- **2** — could not scan (gitleaks missing, not a repo, shallow clone). Say why. Hard stop for a
+  public repo or Public destination. Otherwise first push asks whether to continue unscanned, and
+  upkeep continues and says the run is unscanned.
+- **3** — no secrets, but files to review. Read each listed file, confirm it holds no live
+  credential, and `git rm --cached` the ones that should not be tracked. A file that existed only
+  in history still ships with a push. A file you cleared and kept (an `.npmrc` with no token) is
+  listed again on every later run; exit 3 with only cleared files counts as a pass.
 
-Under `--report`, print the score and the piles only.
+Don't replace the gate with your own grep, and don't eyeball values in its place.
 
-## Phase 6: Logo and icon
+### Gitleaks setup
 
-If the project has a logo (`assets/logo.*`, `static/logo.*`, `public/logo.*`, or similar):
-- README header: `<p align="center"><img src="<path>" alt="<name>" width="140"></p>` at the top
-  if absent
-- favicon: a `<link rel="icon">` in the web app's HTML shell if it is a web app and has none
-- `unraid-icon.png` at the root for Uranus services (convert with `sips` or `rsvg-convert` if
-  only an SVG exists; 512×512)
-- TARS `icon_path` (Phase 7)
+Defense in depth: the gate catches what's already committed; the hook prevents future leaks; CI
+catches anyone who skipped the hook. Install or upgrade every time, no question needed:
 
-If there is no logo, list that as a follow-up. Do not generate one here.
+- **Config:** `.gitleaks.toml` missing → copy `assets/gitleaks.toml` (no substitutions). One that
+  allowlists `README.md`, `docs/` or another whole directory by path (the older template did) →
+  replace its allowlist section with the asset's, keeping any custom `[[rules]]`.
+- **Hook:** check for a hook manager first (`git config --get core.hooksPath`, `.husky/`,
+  `lefthook.yml`, `.pre-commit-config.yaml`); setting `core.hooksPath` to `.githooks` would turn
+  all of those off.
+  - A manager is present: leave `core.hooksPath` alone. Copy `assets/pre-commit` to
+    `.githooks/gitleaks-staged`, `chmod +x`, and add the line `.githooks/gitleaks-staged` to that
+    manager's pre-commit step (husky: `.husky/pre-commit`). A bare `gitleaks` call would miss the
+    files gitleaks skips by default.
+  - No manager: copy `assets/pre-commit` to `.githooks/pre-commit`, `chmod +x`, and run
+    `git config core.hooksPath .githooks`. The setting is per clone, so CONTRIBUTING.md or the
+    README documents it for every other clone.
+  - A hook from an older template (no `SKIPPED=` line, so a token in a lockfile or an `.svg`
+    passes it) → replace it with the asset. Hook present but `core.hooksPath` empty in this
+    clone → set it.
+- **CI, GitHub only** (first push: every GitHub destination; upkeep: repos that already have
+  workflows, so a repo with no Actions doesn't start using minutes): no
+  `.github/workflows/gitleaks.yml`, or one that still calls
+  `gitleaks detect`, has no `permissions:` block, downloads the binary with no checksum, or lacks
+  the "Scan files gitleaks skips by default" step → copy `assets/gitleaks-workflow.yml` over it.
+  It installs the MIT-licensed CLI directly; don't swap in `gitleaks/gitleaks-action@v2`, which
+  needs a paid license for org repos.
+- `command -v gitleaks` missing → say so and suggest `brew install gitleaks`.
 
-## Phase 7: TARS record
+### Gitignore
 
-Skip silently if `~/.tars/tars.db` does not exist.
+Add the usual misses for the detected stack when absent (`node_modules/`, `dist/`, `build/`,
+`.env`, `.DS_Store`, `__pycache__/`, `target/`, `.svelte-kit/`, `.beans/`, `data/*.db*`). An ignore
+rule does nothing for a file that is already tracked: `git ls-files -ci --exclude-standard` lists
+them, and `git rm --cached <file>` untracks each (the working copy stays). If one ever held a
+credential, untracking is not enough: it's still in history, so list it to rotate and purge
+(`references/going-public.md` section 1).
 
-If the project has no row, follow `../repo-ready/references/tars-registration.md` (it builds
-the full schema the app requires). If it has one, read `references/tars-update.md` and update
-in place: correct fields the manifest contradicts (deploy target and command, production URL,
-start command, framework, database, icon path, description), refresh custom fields whose
-values are stale, keep everything else. Never write `project_secrets`.
+### Dockerfiles
 
-Warn if the desktop app is running (`pgrep -fl tars-app || true`; no output means it is not); it rereads the row on restart or
-on reopening the project.
+`hadolint --no-color <Dockerfile>` for each (`brew install hadolint`; not installed = SKIPPED).
+A Dockerfile written in this run: fix every `error` and `warning`. One the project already had:
+list each finding with its rule code and leave the file alone, since a change alters the next deploy.
 
-## Phase 8: Memex wiki page
+### TARS
 
-If `~/memex/wiki/projects/<name>.md` exists, reconcile it with the manifest: fix facts that
-disk contradicts, and add a dated line under its most recent section noting what this pass
-changed (one or two sentences). Don't rewrite it; it is chat-derived context, not the README.
-If it doesn't exist, don't create it.
+Skip silently if `~/.tars/tars.db` doesn't exist. No row for this path → follow
+`references/tars-registration.md` (it builds the full schema the app requires). A row exists →
+`references/tars-update.md`: correct the fields the manifest contradicts (deploy target and
+command, production URL, start command, framework, database, icon path, description), refresh
+stale custom fields, keep everything else. Never write `project_secrets`. Warn if the desktop app
+is running (`pgrep -fl tars-app || true`); it rereads the row on restart or on reopening the project.
 
-## Phase 9: Claude memory
+### Logo placement
 
-Claude Code keeps per-project memory at `~/.claude/projects/<slug>/memory/`, where `<slug>`
-is the absolute repo path with every `/` replaced by `-` (`/Users/x/Development/foo` →
-`-Users-x-Development-foo`). `MEMORY.md` is the index; each other file is one fact with a
-`type:` of user, feedback, project, or reference. Skip silently if the directory is absent.
-
-Before removing or rewriting anything, copy the directory:
-`cp -R ~/.claude/projects/<slug>/memory ~/.claude/projects/<slug>/memory-backup-<YYYY-MM-DD>`.
-Memory is not in git; the copy is the only undo. Name the backup path in the summary. Under
-`--report`, list what would be deleted and change nothing.
-
-For each memory file:
-- **The repo now records it** (README, AGENTS.md, a runbook, a comment): delete it. Memory
-  is for what the repo can't say; a duplicate drifts the moment the repo changes.
-- **Disk contradicts it** (a file, flag, script, or path it names is gone or renamed): fix
-  the fact if the intent still holds, delete it if the intent is gone.
-- **It records a problem that is fixed**: delete it, or reduce it to the one-line lesson if
-  the lesson isn't in AGENTS.md yet (and then put it in AGENTS.md instead).
-- **`type: user` or `type: feedback`**: leave alone unless factually wrong. Those are about
-  the person, not the project, and are not yours to prune on a tidy pass.
-
-Then rewrite `MEMORY.md` so it lists exactly the files that remain, one line each, no
-content. List every deletion in the summary under its own heading.
-
-## Phase 10: Hygiene
-
-- `.gitignore`: add the usual misses if the stack uses them and they're absent
-  (`node_modules/`, `.DS_Store`, `.env`, `.beans/`, `dist/`, `build/`, `.svelte-kit/`,
-  `target/`, `data/*.db*`)
-- tracked files that should be ignored: `git ls-files -ci --exclude-standard` lists every
-  tracked file an ignore rule matches. `git rm --cached <file>` each one (the working copy
-  stays). If one of them ever held a credential (`.env`, a key file), untracking is not
-  enough: it is still in history, so list it as a follow-up to rotate and purge
-- dead scripts: for each file in `scripts/`, `grep -rn <basename> --exclude-dir=node_modules .`
-  and list the ones nothing references (README, AGENTS.md, crontab, compose, package.json,
-  other scripts). Archive them like documents; don't delete.
-- leftovers from retired mechanisms: launchd plists for jobs now on cron elsewhere, old
-  deploy scripts, `*.bak`, `*.orig`
-
-## Phase 10b: Dead files and clutter
-
-Read `references/dead-code.md` and follow it:
-1. **Dead source files:** run the baseline build, find candidates with the stack's analyzer
-   (knip, Periphery, vulture, cargo-machete) or the import-grep method, cross-check each with a
-   repo-wide grep, skip the never-delete list, then `git rm` the survivors and rebuild. A
-   failing rebuild restores the batch and bisects. Record `dead-code`, or skip it under
-   `--skip-dead-code`.
-2. **Unused dependencies and assets:** list only. Record `unused-assets`.
-3. **Untracked clutter:** gitignore junk patterns before the final `/acp` sweeps them in. Ask
-   about large files and untracked source. Record `clutter`.
-
-Then invoke the `de-vibe` skill; its own confirm gate applies.
-
-## Phase 11: Summary and commit
-
-Print the summary as Markdown, not inside a code block: an aligned code block breaks into
-wrapped fragments once a line is wider than the terminal. One bullet per area; leave out an
-area with nothing to report, and give each follow-up its own bullet:
-
-```markdown
-**Repo tidy: <name>**
-
-- **Fixed:** README (3 paths, port), AGENTS.md (2 dead refs), docs/runbook.md
-- **Archived:** docs/archive/2026-03-04-spec-v1.md, scripts/archive/deploy-old.sh
-- **Moved:** ARCHITECTURE.md → docs/architecture.md, specs/ → docs/specs/ (7 links updated)
-- **Deleted:** .DS_Store (2)
-- **Removed (dead code):** src/legacy/OldChart.tsx, src/utils/format-old.ts (build passed)
-- **Ignored:** *.log, Screenshot*.png (untracked clutter)
-- **Added:** .deploy, unraid-icon.png, favicon link
-- **TARS:** deploy_target, production_url, icon_path
-- **Wiki:** ~/memex/wiki/projects/<name>.md (dated note)
-- **Memory:** deleted audit-2026-08-21-findings (fixed, in AGENTS.md); kept 1
-- **Deployment:** on standard
-- **Security:** dependabot.yml (npm, github-actions), secret scanning on, ruleset, 3 actions pinned, zizmor 1 High, gate clean
-- **Scorecard:** 2.5/10 before this pass (rerun after the push)
-- **Diagram:** refreshed, re-pinned to <sha>
-
-**Follow-ups**
-
-- No logo
-- CHANGELOG stopped at 1.2
-- Unused (review): 1 file (in project.pbxproj), 6 exports, 3 dependencies, 4 assets
-```
-
-Other values those areas take: Deployment `MIGRATION PLAN below, not run`; Security
-`current` or `not GitHub`; Scorecard `skipped (private | not GitHub | no CLI)`; Diagram
-`created`, `current` or `skipped (<why>)`.
-
-Then run the secret gate over everything about to be committed and everything already in
-history:
-
-```bash
-bash "$SKILL_DIR/../repo-ready/scripts/secret-gate.sh" "$PWD"; echo "gate exit=$?"      # public GitHub repo: prefix SECRET_GATE_BUILTIN=1 (strict mode)
-```
-
-Exit 1 (secrets found): **stop, do not invoke `acp`**. Print the locations, then run
-`bash "$SKILL_DIR/../repo-ready/scripts/live-check.sh" "$PWD"` (TruffleHog, verifies each
-candidate with its provider) and say which are still live. For a GitHub repo that is public,
-say the key is already exposed and has to be rotated. Exit 3: read each listed
-file and resolve it (untrack, or confirm it is clean) before committing. Exit 2 (gitleaks
-missing): say so, and continue only for a repo with no public remote.
-
-Then print the run report, also when the gate stopped the pass:
-
-```bash
-bash "$SKILL_DIR/../repo-ready/scripts/runlog.sh" report
-```
-
-Exit 1 means a listed check has no record: run it, or record a skip with the reason, and
-print the report again. Never invoke `acp` while the report lists anything under **Not run**.
-The report is Markdown: paste it into your final message as-is, not inside a code block, so the terminal renders the headings and wraps long lines. Tool output doesn't reach the user on its own.
-
-Then, unless `--report` or `--no-commit`: invoke `acp`. It commits everything and, on
-`main` with a `.deploy` marker, deploys. Say so in the line before you invoke it, so a deploy
-of a live service is never a surprise.
+When the project has a logo (`assets/logo.*`, `.github/logo.*`, `static/logo.*`, `public/logo.*`):
+- README header: `<p align="center"><img src="<path>" alt="<name>" width="140"></p>` at the top if absent
+- favicon: a `<link rel="icon">` in the web app's HTML shell if it's a web app and has none
+- `unraid-icon.png` at the root for Uranus services (512×512; convert with `sips` or
+  `rsvg-convert` if only an SVG exists)
+- the TARS `icon_path`
